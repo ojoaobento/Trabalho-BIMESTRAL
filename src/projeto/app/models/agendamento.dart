@@ -5,7 +5,7 @@ class Agendamento {
   final int? id;
   final Cliente cliente;
   final Servico servico;
-  final DataTime dataHora;
+  final DateTime dataHora;
   final String status;
 
   Agendamento({
