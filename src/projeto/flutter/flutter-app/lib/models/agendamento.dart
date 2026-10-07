@@ -6,13 +6,11 @@ class Agendamento {
   final Cliente cliente;
   final Servico servico;
   final DateTime dataHora;
-  final String status;
 
   Agendamento({
     this.id,
     required this.cliente,
     required this.servico,
     required this.dataHora,
-    required this.status,
   });
 }
