@@ -3,9 +3,7 @@ import 'package:flutter/widgets.dart';
 import '../models/agendamento.dart';
 import '../models/cliente.dart';
 import '../models/servico.dart';
-import 'cliente.dart';
-import 'servico.dart';
-import 'agendamento.dart';
+
 class HomePage extends StatefulWidget {
   const new({super.key});
 
