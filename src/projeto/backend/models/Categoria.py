@@ -8,5 +8,5 @@ class Categoria(Base):
     __tablename__ = "categoria"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    nome: Mapped[str] = mapped_column(String(100))
-    ativo: Mapped[bool] = mapped_column(Boolean)
+    nome: Mapped[str] = mapped_column(String(100), unique=True)
+    ativo: Mapped[bool] = mapped_column(Boolean, default=True)

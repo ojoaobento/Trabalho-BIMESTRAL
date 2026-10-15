@@ -1,6 +1,6 @@
-from datetime import datetime, date
+from datetime import datetime
 
-from sqlalchemy import String, DateTime, Date, func
+from sqlalchemy import String, DateTime, func, Boolean
 from sqlalchemy.orm import Mapped, mapped_column
 
 from core.database import Base
@@ -10,10 +10,12 @@ class Cliente(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     nome: Mapped[str] = mapped_column(String(100))
-    telefone: Mapped[str | None] = mapped_column(String(11))
-    email: Mapped[str] = mapped_column(String(100))
-    cpf: Mapped[str] = mapped_column(String(11), unique=True)
-    dt_nascimento: Mapped[date | None] = mapped_column(Date)
+    telefone: Mapped[str] = mapped_column(String(11), unique=True)
+    email: Mapped[str | None] = mapped_column(String(100))
+    aceita_lembretes:  Mapped[bool] = mapped_column(Boolean, default=True)
+    consentimento: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
     dt_cadastro: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
