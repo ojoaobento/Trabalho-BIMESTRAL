@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:main/ui/screens/services_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -9,18 +10,28 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   String horarioSelecionado = '14:30';
+  late DateTime dataSelecionada;
+  final _chaveNavegador = GlobalKey<NavigatorState>();
 
-  final dias = const ['Seg 12', 'Ter 13', 'Qua 14', 'Qui 15', 'Sex 16', 'Sáb 17'];
   final horarios = const ['09:00', '10:30', '14:30', '16:00', '17:00', '18:30', '19:30'];
 
-  static const corPrincipal = Color(0xFFB85D43);
-  static const corFundo = Color(0xFFFFF8F5);
-  static const corTexto = Color(0xFF3B0900);
+  static const corPrincipal = Color(0xFF8E2348);
+  static const corFundo = Color(0xFFFFF8FA);
+  static const corTexto = Color(0xFF4A1026);
+  static const corSuave = Color(0xFFFFEEF3);
+  static const corBorda = Color(0xFFF1DDE5);
+
+  @override
+  void initState() {
+    super.initState();
+    dataSelecionada = DateTime.now();
+  }
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
+      navigatorKey: _chaveNavegador,
       theme: ThemeData(useMaterial3: true, colorScheme: ColorScheme.fromSeed(seedColor: corPrincipal)),
       home: Scaffold(
         backgroundColor: corFundo,
@@ -40,19 +51,15 @@ class _HomePageState extends State<HomePage> {
                     const SizedBox(height: 20),
                     _cardDestaque(),
                     const SizedBox(height: 28),
-                    const Text('Outubro 2024',
-                        style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: corTexto)),
-                    const SizedBox(height: 12),
                     _calendario(),
                     const SizedBox(height: 28),
-                    const Text('Horários livres para Sexta, 16 de Outubro',
+                    Text('Horários livres para ${_formatarData(dataSelecionada)}',
                         style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: corTexto)),
                     const SizedBox(height: 4),
                     const Text('●  7 horários livres', style: TextStyle(color: corPrincipal)),
                     const SizedBox(height: 20),
                     _secaoDeHorarios('Manhã', horarios.take(2).toList()),
-                    _secaoDeHorarios('Tarde', horarios.skip(2).take(3).toList()),
-                    _secaoDeHorarios('Noite', horarios.skip(5).toList()),
+                    _secaoDeHorarios('Tarde', horarios.skip(2).toList()),
                   ],
                 ),
               ),
@@ -70,10 +77,9 @@ class _HomePageState extends State<HomePage> {
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 14),
       child: Column(children: [
         Row(children: [
-          const CircleAvatar(backgroundColor: Color(0xFFFFE4DA), foregroundColor: corPrincipal, child: Icon(Icons.spa_outlined)),
+          const CircleAvatar(backgroundColor: corSuave, foregroundColor: corPrincipal, child: Icon(Icons.spa_outlined)),
           const SizedBox(width: 10),
           const Expanded(child: Text('Studio Cleusa', style: TextStyle(fontSize: 23, fontWeight: FontWeight.bold, color: corTexto))),
-          TextButton(onPressed: () {}, child: const Text('Já agendei antes?')),
         ]),
         const SizedBox(height: 14),
         const Text('1. Horário  •  2. Serviço  •  3. Seus dados  •  4. Confirmar',
@@ -93,7 +99,7 @@ class _HomePageState extends State<HomePage> {
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         const Text('DISPONÍVEL AGORA', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, letterSpacing: 1)),
         const SizedBox(height: 16),
-        const Text('Próximo horário livre:', style: TextStyle(color: Color(0xFFFFDBD0))),
+        const Text('Próximo horário livre:', style: TextStyle(color: Color(0xFFFFD9E5))),
         const Text('Hoje, 14:30', style: TextStyle(color: Colors.white, fontSize: 27, fontWeight: FontWeight.bold)),
         const Text('Janela de 2h30', style: TextStyle(color: Colors.white70)),
         const SizedBox(height: 16),
@@ -108,36 +114,121 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _calendario() {
-    return SizedBox(
-      height: 76,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        itemCount: dias.length,
-        separatorBuilder: (context, index) => const SizedBox(width: 8),
-        itemBuilder: (context, index) {
-          final selecionado = index == 4;
-          return Container(
-            width: 65,
-            decoration: BoxDecoration(
-              color: selecionado ? corPrincipal : Colors.white,
-              borderRadius: BorderRadius.circular(15),
-              border: Border.all(color: selecionado ? corPrincipal : const Color(0xFFF0D9D1)),
-            ),
-            child: Center(
-              child: Text(dias[index], textAlign: TextAlign.center,
-                  style: TextStyle(fontWeight: FontWeight.bold, color: selecionado ? Colors.white : corTexto)),
+    final primeiroDia = dataSelecionada.subtract(Duration(days: dataSelecionada.weekday - 1));
+    final diasDaSemana = List.generate(7, (index) => primeiroDia.add(Duration(days: index)));
+
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+        Text(_tituloMes(dataSelecionada).toUpperCase(),
+            style: const TextStyle(fontWeight: FontWeight.bold, color: corTexto, letterSpacing: .3)),
+        TextButton.icon(
+          onPressed: _abrirCalendarioCompleto,
+          style: TextButton.styleFrom(foregroundColor: corPrincipal, padding: EdgeInsets.zero),
+          icon: const Icon(Icons.calendar_month_outlined, size: 16),
+          label: const Text('Ver calendário completo', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+        ),
+      ]),
+      const SizedBox(height: 8),
+      Row(
+        children: diasDaSemana.map((dia) {
+          final selecionado = DateUtils.isSameDay(dia, dataSelecionada);
+          final hoje = DateUtils.isSameDay(dia, DateTime.now());
+          return Expanded(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 3),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(14),
+                onTap: () => setState(() => dataSelecionada = dia),
+                child: Ink(
+                  height: 70,
+                  decoration: BoxDecoration(
+                    color: selecionado ? corPrincipal : Colors.white,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: selecionado ? corPrincipal : corBorda, width: selecionado ? 2 : 1),
+                  ),
+                  child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+                    Text(_siglaSemana(dia), style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: selecionado ? Colors.white : const Color(0xFF9A8A90))),
+                    const SizedBox(height: 2),
+                    Text('${dia.day}', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: selecionado ? Colors.white : corTexto)),
+                    const SizedBox(height: 2),
+                    Text(hoje ? 'Hoje' : '5 vagas', style: TextStyle(fontSize: 8, color: selecionado ? Colors.white : corPrincipal)),
+                  ]),
+                ),
+              ),
             ),
           );
-        },
+        }).toList(),
+      ),
+    ]);
+  }
+
+  Future<void> _abrirCalendarioCompleto() async {
+    var dataTemporaria = dataSelecionada;
+    final contextoDoNavegador = _chaveNavegador.currentContext;
+    if (contextoDoNavegador == null) return;
+    final dataEscolhida = await showDialog<DateTime>(
+      context: contextoDoNavegador,
+      builder: (contextoDoDialogo) => StatefulBuilder(
+        builder: (contextoDoDialogo, setStateDoDialogo) => Dialog(
+          insetPadding: const EdgeInsets.symmetric(horizontal: 24),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(18, 14, 18, 18),
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              Row(children: [
+                Expanded(child: Text(_tituloMes(dataTemporaria), style: const TextStyle(fontWeight: FontWeight.bold, color: corTexto))),
+                TextButton.icon(
+                  onPressed: () => Navigator.pop(contextoDoDialogo),
+                  style: TextButton.styleFrom(foregroundColor: corTexto),
+                  icon: const Icon(Icons.close, size: 16),
+                  label: const Text('Fechar'),
+                ),
+              ]),
+              const Divider(color: corBorda),
+              CalendarDatePicker(
+                initialDate: dataTemporaria,
+                firstDate: DateTime(2020),
+                lastDate: DateTime(2035),
+                onDateChanged: (data) => setStateDoDialogo(() => dataTemporaria = data),
+              ),
+              const Text('Toque em um dia para atualizar a grade de horários disponíveis.',
+                  textAlign: TextAlign.center, style: TextStyle(fontSize: 10, color: Colors.black54)),
+              const SizedBox(height: 14),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton(
+                  onPressed: () => Navigator.pop(contextoDoDialogo, dataTemporaria),
+                  style: FilledButton.styleFrom(backgroundColor: corPrincipal),
+                  child: Text('Selecionar dia ${dataTemporaria.day}'),
+                ),
+              ),
+            ]),
+          ),
+        ),
       ),
     );
+
+    if (dataEscolhida != null) {
+      setState(() => dataSelecionada = dataEscolhida);
+    }
   }
 
   Widget _secaoDeHorarios(String titulo, List<String> lista) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 22),
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 14),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: corBorda),
+      ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text(titulo, style: const TextStyle(fontWeight: FontWeight.bold, color: corTexto)),
+        Row(children: [
+          Icon(titulo == 'Manhã' ? Icons.wb_sunny_outlined : Icons.wb_twilight_outlined, color: corPrincipal),
+          const SizedBox(width: 8),
+          Text(titulo, style: const TextStyle(fontWeight: FontWeight.bold, color: corTexto)),
+        ]),
         const SizedBox(height: 10),
         Wrap(
           spacing: 10,
@@ -148,8 +239,8 @@ class _HomePageState extends State<HomePage> {
               label: Text(horario),
               selected: selecionado,
               showCheckmark: false,
-              selectedColor: const Color(0xFFFFDBD0),
-              side: BorderSide(color: selecionado ? corPrincipal : const Color(0xFFF0D9D1)),
+              selectedColor: corSuave,
+              side: BorderSide(color: selecionado ? corPrincipal : corBorda),
               onSelected: (_) => setState(() => horarioSelecionado = horario),
             );
           }).toList(),
@@ -158,17 +249,37 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  String _formatarData(DateTime data) {
+    const diasDaSemana = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo'];
+    const meses = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
+    return '${diasDaSemana[data.weekday - 1]}, ${data.day} de ${meses[data.month - 1]}';
+  }
+
+  String _tituloMes(DateTime data) {
+    const meses = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+    return '${meses[data.month - 1]} ${data.year}';
+  }
+
+  String _siglaSemana(DateTime data) {
+    const siglas = ['SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SÁB', 'DOM'];
+    return siglas[data.weekday - 1];
+  }
+
   Widget _rodape() {
     return Container(
       color: Colors.white,
       padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
       child: Column(mainAxisSize: MainAxisSize.min, children: [
-        Text('Selecionado: Sex 16 · $horarioSelecionado', style: const TextStyle(fontSize: 12, color: Colors.black54)),
+        Text('Selecionado: ${_formatarData(dataSelecionada)} · $horarioSelecionado', style: const TextStyle(fontSize: 12, color: Colors.black54)),
         const SizedBox(height: 8),
         SizedBox(
           width: double.infinity,
           child: FilledButton(
-            onPressed: () {},
+            onPressed: () => _chaveNavegador.currentState?.push(
+              MaterialPageRoute(
+                builder: (_) => ServicesPage(data: dataSelecionada, horario: horarioSelecionado),
+              ),
+            ),
             style: FilledButton.styleFrom(backgroundColor: corPrincipal, padding: const EdgeInsets.symmetric(vertical: 16)),
             child: const Text('Continuar'),
           ),
