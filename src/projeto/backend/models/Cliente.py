@@ -9,8 +9,8 @@ class Cliente(Base):
     __tablename__ = "cliente"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    nome: Mapped[str] = mapped_column(String(100))
-    telefone: Mapped[str] = mapped_column(String(11), unique=True)
+    nome: Mapped[str | None] = mapped_column(String(100))
+    telefone: Mapped[str] = mapped_column(String(11), nullable=False, unique=True)
     email: Mapped[str | None] = mapped_column(String(100))
     aceita_lembretes: Mapped[bool] = mapped_column(Boolean, default=True)
     consentimento: Mapped[datetime | None] = mapped_column(
