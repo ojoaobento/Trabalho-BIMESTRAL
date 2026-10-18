@@ -12,7 +12,7 @@ class Cliente(Base):
     nome: Mapped[str] = mapped_column(String(100))
     telefone: Mapped[str] = mapped_column(String(11), unique=True)
     email: Mapped[str | None] = mapped_column(String(100))
-    aceita_lembretes:  Mapped[bool] = mapped_column(Boolean, default=True)
+    aceita_lembretes: Mapped[bool] = mapped_column(Boolean, default=True)
     consentimento: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
