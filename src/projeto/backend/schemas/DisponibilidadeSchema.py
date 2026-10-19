@@ -11,9 +11,9 @@ class DisponibilidadeRequest(BaseModel):
 
 class DisponibilidadeAtualizarRequest(BaseModel):
 
-    dia_semana: Optional[int] = Field(ge=0, le=6, description="0=Segunda-Feira, 6-Domingo")
-    hora_inicio: Optional[time] 
-    hora_fim: Optional[time] 
+    dia_semana: Optional[int] = Field(ge=0, le=6, description="0=Segunda-Feira, 6-Domingo", default=None)
+    hora_inicio: Optional[time]  = None
+    hora_fim: Optional[time] = None
     ativo: Optional[bool] = Field(default=True)
 
 class DisponibilidadeResponse(BaseModel):

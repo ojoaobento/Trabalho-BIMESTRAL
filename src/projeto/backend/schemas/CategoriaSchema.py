@@ -10,7 +10,7 @@ class CategoriaRequest(BaseModel):
 class CategoriaAtualizarRequest(BaseModel):
     model_config = ConfigDict(str_strip_whitespace=True)
 
-    nome: Optional[str] = Field(min_length=1, max_length=100)
+    nome: Optional[str] = Field(min_length=1, max_length=100, default=None)
     ativo: Optional[bool] | None = None
 
 class CategoriaResponse(BaseModel):
