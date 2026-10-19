@@ -10,7 +10,7 @@ class Agendamento {
   final DateTime dtFim;
   final DateTime? reservaExpireEm;
   final String status;
-  final doubleValorCobrado;
+  final double ValorCobrado;
   final String? Observacoes;
   final DateTime dtCadastro;
   
@@ -23,8 +23,8 @@ class Agendamento {
     required this.dtFim,
     this.reservaExpireEm,
     required this.status,
-    required this.valorCobrado,
-    this.observacoes,
+    required this.ValorCobrado,
+    this.Observacoes,
     DateTime? dtCadastro,
   }) : dtCadastro = dtCadastro ?? DateTime.now();
 }
