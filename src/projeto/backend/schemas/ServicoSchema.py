@@ -4,7 +4,7 @@ from typing import Optional
 
 class ServicoRequest(BaseModel):
 
-    categoria_id: int = Field()
+    categoria_id: int
     nome: str = Field(min_length=2, max_length=100)
     descricao: str = Field(min_length=2, max_length=100)
     preco: Decimal = Field(gt=0)
