@@ -1,4 +1,4 @@
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, EmailStr
 from datetime import datetime
 from typing import Literal, Optional
 
@@ -7,7 +7,7 @@ class ClienteRequest(BaseModel):
 
     nome: str = Field(min_length= 2, max_length=100)
     telefone: str = Field(pattern=r"^\d{11}$")
-    email: str | None = Field(default=None, min_length=2, max_length=100)
+    email: EmailStr
     aceita_lembretes: bool = True
     consentimento: Literal[True]
 

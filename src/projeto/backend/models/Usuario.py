@@ -10,7 +10,7 @@ class Usuario(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     nome: Mapped[str] = mapped_column(String(100))
     email: Mapped[str] = mapped_column(String(100), unique=True)
-    senha_hash: Mapped[str] = mapped_column(String(100))
+    senha_hash: Mapped[str] = mapped_column(String(265))
     ativo: Mapped[bool] = mapped_column(Boolean, default=True)
     dt_cadastro: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
