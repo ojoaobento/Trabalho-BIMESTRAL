@@ -4,6 +4,7 @@ class Usuario {
   final String email;
   final String senhaHash;
   final bool ativo;
+  final DateTime dtCadastro;
 
   Usuario({
 this.id,
