@@ -13,6 +13,9 @@ class ClienteRepository:
     def buscar_por_id(self, cliente_id : int):
         return self.db.get(Cliente, cliente_id)
 
+    def buscar_por_nome(self, nome: str):
+        return self.db.scalar(select(Cliente).where(Cliente.nome == nome))
+
     def salvar(self, cliente : Cliente):
         self.db.add(cliente)
         self.db.commit()

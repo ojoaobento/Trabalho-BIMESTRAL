@@ -13,6 +13,9 @@ class CategoriaRepository:
     def buscar_por_id(self, categoria_id: int):
         return self.db.get(Categoria, categoria_id)
 
+    def buscar_por_nome(self, nome: str):
+        return self.db.scalar(select(Categoria).where(Categoria.nome == nome))
+
     def salvar(self, categoria: Categoria):
         self.db.add(categoria)
         self.db.commit()
