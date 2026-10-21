@@ -14,7 +14,7 @@ class ClienteRepository:
         return self.db.get(Cliente, cliente_id)
 
     def buscar_por_nome(self, nome: str):
-        return self.db.scalar(select(Cliente).where(Cliente.nome == nome))
+        return self.db.scalars(select(Cliente).where(Cliente.nome == nome))
 
     def salvar(self, cliente : Cliente):
         self.db.add(cliente)
