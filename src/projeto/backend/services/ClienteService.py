@@ -1,6 +1,6 @@
 from fastapi import HTTPException, status
 from sqlalchemy.exc import IntegrityError
-
+from datetime import datetime, timezone
 from models.Cliente import Cliente
 from repositories.ClienteRepository import ClienteRepository
 from schemas.ClienteSchema import (
@@ -44,8 +44,8 @@ class ClienteService:
                 detail=(f"O cliente que está tentando inserir já possui um cadastro")
             )
 
-        cliente = Cliente(nome=dados.nome)
-
+        campos = dados.model_dump(exclude={"consentimento"})
+        cliente = Cliente(**campos, consentimento_em=datetime.now(timezone.utc))
         return self.repository.salvar(cliente)
 
     def atualizar(self, cliente_id: int, dados: ClienteAtualizarRequest) -> Cliente:
@@ -53,11 +53,19 @@ class ClienteService:
 
         campos = dados.model_dump(exclude_unset=True)
 
-        for campo in ["nome", "telefone", "email", "aceita_lembretes"]:
+        for campo in ["nome", "telefone", "aceita_lembretes"]:
             if campo in campos and campos[campo] is None:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail=(f"O campo {campo} não pode ser nulo")
+                )
+        
+        novo_telefone = campos.get("telefone")
+        if novo_telefone is not None and novo_telefone != cliente.telefone:
+            if self.repository.buscar_por_telefone(novo_telefone):
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail="Este telefone já pertence a outro cliente.",
                 )
 
         for campo, valor in campos.items():
