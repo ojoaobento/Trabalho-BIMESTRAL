@@ -1,7 +1,8 @@
 from sqlalchemy import select 
 from sqlalchemy.orm import Session
+from datetime import datetime
 
-from models.Agendamento import Agendamento
+from models.Agendamento import Agendamento, StatusAgendamento
 
 
 class AgendamentoRepository:
@@ -11,16 +12,31 @@ class AgendamentoRepository:
     def listar(self):
         return self.db.scalars(select(Agendamento).order_by(Agendamento.id)).all()
 
-    def buscar(self, agendamento_id : Agendamento):
-        return self.db.scalars(select(Agendamento).where(Agendamento.id == agendamento_id))
+    def listar_por_cliente(self, cliente_id: int):
+        return self.db.scalars(select(Agendamento).where(Agendamento.cliente_id == cliente_id).order_by(Agendamento.dt_inicio.desc())).all()
 
-    def buscar_por_cliente(self, cliente: str):
-        return self.db.scalar(select(Agendamento).where(Agendamento.cliente == cliente))
+    def buscar_por_id(self, agendamento_id : int):
+        return self.db.get(Agendamento, agendamento_id)
+
+    def buscar_por_periodo(self, inicio: datetime, fim: datetime):
+        return self.db.scalars(select(Agendamento).where(
+            Agendamento.dt_inicio >= inicio, Agendamento.dt_inicio < fim
+        ).order_by(Agendamento.dt_inicio)).all()
+
+    def buscar_conflitos(self, inicio: datetime, fim: datetime):
+        return self.db.scalars(select(Agendamento).where(
+            Agendamento.dt_inicio < fim, Agendamento.dt_fim > inicio,
+            Agendamento.status.in_([
+                StatusAgendamento.PENDENTE,
+                StatusAgendamento.RESERVADO,
+                StatusAgendamento.CONFIRMADO
+            ])
+        )).all()
 
     def salvar(self, agendamento: Agendamento):
         self.db.add(agendamento)
         self.db.commit()
-        self.db.refresh()
+        self.db.refresh(agendamento)
         return agendamento
 
     def deletar(self, agendamento: Agendamento):

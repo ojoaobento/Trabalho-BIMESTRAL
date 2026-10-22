@@ -13,13 +13,13 @@ class ClienteRepository:
     def buscar_por_id(self, cliente_id : int):
         return self.db.get(Cliente, cliente_id)
 
-    def buscar_por_nome(self, nome: str):
-        return self.db.scalars(select(Cliente).where(Cliente.nome == nome))
+    def buscar_por_telefone(self, telefone: str):
+        return self.db.scalar(select(Cliente).where(Cliente.telefone == telefone))
 
     def salvar(self, cliente : Cliente):
         self.db.add(cliente)
         self.db.commit()
-        self.db.refresh(Cliente)
+        self.db.refresh(cliente)
         return cliente
 
     def deletar(self, cliente : Cliente):

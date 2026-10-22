@@ -10,7 +10,11 @@ class DisponibilidadeRepository:
     def listar(self):
         return self.db.scalars(select(Disponibilidade).order_by(Disponibilidade.id)).all()
 
-    def buscar(self, disponibilidade_id: int):
+    def listar_por_dia_semana(self, dia_semana: int):
+        return self.db.scalars(select(Disponibilidade).
+                              where(Disponibilidade.dia_semana == dia_semana, Disponibilidade.ativo.is_(True)).order_by(Disponibilidade.hora_inicio)).all()
+
+    def buscar_por_id(self, disponibilidade_id: int):
         return self.db.get(Disponibilidade, disponibilidade_id)
 
     def salvar(self, disponibilidade: Disponibilidade):
