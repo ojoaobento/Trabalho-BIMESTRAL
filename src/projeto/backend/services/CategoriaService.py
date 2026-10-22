@@ -20,8 +20,8 @@ class CategoriaService:
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=(f"Categoria {categoria_id} não foi encontrada")
             )
-        else:
-            return categoria
+        
+        return categoria
     def criar(self, dados: CategoriaRequest) -> Categoria:
         if self.repository.buscar_por_nome(dados.nome):
             raise HTTPException(
@@ -58,5 +58,5 @@ class CategoriaService:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
                 detail="Não é possível excluir: existem serviços nesta categoria. "
-                       "Desative a categoria em vez de excluir.",
+                       "Desative a categoria em vez de excluir."
             )
