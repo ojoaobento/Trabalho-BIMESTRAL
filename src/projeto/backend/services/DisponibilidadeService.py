@@ -1,5 +1,4 @@
 from fastapi import HTTPException, status 
-from sqlalchemy.exc import IntegrityError
 from repositories.DisponibilidadeRepository import DisponibilidadeRepository
 from models.Disponibilidade import Disponibilidade
 from schemas.DisponibilidadeSchema import (
