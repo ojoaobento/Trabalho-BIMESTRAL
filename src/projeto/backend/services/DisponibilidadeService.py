@@ -9,6 +9,7 @@ from schemas.DisponibilidadeSchema import (
 
 from datetime import datetime, time 
 
+
 class DisponibilidadeService:
 
     def __init__(self, repository: DisponibilidadeRepository):
@@ -29,9 +30,23 @@ class DisponibilidadeService:
             )
         return disponibilidade
 
+    def _conferir_sobreposicao(self, dia_semana: int, inicio: time, fim: time, ignorar_id: int | None = None) -> None:
+        for bloco in self.repository.listar_por_dia_semana(dia_semana):
+            if ignorar_id is not None and bloco.id == ignorar_id:
+                continue 
+            if inicio < bloco.hora_fim and fim > bloco.hora_inicio:
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail=(f"Este horário se sobrepõe a outro bloco do mesmo dia"
+                            f"({bloco.hora_inicio:%H:%M} às {bloco.hora_fim:%H:%H})")
+                )
+
     def criar(self, dados: DisponibilidadeRequest) -> Disponibilidade:        
+
+        if dados.ativo:
+            self._conferir_sobreposicao(dados.dia_semana, dados.hora_inicio, dados.hora_fim)
         
-        disponibilidade = Disponibilidade(nome=dados)
+        disponibilidade = Disponibilidade(**dados.model_dump())
 
         return self.repository.salvar(disponibilidade)
 
@@ -49,6 +64,21 @@ class DisponibilidadeService:
                     detail="O campo {campo} não pode ser nulo...."
                 )
 
+        dia = campos.get("dia_semana", disponibilidade.dia_semana)
+        inicio = campos.get("hora_inicio", disponibilidade.hora_inicio)
+        fim = campos.get("hora_fim", disponibilidade.hora_fim)
+        ativo = campos.get("ativo", disponibilidade.ativo)
+
+        if fim <= inicio:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="O horário do fim deve ser depois do horário de ínicio"
+            )
+
+        if ativo:
+            self._conferir_sobreposicao(dia, inicio, fim, ignorar_id=disponibilidade.id)
+
+
         for campo, valor in campos.items():
             setattr(disponibilidade, campo, valor)
 
@@ -57,12 +87,6 @@ class DisponibilidadeService:
     def deletar(self, disponibilidade_id: int) -> None:
         disponibilidade = self.repository.buscar_por_id(disponibilidade_id)
 
-        try:
-            self.repository.deletar(disponibilidade)
-        except IntegrityError:
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail="Não foi possivel realizar a exclusão dessa DISPONIBILIDADE, ela está integrada em outras telas"
-            )
+        self.repository.deletar(disponibilidade)
 
 
