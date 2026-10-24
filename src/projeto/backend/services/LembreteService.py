@@ -85,7 +85,7 @@ class LembreteService:
 
         return self.repository.salvar(lembrete)
 
-    def deletar(self, lembrete_id: int):
+    def deletar(self, lembrete_id: int) -> None:
         lembrete = self.repository.buscar_por_id(lembrete_id)
 
         self.repository.deletar(lembrete)
