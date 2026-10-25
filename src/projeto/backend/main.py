@@ -1,15 +1,17 @@
+"Swagger: http://localhost:8000/docs"
+
 from fastapi import FastAPI
-
+ 
+from api.AgendamentoRouter import router as agendamento_router
+from api.AuthRouter import router as auth_router
 from api.CategoriaRouter import router as categoria_router
-from api.ClienteRouter import router as cliente_router
 from api.UsuarioRouter import router as usuario_router
+from api.LembreteRouter import router as lembrete_router
 
-app = FastAPI(title="API de Agendamento - Studio Cleusa")
-
-app.include_router(categoria_router)
-app.include_router(cliente_router)
+app = FastAPI(title="API de Agendamento - Studio Cleusa", version="0.1.0")
+ 
+app.include_router(auth_router)
 app.include_router(usuario_router)
-
-@app.get("/", tags=["Testes"])
-def raiz():
-    return {"status": "ok"}
+app.include_router(categoria_router)
+app.include_router(agendamento_router)
+app.include_router(lembrete_router)
