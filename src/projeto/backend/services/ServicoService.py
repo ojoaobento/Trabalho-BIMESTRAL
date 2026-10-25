@@ -35,7 +35,15 @@ class ServicoService:
 
 
     def listar(self):
-        return self.repository.listar()
+        servico = self.repository.listar()
+
+        if not servico:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Não foi encontrada nenhum Serviço."
+            )
+
+        return servico
 
     def listar_ativos(self):
 

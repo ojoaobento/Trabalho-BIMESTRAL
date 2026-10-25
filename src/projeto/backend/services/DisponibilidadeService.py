@@ -15,7 +15,15 @@ class DisponibilidadeService:
         self.repository = repository 
 
     def listar(self):
-        return self.repository.listar()
+        disponibilidade = self.repository.listar()
+
+        if not disponibilidade:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Não foi encontrada nenhuma disponibilidade."
+            )
+
+        return disponibilidade
 
     def listar_por_dia_semana(self, dia_semana: int):
         servico = self.repository.listar_por_dia_semana(dia_semana)

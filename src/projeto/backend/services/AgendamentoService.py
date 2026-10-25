@@ -42,7 +42,15 @@ class AgendamentoService:
         self.lembrete_service = lembrete_service
 
     def listar(self):
-        return self.repository.listar()
+        agendamento = self.repository.listar()
+
+        if not agendamento:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Não foi encontrada nenhum Agendamento."
+            )
+
+        return agendamento
 
     def listar_por_cliente(self, cliente_id: int):
         self.cliente_service.buscar_por_id(cliente_id)

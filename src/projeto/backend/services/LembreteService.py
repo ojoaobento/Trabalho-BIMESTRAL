@@ -26,7 +26,15 @@ class LembreteService:
 
 
     def listar(self):
-        return self.repository.listar()
+        lembrete = self.repository.listar()
+
+        if not lembrete:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Não foi encontrada nenhum Lembrete."
+            )
+
+        return lembrete
 
     def listar_pendetes(self):
         return self.repository.listar_pendentes(datetime.now(timezone.utc))

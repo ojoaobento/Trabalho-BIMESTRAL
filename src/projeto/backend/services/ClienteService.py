@@ -14,7 +14,15 @@ class ClienteService:
         self.repository = repository
 
     def listar(self):
-        return self.repository.listar()
+        cliente = self.repository.listar()
+
+        if not cliente:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Não foi encontrada nenhum Cliente."
+            )
+
+        return cliente
 
     def buscar_por_id(self, cliente_id: int) -> Cliente:
         cliente = self.repository.buscar_por_id(cliente_id)
