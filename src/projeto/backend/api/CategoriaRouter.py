@@ -11,7 +11,7 @@ from schemas.CategoriaSchema import (
     CategoriaResponse
 )
 
-router = APIRouter(prefix="/categorias", tags=["Categorias"], dependencies=[Depends(get_usuario_logado)])
+router = APIRouter(prefix="/categorias", tags=["Categorias"])
 
 def get_service(db : Session = Depends(get_db)) -> CategoriaService:
     return CategoriaService(CategoriaRepository(db))
@@ -24,14 +24,17 @@ def listar(service: CategoriaService = Depends(get_service)):
 def buscar(categoria_id: int, service: CategoriaService =Depends(get_service)):
     return service.buscar(categoria_id)
 
-@router.post("", response_model=CategoriaResponse, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=CategoriaResponse, status_code=status.HTTP_201_CREATED,
+             dependencies=[Depends(get_usuario_logado)])
 def criar(dados: CategoriaRequest, service: CategoriaService = Depends(get_service)):
     return service.criar(dados)
 
-@router.patch("/{categoria_id}", response_model=CategoriaResponse)
+@router.patch("/{categoria_id}", response_model=CategoriaResponse,
+              dependencies=[Depends(get_usuario_logado)])
 def atualizar(categoria_id: int, dados: CategoriaAtualizarRequest ,service: CategoriaService = Depends(get_service)):
     return service.atualizar(categoria_id, dados)
 
-@router.delete("/{categoria_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{categoria_id}", status_code=status.HTTP_204_NO_CONTENT,
+               dependencies=[Depends(get_usuario_logado)])
 def deletar(categoria_id: int, service: CategoriaService = Depends(get_service)):
     service.deletar(categoria_id)

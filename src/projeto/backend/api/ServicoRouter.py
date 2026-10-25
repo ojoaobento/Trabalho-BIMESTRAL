@@ -13,14 +13,15 @@ from schemas.ServicoSchema import (
 )
 
 
-router = APIRouter(prefix= "/servicos", tags=["Serviços"], dependencies=[Depends(get_usuario_logado)])
+router = APIRouter(prefix= "/servicos", tags=["Serviços"])
 
 
 def get_service(db: Session = Depends(get_db)) -> ServicoService:
     return ServicoService(ServicoRepository(db), CategoriaRepository(db))
 
 
-@router.get("", response_model=list[ServicoResponse])
+@router.get("", response_model=list[ServicoResponse],
+            dependencies=[Depends(get_usuario_logado)])
 def listar(service: ServicoService = Depends(get_service)):
     return service.listar()
 
@@ -32,23 +33,27 @@ def listar_ativos(service: ServicoService = Depends(get_service)):
 def listar_por_categoria(categoria_id: int, service: ServicoService = Depends(get_service)):
     return service.listar_por_categoria(categoria_id)
 
-@router.get("/{servico_id}", response_model=ServicoResponse)
-def buscar_por_id(servico_id: int, service: ServicoService = Depends(get_service)):
-    return service.buscar_por_id(servico_id)
-
 @router.get("/nome/{servico_nome}", response_model=ServicoResponse)
 def buscar_por_nome(servico_nome: str, service : ServicoService = Depends(get_service)):
     return service.buscar_por_nome(servico_nome)
 
-@router.post("", response_model=ServicoResponse, status_code=status.HTTP_201_CREATED)
+@router.get("/{servico_id}", response_model=ServicoResponse)
+def buscar_por_id(servico_id: int, service: ServicoService = Depends(get_service)):
+    return service.buscar_por_id(servico_id)
+
+
+@router.post("", response_model=ServicoResponse, status_code=status.HTTP_201_CREATED,
+             dependencies=[Depends(get_usuario_logado)])
 def criar(dados: ServicoRequest, service: ServicoService = Depends(get_service)):
     return service.criar(dados)
 
-@router.patch("/{servico_id}", response_model=ServicoResponse)
+@router.patch("/{servico_id}", response_model=ServicoResponse,
+              dependencies=[Depends(get_usuario_logado)])
 def atualizar(servico_id: int, dados: ServicoAtualizarRequest, service: ServicoService = Depends(get_service)):
     return service.atualizar(servico_id, dados)
 
-@router.delete("/{servico_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{servico_id}", status_code=status.HTTP_204_NO_CONTENT,
+               dependencies=[Depends(get_usuario_logado)])
 def deletar(servico_id: int, service: ServicoService = Depends(get_service)):
     return service.deletar(servico_id)
 

@@ -33,7 +33,7 @@ def buscar_por_id(usuario_id: int, service: UsuarioService = Depends(get_service
 def buscar_por_email(email: str, service: UsuarioService = Depends(get_service)):
     return service.buscar_por_email(email)
 
-@router.post("", response_model=UsuarioRequest, status_code=status.HTTP_201_CREATED)
+@router.post("", status_code=status.HTTP_201_CREATED)
 def criar(dados: UsuarioRequest, service: UsuarioService = Depends(get_service)):
     return service.criar(dados)
 

@@ -49,7 +49,7 @@ def listar(
     if cliente_id is not None:
         return service.listar_por_cliente(cliente_id)
     if inicio is not None and fim is not None:
-        return service.listar_por_período(inicio, fim)
+        return service.listar_por_periodo(inicio, fim)
     return service.listar()
  
  

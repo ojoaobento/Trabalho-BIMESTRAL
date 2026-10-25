@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, status, Query
 from sqlalchemy.orm import Session
  
 from core.database import get_db
@@ -19,9 +19,12 @@ def get_service(db: Session = Depends(get_db)) -> DisponibilidadeService:
 @router.get("", response_model=list[DisponibilidadeResponse])
 def listar(service: DisponibilidadeService = Depends(get_service)):
     return service.listar()
-
+ 
 @router.get("/dia_semana", response_model=list[DisponibilidadeResponse])
-def listar_por_dia_semana(dia_semana: int, service: DisponibilidadeService = Depends(get_service)):
+def listar_por_dia_semana(
+    dia_semana: int = Query(ge=0, le=6, description="0 = segunda ... 6 = domingo"),
+    service: DisponibilidadeService = Depends(get_service),
+):
     return service.listar_por_dia_semana(dia_semana)
 
 @router.get("/{disponibilidade_id}", response_model=DisponibilidadeResponse)

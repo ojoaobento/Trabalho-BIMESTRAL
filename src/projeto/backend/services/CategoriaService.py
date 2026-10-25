@@ -11,15 +11,7 @@ class CategoriaService:
         self.repository = repository
 
     def listar(self):
-        categoria = self.repository.listar()
-
-        if not categoria:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Não foi encontrada nenhuma Categoria."
-            )
-
-        return categoria
+        return self.repository.listar()
 
     def buscar(self, categoria_id : int) -> Categoria:
         categoria = self.repository.buscar_por_id(categoria_id)

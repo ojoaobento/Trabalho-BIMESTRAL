@@ -14,15 +14,7 @@ class UsuarioService:
         self.repository = repository
 
     def listar(self):
-        usuario = self.repository.listar()
-
-        if not usuario:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Não foi encontrada nenhum Usuário."
-            )
-
-        return usuario
+        return self.repository.listar()
 
     def buscar_por_id(self, usuario_id: int) -> Usuario:
         usuario = self.repository.buscar_por_id(usuario_id)
