@@ -38,7 +38,16 @@ class ServicoService:
         return self.repository.listar()
 
     def listar_ativos(self):
-        return self.repository.listar_ativos()
+
+        servico = self.repository.listar_ativos()
+
+        if not servico: 
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Nenhum serviço ativo foi encontrado."
+            )
+
+        return servico
 
     def listar_por_categoria(self, categoria_id: int):
         self._categoria_existente(categoria_id)  
@@ -56,13 +65,13 @@ class ServicoService:
 
         return servico 
 
-    def buscar_por_nome(self, nome:str) -> Servico:
-        servico = self.repository.buscar_por_nome(nome)
+    def buscar_por_nome(self, servico_nome:str) -> Servico:
+        servico = self.repository.buscar_por_nome(servico_nome)
 
         if servico is None:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=(f"Servico {nome} não foi encontrado")
+                detail=(f"Servico {servico_nome} não foi encontrado")
             )
 
         return servico
@@ -109,6 +118,12 @@ class ServicoService:
 
     def deletar(self, servico_id: int):
         servico = self.repository.buscar_por_id(servico_id)
+
+        if not servico:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=(f"Servico {servico_id} não encontrado.")
+            )
 
         try:
             self.repository.deletar(servico)

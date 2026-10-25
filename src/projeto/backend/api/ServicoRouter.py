@@ -5,6 +5,7 @@ from services.ServicoService import ServicoService
 from sqlalchemy.orm import Session
 from core.dependencies import get_usuario_logado
 from repositories.ServicoRepository import ServicoRepository
+from repositories.CategoriaRepository import CategoriaRepository
 from schemas.ServicoSchema import (
     ServicoAtualizarRequest,
     ServicoRequest,
@@ -16,7 +17,7 @@ router = APIRouter(prefix= "/servicos", tags=["Serviços"], dependencies=[Depend
 
 
 def get_service(db: Session = Depends(get_db)) -> ServicoService:
-    return ServicoService(ServicoRepository(db))
+    return ServicoService(ServicoRepository(db), CategoriaRepository(db))
 
 
 @router.get("", response_model=list[ServicoResponse])
@@ -35,7 +36,7 @@ def listar_por_categoria(categoria_id: int, service: ServicoService = Depends(ge
 def buscar_por_id(servico_id: int, service: ServicoService = Depends(get_service)):
     return service.buscar_por_id(servico_id)
 
-@router.get("/{servico_nome}", response_model=ServicoResponse)
+@router.get("/nome/{servico_nome}", response_model=ServicoResponse)
 def buscar_por_nome(servico_nome: str, service : ServicoService = Depends(get_service)):
     return service.buscar_por_nome(servico_nome)
 
