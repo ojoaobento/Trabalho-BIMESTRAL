@@ -7,7 +7,7 @@ class DisponibilidadeRequest(BaseModel):
     dia_semana: int = Field(ge=0, le=6, description="0=Segunda-Feira, 6-Domingo")
     hora_inicio: time 
     hora_fim: time 
-    ativo: bool = Field(default=True)
+    ativo: bool = Field(default=None)
 
 class DisponibilidadeAtualizarRequest(BaseModel):
 

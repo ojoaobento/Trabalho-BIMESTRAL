@@ -6,7 +6,7 @@ from schemas.DisponibilidadeSchema import (
     DisponibilidadeRequest
 )
 
-from datetime import datetime, time 
+from datetime import time 
 
 
 class DisponibilidadeService:
@@ -18,8 +18,15 @@ class DisponibilidadeService:
         return self.repository.listar()
 
     def listar_por_dia_semana(self, dia_semana: int):
-        return self.repository.listar_por_dia_semana(dia_semana)
+        servico = self.repository.listar_por_dia_semana(dia_semana)
 
+        if not servico:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=(f"Não foi encontrado disponibilidades nesse dia {dia_semana}")
+            )
+        return servico
+    
     def buscar_por_id(self, disponibilidade_id: int) -> Disponibilidade:
         disponibilidade = self.repository.buscar_por_id(disponibilidade_id)
         if disponibilidade is None:
@@ -50,14 +57,15 @@ class DisponibilidadeService:
             
     def criar(self, dados: DisponibilidadeRequest) -> Disponibilidade:        
 
-        if dados.ativo:
-            self._conferir_sobreposicao(dados.dia_semana, dados.hora_inicio, dados.hora_fim)
 
         if dados.hora_fim <= dados.hora_inicio:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="O horário de fim deve ser posterior ao horário de início."
             )
+
+        if dados.ativo:
+            self._conferir_sobreposicao(dados.dia_semana, dados.hora_inicio, dados.hora_fim)
         
         disponibilidade = Disponibilidade(**dados.model_dump())
 
@@ -99,6 +107,12 @@ class DisponibilidadeService:
 
     def deletar(self, disponibilidade_id: int) -> None:
         disponibilidade = self.repository.buscar_por_id(disponibilidade_id)
+
+        if not disponibilidade:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=(f"A disponibilidade {disponibilidade_id} não foi encontrada.")
+            )
 
         self.repository.deletar(disponibilidade)
 
