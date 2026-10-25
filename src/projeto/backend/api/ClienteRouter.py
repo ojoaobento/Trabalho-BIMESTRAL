@@ -19,11 +19,11 @@ def get_service(db: Session = Depends(get_db)) -> ClienteService:
 def listar(service: ClienteService = Depends(get_service)):
     return service.listar()
 
-@router.get("/{cliente.id}", response_model=ClienteResponse)
+@router.get("/{cliente_id}", response_model=ClienteResponse)
 def buscar_por_id(cliente_id: int, service: ClienteService = Depends(get_service)):
     return service.buscar_por_id(cliente_id)
 
-@router.get("/{cliente.telefone}", response_model=ClienteResponse)
+@router.get("/{cliente_telefone}", response_model=ClienteResponse)
 def buscar_por_telefone(telefone: str, service: ClienteService = Depends(get_service)):
     return service.buscar_por_telefone(telefone)
 
@@ -31,10 +31,10 @@ def buscar_por_telefone(telefone: str, service: ClienteService = Depends(get_ser
 def criar(dados: ClienteRequest, service: ClienteService = Depends(get_service)):
     return service.criar(dados)
 
-@router.patch("/{cliente.id}", response_model=ClienteResponse)
+@router.patch("/{cliente_id}", response_model=ClienteResponse)
 def atualizar(cliente_id: int, dados: ClienteAtualizarRequest ,service: ClienteService = Depends(get_service)):
     return service.atualizar(cliente_id, dados)
 
-@router.delete("/{cliente.id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{cliente_id}", status_code=status.HTTP_204_NO_CONTENT)
 def deletar(cliente_id: int, service: ClienteService = Depends(get_service)):
     return service.deletar(cliente_id)
