@@ -10,7 +10,7 @@ from schemas.ClienteSchema import (
 from repositories.ClienteRepository import ClienteRepository
 from services.ClienteService import ClienteService
 
-router = APIRouter(prefix="/clientes", tags=["Clientes"], dependencies=[(get_usuario_logado)])
+router = APIRouter(prefix="/clientes", tags=["Clientes"], dependencies=[Depends(get_usuario_logado)])
 
 def get_service(db: Session = Depends(get_db)) -> ClienteService:
     return ClienteService(ClienteRepository(db))
