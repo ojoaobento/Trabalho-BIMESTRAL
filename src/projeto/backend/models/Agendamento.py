@@ -1,7 +1,7 @@
 import enum
 from decimal import Decimal
 from datetime import datetime
-from sqlalchemy import ForeignKey, DateTime, Numeric, func, Enum
+from sqlalchemy import ForeignKey, DateTime, Numeric, func, Enum, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from core.database import Base
 class StatusAgendamento(str, enum.Enum):
@@ -28,6 +28,7 @@ class Agendamento(Base):
     ), default=StatusAgendamento.PENDENTE)
     valor_cobrado: Mapped[Decimal] = mapped_column(Numeric(10,2), nullable=False)
     dt_cadastro: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    observacoes: Mapped[str | None] = mapped_column(Text)
 
     cliente: Mapped["Cliente"] = relationship()
     servico: Mapped["Servico"] = relationship()

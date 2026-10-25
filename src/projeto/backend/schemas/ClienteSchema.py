@@ -7,7 +7,7 @@ class ClienteRequest(BaseModel):
 
     nome: str = Field(min_length= 2, max_length=100)
     telefone: str = Field(pattern=r"^\d{11}$")
-    email: EmailStr
+    email: EmailStr | None = None
     aceita_lembretes: bool = True
     consentimento: Literal[True]
 

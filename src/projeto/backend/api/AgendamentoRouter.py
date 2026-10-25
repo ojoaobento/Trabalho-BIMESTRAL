@@ -2,7 +2,7 @@ from datetime import datetime
  
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.orm import Session
- 
+from core.dependencies import get_usuario_logado
 from core.database import get_db
 from repositories.AgendamentoRepository import AgendamentoRepository
 from repositories.ClienteRepository import ClienteRepository
@@ -18,7 +18,7 @@ from schemas.AgendamentoSchema import (
 from services.AgendamentoService import AgendamentoService
 from services.ClienteService import ClienteService
 from services.LembreteService import LembreteService
-
+from models.Usuario import Usuario
 router = APIRouter(prefix="/agendamentos", tags=["Agendamentos"])
 
 
@@ -39,7 +39,7 @@ def criar(dados: AgendamentoRequest, service: AgendamentoService = Depends(get_s
     return service.criar(dados)
  
  
-@router.get("", response_model=list[AgendamentoResponse])
+@router.get("", response_model=list[AgendamentoResponse], dependencies=[Depends(get_usuario_logado)])
 def listar(
     cliente_id: int | None = None,
     inicio: datetime | None = None,
@@ -53,12 +53,12 @@ def listar(
     return service.listar()
  
  
-@router.get("/{agendamento_id}", response_model=AgendamentoResponse)
+@router.get("/{agendamento_id}", response_model=AgendamentoResponse, dependencies=[Depends(get_usuario_logado)])
 def buscar(agendamento_id: int, service: AgendamentoService = Depends(get_service)):
     return service.buscar_por_id(agendamento_id)
  
  
-@router.patch("/{agendamento_id}", response_model=AgendamentoResponse)
+@router.patch("/{agendamento_id}", response_model=AgendamentoResponse, dependencies=[Depends(get_usuario_logado)])
 def atualizar(
     agendamento_id: int,
     dados: AgendamentoAtualizarRequest,
@@ -67,15 +67,16 @@ def atualizar(
     return service.atualizar(agendamento_id, dados)
  
  
-@router.patch("/{agendamento_id}/status", response_model=AgendamentoResponse)
+@router.patch("/{agendamento_id}/status", response_model=AgendamentoResponse, dependencies=[Depends(get_usuario_logado)])
 def alterar_status(
     agendamento_id: int,
     dados: AgendamentoStatusRequest,
     service: AgendamentoService = Depends(get_service),
+    usuario: Usuario = Depends(get_usuario_logado),
 ):
-    return service.alterar_status(agendamento_id, dados.status, usuario_id=None)
+    return service.alterar_status(agendamento_id, dados.status, usuario_id=usuario.id)
  
  
-@router.delete("/{agendamento_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{agendamento_id}", status_code=status.HTTP_204_NO_CONTENT, dependencies=[Depends(get_usuario_logado)])
 def deletar(agendamento_id: int, service: AgendamentoService = Depends(get_service)):
     service.deletar(agendamento_id)
