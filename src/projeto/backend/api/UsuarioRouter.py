@@ -29,7 +29,7 @@ def listar(service: UsuarioService = Depends(get_service)):
 def buscar_por_id(usuario_id: int, service: UsuarioService = Depends(get_service)):
     return service.buscar_por_id(usuario_id)
 
-@router.get("/{usuario.email}", response_model=UsuarioResponse)
+@router.get("/{usuario_email}", response_model=UsuarioResponse)
 def buscar_por_email(email: str, service: UsuarioService = Depends(get_service)):
     return service.buscar_por_email(email)
 
