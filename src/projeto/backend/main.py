@@ -1,4 +1,5 @@
 "Swagger: http://localhost:8000/docs"
+"uvicorn main:app --reload"
 
 from fastapi import FastAPI
  
