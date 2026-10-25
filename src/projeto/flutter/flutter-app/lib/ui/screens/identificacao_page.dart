@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:main/ui/screens/revisao_page.dart';
 
 class IdentificacaoPage extends StatefulWidget {
   const IdentificacaoPage({
@@ -6,11 +7,15 @@ class IdentificacaoPage extends StatefulWidget {
     required this.data,
     required this.horario,
     required this.servico,
+    required this.preco,
+    required this.duracao,
   });
 
   final DateTime data;
   final String horario;
   final String servico;
+  final double preco;
+  final int duracao;
 
   @override
   State<IdentificacaoPage> createState() => _IdentificacaoPageState();
@@ -392,7 +397,22 @@ class _IdentificacaoPageState extends State<IdentificacaoPage> {
             ),
           ),
           FilledButton.icon(
-            onPressed: _autorizouDados ? () {} : null,
+          onPressed: _autorizouDados
+              ? () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => RevisaoPage(
+                        data: widget.data,
+                        horario: widget.horario,
+                        servico: widget.servico,
+                        preco: widget.preco,
+                        duracao: widget.duracao,
+                        nome: _nomeController.text,
+                        whatsApp: _whatsAppController.text,
+                      ),
+                    ),
+                  )
+              : null,
             style: FilledButton.styleFrom(
               backgroundColor: _corPrincipal,
               padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 13),

@@ -399,6 +399,8 @@ class _ServicosPageState extends State<ServicosPage> {
                         data: widget.data,
                         horario: widget.horario,
                         servico: servico.nome,
+                        preco: servico.preco,
+                        duracao: servico.duracao,
                       ),
                     ),
                   ),
