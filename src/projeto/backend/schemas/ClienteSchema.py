@@ -17,7 +17,7 @@ class ClienteAtualizarRequest(BaseModel):
 
     nome: Optional[str] = Field(default=None, min_length=2, max_length=100)
     telefone: Optional[str] = Field(default=None, pattern=r"^\d{11}$")
-    email: Optional[str] = Field(default=None, min_length=2, max_length=100)
+    email: Optional[EmailStr] = None
     aceita_lembretes: Optional[bool] = None
 
 class ClienteResponse(BaseModel):

@@ -23,16 +23,16 @@ def listar(service: ClienteService = Depends(get_service)):
 def buscar_por_id(cliente_id: int, service: ClienteService = Depends(get_service)):
     return service.buscar_por_id(cliente_id)
 
-@router.get("/{cliente_telefone}", response_model=ClienteResponse)
+@router.get("/telefone/{cliente_telefone}", response_model=ClienteResponse)
 def buscar_por_telefone(telefone: str, service: ClienteService = Depends(get_service)):
     return service.buscar_por_telefone(telefone)
 
-@router.post("", response_model=ClienteRequest, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=ClienteResponse, status_code=status.HTTP_201_CREATED)
 def criar(dados: ClienteRequest, service: ClienteService = Depends(get_service)):
     return service.criar(dados)
 
 @router.patch("/{cliente_id}", response_model=ClienteResponse)
-def atualizar(cliente_id: int, dados: ClienteAtualizarRequest ,service: ClienteService = Depends(get_service)):
+def atualizar(cliente_id: int, dados: ClienteAtualizarRequest, service: ClienteService = Depends(get_service)):
     return service.atualizar(cliente_id, dados)
 
 @router.delete("/{cliente_id}", status_code=status.HTTP_204_NO_CONTENT)

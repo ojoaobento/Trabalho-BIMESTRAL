@@ -53,7 +53,7 @@ class ClienteService:
 
         campos = dados.model_dump(exclude_unset=True)
 
-        for campo in ["nome", "telefone", "aceita_lembretes"]:
+        for campo in ["nome", "telefone", "email", "aceita_lembretes"]:
             if campo in campos and campos[campo] is None:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,

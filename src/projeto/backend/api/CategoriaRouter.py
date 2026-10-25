@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, status
 
 from sqlalchemy.orm import Session
-
+from core.dependencies import get_usuario_logado
 from core.database import get_db
 from repositories.CategoriaRepository import CategoriaRepository
 from services.CategoriaService import CategoriaService
@@ -11,7 +11,7 @@ from schemas.CategoriaSchema import (
     CategoriaResponse
 )
 
-router = APIRouter(prefix="/categorias", tags=["Categorias"])
+router = APIRouter(prefix="/categorias", tags=["Categorias"], dependencies=[Depends(get_usuario_logado)])
 
 def get_service(db : Session = Depends(get_db)) -> CategoriaService:
     return CategoriaService(CategoriaRepository(db))

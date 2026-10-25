@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, status, HTTPException
 from core.database import get_db
+from core.dependencies import get_usuario_logado
 from services.ServicoService import ServicoService
 from sqlalchemy.orm import Session
 from core.dependencies import get_usuario_logado
@@ -11,7 +12,7 @@ from schemas.ServicoSchema import (
 )
 
 
-router = APIRouter(prefix= "/servicos", tags=["Serviços"])
+router = APIRouter(prefix= "/servicos", tags=["Serviços"], dependencies=[Depends(get_usuario_logado)])
 
 
 def get_service(db: Session = Depends(get_db)) -> ServicoService:
