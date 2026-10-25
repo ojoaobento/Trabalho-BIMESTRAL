@@ -61,7 +61,7 @@ class AgendamentoService:
         return agendamento
 
     
-    def listar_por_período(self, inicio: datetime, fim: datetime):
+    def listar_por_periodo(self, inicio: datetime, fim: datetime):
         if fim <= inicio:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,

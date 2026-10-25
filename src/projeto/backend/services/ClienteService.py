@@ -6,7 +6,6 @@ from repositories.ClienteRepository import ClienteRepository
 from schemas.ClienteSchema import (
     ClienteAtualizarRequest,
     ClienteRequest,
-    ClienteResponse
 )
 
 class ClienteService:
@@ -36,6 +35,11 @@ class ClienteService:
 
         return cliente
 
+    def buscar_ou_criar(self, dados: ClienteRequest) -> Cliente:
+        cliente = self.repository.buscar_por_telefone(dados.telefone)
+        if cliente is not None:
+            return cliente
+        return self.criar(dados)
 
     def criar(self, dados: ClienteRequest) -> Cliente:
         if self.repository.buscar_por_telefone(dados.telefone):
@@ -49,7 +53,7 @@ class ClienteService:
         return self.repository.salvar(cliente)
 
     def atualizar(self, cliente_id: int, dados: ClienteAtualizarRequest) -> Cliente:
-        cliente = self.repository.buscar_por_id(cliente_id)
+        cliente = self.buscar_por_id(cliente_id)
 
         campos = dados.model_dump(exclude_unset=True)
 
@@ -74,7 +78,7 @@ class ClienteService:
         return self.repository.salvar(cliente)
 
     def deletar(self, cliente_id : int):
-        cliente = self.repository.buscar_por_id(cliente_id)
+        cliente = self.buscar_por_id(cliente_id)
 
         try:
             self.repository.deletar(cliente)
