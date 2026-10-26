@@ -1,7 +1,10 @@
+
 import 'package:flutter/material.dart';
 
 import 'package:main/screens/admin_login.dart';
 import 'package:main/services/api_client.dart';
+import 'package:main/screens/categoria_page.dart';
+import 'package:main/screens/servico_page.dart';
 
 class _ItemMenu {
   final IconData icone;
@@ -40,6 +43,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
   @override
   void initState() {
     super.initState();
+
     ApiClient.instancia.aoExpirarSessao =
         () => _voltarParaLogin(sessaoExpirou: true);
   }
@@ -52,12 +56,16 @@ class _AdminDashboardState extends State<AdminDashboard> {
 
   void _voltarParaLogin({bool sessaoExpirou = false}) {
     if (!mounted) return;
+
     final messenger = ScaffoldMessenger.of(context);
+
     ApiClient.instancia.sair();
 
     Navigator.pushReplacement(
       context,
-      MaterialPageRoute(builder: (_) => const Adminlogin()),
+      MaterialPageRoute(
+        builder: (_) => const Adminlogin(),
+      ),
     );
 
     if (sessaoExpirou) {
@@ -70,6 +78,30 @@ class _AdminDashboardState extends State<AdminDashboard> {
     }
   }
 
+  Widget _construirConteudo() {
+    switch (_selectedIndex) {
+
+      case 0:
+        return const ServicosPage();
+
+      case 4:
+        return const CategoriasPage();
+
+      default:
+        return Center(
+          child: Text(
+            ''
+            '"${_itens[_selectedIndex].titulo}"',
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontSize: 16,
+              color: Colors.grey,
+            ),
+          ),
+        );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final bool menuFixo =
@@ -77,19 +109,22 @@ class _AdminDashboardState extends State<AdminDashboard> {
 
     return Scaffold(
       backgroundColor: fundo,
+
       appBar: AppBar(
         backgroundColor: vinho,
         foregroundColor: Colors.white,
         elevation: 0,
         title: const Text(
           'Painel Administrativo',
-          style: TextStyle(fontWeight: FontWeight.bold),
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+          ),
         ),
         actions: [
           IconButton(
             icon: const Icon(Icons.logout),
             tooltip: 'Sair',
-            onPressed: _voltarParaLogin, 
+            onPressed: _voltarParaLogin,
           ),
         ],
       ),
@@ -106,8 +141,12 @@ class _AdminDashboardState extends State<AdminDashboard> {
           if (menuFixo) ...[
             Material(
               color: rosaClaro,
-              child: SizedBox(width: 280, child: _menu()),
+              child: SizedBox(
+                width: 280,
+                child: _menu(),
+              ),
             ),
+
             const VerticalDivider(
               width: 1,
               thickness: 1,
@@ -130,19 +169,14 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       color: texto,
                     ),
                   ),
-                  const Divider(height: 30, color: Color(0xFFF1DDE5)),
+
+                  const Divider(
+                    height: 30,
+                    color: Color(0xFFF1DDE5),
+                  ),
+
                   Expanded(
-                    child: Center(
-                      child: Text(
-                        'Aqui será exibida a tabela/CRUD de:\n'
-                        '"${_itens[_selectedIndex].titulo}"',
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          fontSize: 16,
-                          color: Colors.grey,
-                        ),
-                      ),
-                    ),
+                    child: _construirConteudo(),
                   ),
                 ],
               ),
@@ -158,7 +192,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
       padding: const EdgeInsets.symmetric(vertical: 16),
       children: [
         const Padding(
-          padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          padding: EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 8,
+          ),
           child: Text(
             'Menu Principal',
             style: TextStyle(
@@ -168,13 +205,22 @@ class _AdminDashboardState extends State<AdminDashboard> {
             ),
           ),
         ),
+
         for (int i = 0; i < _itens.length; i++)
-          _buildNavItem(i, _itens[i], fecharAoSelecionar),
+          _buildNavItem(
+            i,
+            _itens[i],
+            fecharAoSelecionar,
+          ),
       ],
     );
   }
 
-  Widget _buildNavItem(int index, _ItemMenu item, bool fecharAoSelecionar) {
+  Widget _buildNavItem(
+    int index,
+    _ItemMenu item,
+    bool fecharAoSelecionar,
+  ) {
     final bool isSelected = _selectedIndex == index;
 
     return ListTile(
@@ -182,19 +228,26 @@ class _AdminDashboardState extends State<AdminDashboard> {
         item.icone,
         color: isSelected ? vinho : Colors.black87,
       ),
+
       title: Text(
         item.titulo,
         style: TextStyle(
-          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+          fontWeight:
+              isSelected ? FontWeight.bold : FontWeight.normal,
           color: isSelected ? vinho : Colors.black87,
         ),
       ),
+
       selected: isSelected,
       selectedTileColor: vinho.withOpacity(0.12),
+
       onTap: () {
-        setState(() => _selectedIndex = index);
+        setState(() {
+          _selectedIndex = index;
+        });
+
         if (fecharAoSelecionar) {
-          Navigator.pop(context); 
+          Navigator.pop(context);
         }
       },
     );
