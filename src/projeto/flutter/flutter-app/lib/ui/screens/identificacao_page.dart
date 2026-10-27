@@ -32,24 +32,11 @@ class _IdentificacaoPageState extends State<IdentificacaoPage> {
   final _whatsAppController = TextEditingController(text: '(44) 99876-5432');
 
   @override
-  void initState() {
-    super.initState();
-    _nomeController.addListener(_atualizarIdentificacao);
-    _whatsAppController.addListener(_atualizarIdentificacao);
-  }
-
-  @override
   void dispose() {
-    _nomeController
-      ..removeListener(_atualizarIdentificacao)
-      ..dispose();
-    _whatsAppController
-      ..removeListener(_atualizarIdentificacao)
-      ..dispose();
+    _nomeController.dispose();
+    _whatsAppController.dispose();
     super.dispose();
   }
-
-  void _atualizarIdentificacao() => setState(() {});
 
   @override
   Widget build(BuildContext context) {
@@ -220,6 +207,16 @@ class _IdentificacaoPageState extends State<IdentificacaoPage> {
   }
 
   Widget _clienteAgendado() {
+    return ValueListenableBuilder<TextEditingValue>(
+      valueListenable: _nomeController,
+      builder: (context, _, _) => ValueListenableBuilder<TextEditingValue>(
+        valueListenable: _whatsAppController,
+        builder: (context, _, _) => _clienteAgendadoConteudo(),
+      ),
+    );
+  }
+
+  Widget _clienteAgendadoConteudo() {
     return Container(
       padding: const EdgeInsets.all(13),
       decoration: BoxDecoration(
@@ -397,8 +394,8 @@ class _IdentificacaoPageState extends State<IdentificacaoPage> {
             ),
           ),
           FilledButton.icon(
-          onPressed: _autorizouDados
-              ? () => Navigator.push(
+            onPressed: _autorizouDados
+                ? () => Navigator.push(
                     context,
                     MaterialPageRoute(
                       builder: (_) => RevisaoPage(
@@ -412,7 +409,7 @@ class _IdentificacaoPageState extends State<IdentificacaoPage> {
                       ),
                     ),
                   )
-              : null,
+                : null,
             style: FilledButton.styleFrom(
               backgroundColor: _corPrincipal,
               padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 13),

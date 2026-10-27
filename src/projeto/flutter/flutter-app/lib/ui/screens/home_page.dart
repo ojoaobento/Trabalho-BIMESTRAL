@@ -11,8 +11,6 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   String horarioSelecionado = '14:30';
   late DateTime dataSelecionada;
-  final _chaveNavegador = GlobalKey<NavigatorState>();
-
   final horarios = const [
     '09:00',
     '10:30',
@@ -37,68 +35,60 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      navigatorKey: _chaveNavegador,
-      theme: ThemeData(
-        useMaterial3: true,
-        colorScheme: ColorScheme.fromSeed(seedColor: corPrincipal),
-      ),
-      home: Scaffold(
-        backgroundColor: corFundo,
-        body: SafeArea(
-          child: Column(
-            children: [
-              _cabecalho(),
-              Expanded(
-                child: ListView(
-                  padding: const EdgeInsets.all(20),
-                  children: [
-                    const Text(
-                      'ESTÉTICA & BELEZA',
-                      style: TextStyle(
-                        color: corPrincipal,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 1.2,
-                      ),
+    return Scaffold(
+      backgroundColor: corFundo,
+      body: SafeArea(
+        child: Column(
+          children: [
+            _cabecalho(),
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.all(20),
+                children: [
+                  const Text(
+                    'ESTÉTICA & BELEZA',
+                    style: TextStyle(
+                      color: corPrincipal,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 1.2,
                     ),
-                    const SizedBox(height: 8),
-                    const Text(
-                      'Escolha o melhor\nhorário para você',
-                      style: TextStyle(
-                        fontSize: 29,
-                        height: 1.1,
-                        fontWeight: FontWeight.bold,
-                        color: corTexto,
-                      ),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Escolha o melhor\nhorário para você',
+                    style: TextStyle(
+                      fontSize: 29,
+                      height: 1.1,
+                      fontWeight: FontWeight.bold,
+                      color: corTexto,
                     ),
-                    const SizedBox(height: 20),
-                    _cardDestaque(),
-                    const SizedBox(height: 28),
-                    _calendario(),
-                    const SizedBox(height: 28),
-                    Text(
-                      'Horários livres para ${_formatarData(dataSelecionada)}',
-                      style: TextStyle(
-                        fontSize: 17,
-                        fontWeight: FontWeight.bold,
-                        color: corTexto,
-                      ),
+                  ),
+                  const SizedBox(height: 20),
+                  _cardDestaque(),
+                  const SizedBox(height: 28),
+                  _calendario(),
+                  const SizedBox(height: 28),
+                  Text(
+                    'Horários livres para ${_formatarData(dataSelecionada)}',
+                    style: TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.bold,
+                      color: corTexto,
                     ),
-                    const SizedBox(height: 4),
-                    const Text(
-                      '●  7 horários livres',
-                      style: TextStyle(color: corPrincipal),
-                    ),
-                    const SizedBox(height: 20),
-                    _secaoDeHorarios('Manhã', horarios.take(2).toList()),
-                    _secaoDeHorarios('Tarde', horarios.skip(2).toList()),
-                  ],
-                ),
+                  ),
+                  const SizedBox(height: 4),
+                  const Text(
+                    '●  7 horários livres',
+                    style: TextStyle(color: corPrincipal),
+                  ),
+                  const SizedBox(height: 20),
+                  _secaoDeHorarios('Manhã', horarios.take(2).toList()),
+                  _secaoDeHorarios('Tarde', horarios.skip(2).toList()),
+                ],
               ),
-              _rodape(),
-            ],
-          ),
+            ),
+            _rodape(),
+          ],
         ),
       ),
     );
@@ -296,10 +286,8 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> _abrirCalendarioCompleto() async {
     var dataTemporaria = dataSelecionada;
-    final contextoDoNavegador = _chaveNavegador.currentContext;
-    if (contextoDoNavegador == null) return;
     final dataEscolhida = await showDialog<DateTime>(
-      context: contextoDoNavegador,
+      context: context,
       builder: (contextoDoDialogo) => StatefulBuilder(
         builder: (contextoDoDialogo, setStateDoDialogo) => Dialog(
           insetPadding: const EdgeInsets.symmetric(horizontal: 24),
@@ -484,7 +472,7 @@ class _HomePageState extends State<HomePage> {
           SizedBox(
             width: double.infinity,
             child: FilledButton(
-              onPressed: () => _chaveNavegador.currentState?.push(
+              onPressed: () => Navigator.of(context).push(
                 MaterialPageRoute(
                   builder: (_) => ServicosPage(
                     data: dataSelecionada,
