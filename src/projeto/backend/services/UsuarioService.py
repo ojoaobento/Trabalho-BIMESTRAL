@@ -77,7 +77,7 @@ class UsuarioService:
         return self.repository.salvar(usuario)
 
     def deletar(self, usuario_id : int) -> None:
-        usuario = self.repository.buscar_por_id(id)
+        usuario = self.repository.buscar_por_id(usuario_id)
         try:
             self.repository.deletar(usuario)
         except IntegrityError:
