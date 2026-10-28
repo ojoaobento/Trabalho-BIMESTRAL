@@ -9,6 +9,8 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
+  static const _horarioDestaque = '14:30';
+
   String horarioSelecionado = '14:30';
   late DateTime dataSelecionada;
   final horarios = const [
@@ -171,7 +173,7 @@ class _HomePageState extends State<HomePage> {
           const Text('Janela de 2h30', style: TextStyle(color: Colors.white70)),
           const SizedBox(height: 16),
           FilledButton.icon(
-            onPressed: () => setState(() => horarioSelecionado = '14:30'),
+            onPressed: _escolherProximoHorario,
             style: FilledButton.styleFrom(
               backgroundColor: Colors.white,
               foregroundColor: corPrincipal,
@@ -180,6 +182,28 @@ class _HomePageState extends State<HomePage> {
             label: const Text('Escolher este horário'),
           ),
         ],
+      ),
+    );
+  }
+
+  /// Seleciona o horário exibido no destaque para a data atual e avança para
+  /// a etapa de escolha do serviço.
+  void _escolherProximoHorario() {
+    final hoje = DateTime.now();
+    final dataDeHoje = DateTime(hoje.year, hoje.month, hoje.day);
+
+    setState(() {
+      dataSelecionada = dataDeHoje;
+      horarioSelecionado = _horarioDestaque;
+    });
+
+    _abrirServicos(data: dataDeHoje, horario: _horarioDestaque);
+  }
+
+  void _abrirServicos({required DateTime data, required String horario}) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => ServicosPage(data: data, horario: horario),
       ),
     );
   }
@@ -472,13 +496,9 @@ class _HomePageState extends State<HomePage> {
           SizedBox(
             width: double.infinity,
             child: FilledButton(
-              onPressed: () => Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => ServicosPage(
-                    data: dataSelecionada,
-                    horario: horarioSelecionado,
-                  ),
-                ),
+              onPressed: () => _abrirServicos(
+                data: dataSelecionada,
+                horario: horarioSelecionado,
               ),
               style: FilledButton.styleFrom(
                 backgroundColor: corPrincipal,
