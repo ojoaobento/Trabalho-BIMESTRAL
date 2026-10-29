@@ -397,7 +397,7 @@ class _IdentificacaoPageState extends State<IdentificacaoPage> {
             onPressed: _autorizouDados
                 ? () => Navigator.push(
                     context,
-                    MaterialPageRoute(
+                    _InstantPageRoute(
                       builder: (_) => RevisaoPage(
                         data: widget.data,
                         horario: widget.horario,
@@ -422,4 +422,14 @@ class _IdentificacaoPageState extends State<IdentificacaoPage> {
       ),
     );
   }
+}
+
+class _InstantPageRoute<T> extends PageRouteBuilder<T> {
+  _InstantPageRoute({required WidgetBuilder builder})
+    : super(
+        pageBuilder: (context, animation, secondaryAnimation) =>
+            builder(context),
+        transitionDuration: Duration.zero,
+        reverseTransitionDuration: Duration.zero,
+      );
 }
