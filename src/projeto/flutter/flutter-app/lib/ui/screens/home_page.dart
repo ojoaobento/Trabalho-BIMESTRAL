@@ -9,6 +9,8 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
+  static const _horarioDestaque = '14:30';
+
   String horarioSelecionado = '14:30';
   late DateTime dataSelecionada;
   final horarios = const [
@@ -171,7 +173,7 @@ class _HomePageState extends State<HomePage> {
           const Text('Janela de 2h30', style: TextStyle(color: Colors.white70)),
           const SizedBox(height: 16),
           FilledButton.icon(
-            onPressed: () => setState(() => horarioSelecionado = '14:30'),
+            onPressed: _escolherProximoHorario,
             style: FilledButton.styleFrom(
               backgroundColor: Colors.white,
               foregroundColor: corPrincipal,
@@ -180,6 +182,28 @@ class _HomePageState extends State<HomePage> {
             label: const Text('Escolher este horário'),
           ),
         ],
+      ),
+    );
+  }
+
+  /// Seleciona o horário exibido no destaque para a data atual e avança para
+  /// a etapa de escolha do serviço.
+  void _escolherProximoHorario() {
+    final hoje = DateTime.now();
+    final dataDeHoje = DateTime(hoje.year, hoje.month, hoje.day);
+
+    setState(() {
+      dataSelecionada = dataDeHoje;
+      horarioSelecionado = _horarioDestaque;
+    });
+
+    _abrirServicos(data: dataDeHoje, horario: _horarioDestaque);
+  }
+
+  void _abrirServicos({required DateTime data, required String horario}) {
+    Navigator.of(context).push(
+      _InstantPageRoute(
+        builder: (_) => ServicosPage(data: data, horario: horario),
       ),
     );
   }
@@ -285,11 +309,17 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _abrirCalendarioCompleto() async {
-    var dataTemporaria = dataSelecionada;
-    final dataEscolhida = await showDialog<DateTime>(
-      context: context,
-      builder: (contextoDoDialogo) => StatefulBuilder(
-        builder: (contextoDoDialogo, setStateDoDialogo) => Dialog(
+    final dataTemporaria = ValueNotifier<DateTime>(dataSelecionada);
+
+    try {
+      final dataEscolhida = await showGeneralDialog<DateTime>(
+        context: context,
+        barrierDismissible: true,
+        barrierLabel: MaterialLocalizations.of(context)
+            .modalBarrierDismissLabel,
+        barrierColor: Colors.black54,
+        transitionDuration: Duration.zero,
+        pageBuilder: (contextoDoDialogo, _, _) => Dialog(
           insetPadding: const EdgeInsets.symmetric(horizontal: 24),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(24),
@@ -299,32 +329,34 @@ class _HomePageState extends State<HomePage> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        _tituloMes(dataTemporaria),
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: corTexto,
+                ValueListenableBuilder<DateTime>(
+                  valueListenable: dataTemporaria,
+                  builder: (context, data, _) => Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          _tituloMes(data),
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: corTexto,
+                          ),
                         ),
                       ),
-                    ),
-                    TextButton.icon(
-                      onPressed: () => Navigator.pop(contextoDoDialogo),
-                      style: TextButton.styleFrom(foregroundColor: corTexto),
-                      icon: const Icon(Icons.close, size: 16),
-                      label: const Text('Fechar'),
-                    ),
-                  ],
+                      TextButton.icon(
+                        onPressed: () => Navigator.pop(contextoDoDialogo),
+                        style: TextButton.styleFrom(foregroundColor: corTexto),
+                        icon: const Icon(Icons.close, size: 16),
+                        label: const Text('Fechar'),
+                      ),
+                    ],
+                  ),
                 ),
                 const Divider(color: corBorda),
                 CalendarDatePicker(
-                  initialDate: dataTemporaria,
+                  initialDate: dataSelecionada,
                   firstDate: DateTime(2020),
                   lastDate: DateTime(2035),
-                  onDateChanged: (data) =>
-                      setStateDoDialogo(() => dataTemporaria = data),
+                  onDateChanged: (data) => dataTemporaria.value = data,
                 ),
                 const Text(
                   'Toque em um dia para atualizar a grade de horários disponíveis.',
@@ -332,26 +364,29 @@ class _HomePageState extends State<HomePage> {
                   style: TextStyle(fontSize: 10, color: Colors.black54),
                 ),
                 const SizedBox(height: 14),
-                SizedBox(
-                  width: double.infinity,
-                  child: FilledButton(
-                    onPressed: () =>
-                        Navigator.pop(contextoDoDialogo, dataTemporaria),
-                    style: FilledButton.styleFrom(
-                      backgroundColor: corPrincipal,
+                ValueListenableBuilder<DateTime>(
+                  valueListenable: dataTemporaria,
+                  builder: (context, data, _) => SizedBox(
+                    width: double.infinity,
+                    child: FilledButton(
+                      onPressed: () => Navigator.pop(contextoDoDialogo, data),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: corPrincipal,
+                      ),
+                      child: Text('Selecionar dia ${data.day}'),
                     ),
-                    child: Text('Selecionar dia ${dataTemporaria.day}'),
                   ),
                 ),
               ],
             ),
           ),
         ),
-      ),
-    );
+      );
 
-    if (dataEscolhida != null) {
+      if (!mounted || dataEscolhida == null) return;
       setState(() => dataSelecionada = dataEscolhida);
+    } finally {
+      dataTemporaria.dispose();
     }
   }
 
@@ -472,13 +507,9 @@ class _HomePageState extends State<HomePage> {
           SizedBox(
             width: double.infinity,
             child: FilledButton(
-              onPressed: () => Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => ServicosPage(
-                    data: dataSelecionada,
-                    horario: horarioSelecionado,
-                  ),
-                ),
+              onPressed: () => _abrirServicos(
+                data: dataSelecionada,
+                horario: horarioSelecionado,
               ),
               style: FilledButton.styleFrom(
                 backgroundColor: corPrincipal,
@@ -491,4 +522,14 @@ class _HomePageState extends State<HomePage> {
       ),
     );
   }
+}
+
+class _InstantPageRoute<T> extends PageRouteBuilder<T> {
+  _InstantPageRoute({required WidgetBuilder builder})
+    : super(
+        pageBuilder: (context, animation, secondaryAnimation) =>
+            builder(context),
+        transitionDuration: Duration.zero,
+        reverseTransitionDuration: Duration.zero,
+      );
 }

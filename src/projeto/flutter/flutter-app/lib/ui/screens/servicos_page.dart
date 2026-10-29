@@ -263,6 +263,13 @@ class _ServicosPageState extends State<ServicosPage> {
     return InkWell(
       onTap: () => setState(() => _servicoSelecionado = servico),
       borderRadius: BorderRadius.circular(13),
+      // Os cartões já mostram a seleção pela borda e pelo ícone. Desativar a
+      // onda de toque evita o clarão circular ao escolher um serviço.
+      splashFactory: NoSplash.splashFactory,
+      splashColor: Colors.transparent,
+      highlightColor: Colors.transparent,
+      hoverColor: Colors.transparent,
+      focusColor: Colors.transparent,
       child: Container(
         margin: const EdgeInsets.only(bottom: 9),
         padding: const EdgeInsets.all(13),
@@ -394,7 +401,7 @@ class _ServicosPageState extends State<ServicosPage> {
                 ? null
                 : () => Navigator.push(
                     context,
-                    MaterialPageRoute(
+                    _InstantPageRoute(
                       builder: (_) => IdentificacaoPage(
                         data: widget.data,
                         horario: widget.horario,
@@ -435,6 +442,16 @@ class _ServicosPageState extends State<ServicosPage> {
     ];
     return '${dias[widget.data.weekday - 1]} ${widget.data.day} de ${meses[widget.data.month - 1]} às ${widget.horario}';
   }
+}
+
+class _InstantPageRoute<T> extends PageRouteBuilder<T> {
+  _InstantPageRoute({required WidgetBuilder builder})
+    : super(
+        pageBuilder: (context, animation, secondaryAnimation) =>
+            builder(context),
+        transitionDuration: Duration.zero,
+        reverseTransitionDuration: Duration.zero,
+      );
 }
 
 class _Servico {
