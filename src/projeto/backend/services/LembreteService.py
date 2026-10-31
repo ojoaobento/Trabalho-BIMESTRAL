@@ -37,7 +37,7 @@ class LembreteService:
         if lembrete is None:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="Lembrete {lembrete_id} não encontrado."
+                detail=f"Lembrete {lembrete_id} não encontrado."
             )
 
         return lembrete
@@ -72,7 +72,7 @@ class LembreteService:
             if campo in campos and campos[campo] is None:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="O campo {campo} não pode ser nulo...."
+                    detail=f"O campo {campo} não pode ser nulo...."
                 )            
 
         estava_enviado = lembrete.enviado
@@ -100,20 +100,40 @@ class LembreteService:
         lembrete.enviado_em = datetime.now(timezone.utc)
         return self.repository.salvar(lembrete)
 
-    def criar_para_agendamento(self, agendamento: Agendamento) -> Lembrete | None:
-        enviar_em = agendamento.dt_inicio - timedelta(hours=24)
-        if enviar_em <= datetime.now(timezone.utc):
-            return None
-        lembrete = Lembrete(
-            agendamento_id=agendamento.id,
-            tipo=TipoLembrete.LEMBRETE_24H,
-            enviar_em=enviar_em,
-        )
-        return self.repository.salvar(lembrete)
+    def criar_para_agendamento(self, agendamento: Agendamento) -> list[Lembrete]:
+ 
+        criados = []
+        agora = datetime.now(timezone.utc)
+
+        lembretes_existentes = self.repository.listar_por_agendamento(agendamento.id)
+        tipos_existentes = {l.tipo for l in lembretes_existentes}
+
+        if TipoLembrete.CONFIRMACAO not in tipos_existentes:
+            lembrete_confirmacao = Lembrete(
+                agendamento_id=agendamento.id,
+                servico_id=agendamento.servico_id,
+                tipo=TipoLembrete.CONFIRMACAO,
+                enviar_em=agora,
+                enviado=False,
+            )
+            criados.append(self.repository.salvar(lembrete_confirmacao))
+
+        cliente = agendamento.cliente
+        aceita = getattr(cliente, "aceita_lembretes", True) if cliente else True
+        if aceita and TipoLembrete.LEMBRETE_24H not in tipos_existentes:
+            enviar_em_1h = agendamento.dt_inicio - timedelta(hours=1)
+            lembrete_1h = Lembrete(
+                agendamento_id=agendamento.id,
+                servico_id=agendamento.servico_id,
+                tipo=TipoLembrete.LEMBRETE_24H,
+                enviar_em=enviar_em_1h,
+                enviado=False,
+            )
+            criados.append(self.repository.salvar(lembrete_1h))
+
+        return criados
     
     def cancelar_pendentes(self, agendamento_id: int) -> None:
         for lembrete in self.repository.listar_por_agendamento(agendamento_id):
             if not lembrete.enviado:
                 self.repository.deletar(lembrete)
-
-    

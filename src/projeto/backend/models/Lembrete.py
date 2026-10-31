@@ -14,6 +14,7 @@ class Lembrete(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     agendamento_id: Mapped[int] = mapped_column(ForeignKey("agendamento.id"), index=True)
+    servico_id: Mapped[int | None] = mapped_column(ForeignKey("servico.id"), nullable=True, index=True)
     enviar_em: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
     tipo: Mapped[TipoLembrete] = mapped_column(
         Enum(TipoLembrete, name="tipo_lembrete")
@@ -22,3 +23,4 @@ class Lembrete(Base):
     enviado_em: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     agendamento: Mapped["Agendamento"] = relationship()
+    servico: Mapped["Servico | None"] = relationship()

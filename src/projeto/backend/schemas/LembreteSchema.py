@@ -11,6 +11,7 @@ class TipoLembrete(str, enum.Enum):
 class LembreteRequest(BaseModel):
 
     agendamento_id: int
+    servico_id: Optional[int] = None
     enviar_em: datetime
     tipo: TipoLembrete
     enviado: bool = False
@@ -18,6 +19,7 @@ class LembreteRequest(BaseModel):
 
 class LembreteAtualizarRequest(BaseModel):
 
+    servico_id: Optional[int] = None
     enviar_em: Optional[datetime] = None
     tipo: Optional[TipoLembrete] = None
 
@@ -27,8 +29,8 @@ class LembreteResponse(BaseModel):
 
     id: int
     agendamento_id: int
+    servico_id: Optional[int] = None
     enviar_em: datetime
     tipo: TipoLembrete
     enviado: bool
     enviado_em: Optional[datetime] = None
-
