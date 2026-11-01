@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:main/ui/screens/revisao_page.dart';
 
 class IdentificacaoPage extends StatefulWidget {
@@ -296,16 +297,15 @@ class _IdentificacaoPageState extends State<IdentificacaoPage> {
         onPressed: () {},
         style: OutlinedButton.styleFrom(
           foregroundColor: _corTexto,
+          backgroundColor: Colors.white,
+          surfaceTintColor: Colors.white,
           side: const BorderSide(color: _corBorda),
           padding: const EdgeInsets.symmetric(vertical: 12),
         ),
-        icon: const Text(
-          'G',
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-            color: Color(0xFF4285F4),
-          ),
+        icon: SvgPicture.asset(
+          'assets/icons/google_g.svg',
+          width: 18,
+          height: 18,
         ),
         label: const Text(
           'Continuar com o Google',
