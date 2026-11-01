@@ -21,8 +21,7 @@ class AgendaApp extends StatelessWidget {
       theme: ThemeData(
         useMaterial3: true,
         colorScheme: ColorScheme.fromSeed(seedColor: _corPrincipal),
-        // Evita o clarão do efeito padrão de toque no navegador. O estado
-        // selecionado dos controles continua sendo indicado pelas cores.
+        // Evita o clarão do efeito padrão de toque no navegador. O estado de toque é indicado apenas pelo efeito de foco.
         splashFactory: NoSplash.splashFactory,
         highlightColor: Colors.transparent,
         pageTransitionsTheme: const PageTransitionsTheme(
