@@ -164,8 +164,8 @@ class _IdentificacaoPageState extends State<IdentificacaoPage> {
                 style: TextStyle(fontSize: 10, color: Colors.black45),
               ),
               Text(
-                '5. Status do agendamento',
-                style: TextStyle(fontSize: 8, color: Colors.black45),
+                '5. Status',
+                style: TextStyle(fontSize: 10, color: Colors.black45),
               ),
             ],
           ),

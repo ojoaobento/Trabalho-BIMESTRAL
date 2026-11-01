@@ -124,7 +124,7 @@ class _HomePageState extends State<HomePage> {
           ),
           const SizedBox(height: 14),
           const Text(
-            '1. Horário  •  2. Serviço  •  3. Seus dados  •  4. Confirmar  •  5. Status do agendamento',
+            '1. Horário  •  2. Serviço  •  3. Seus dados  •  4. Confirmar  •  5. Status',
             textAlign: TextAlign.center,
             style: TextStyle(fontSize: 9, color: corPrincipal),
           ),

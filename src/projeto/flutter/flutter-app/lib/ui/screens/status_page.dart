@@ -125,7 +125,7 @@ class SolicitacaoConfirmadaPage extends StatelessWidget {
             _EtapaProgresso('2. Serviço'),
             _EtapaProgresso('3. Seus dados'),
             _EtapaProgresso('4. Confirmar'),
-            _EtapaProgresso('5. Status do agendamento', ativa: true),
+            _EtapaProgresso('5. Status', ativa: true),
           ],
         ),
         const SizedBox(height: 7),
