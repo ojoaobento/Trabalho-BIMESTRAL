@@ -144,7 +144,9 @@ class AgendamentoService:
             valor_cobrado=servico.preco, 
             observacoes=dados.observacoes,
         )
-        return self.repository.salvar(agendamento)
+        agendamento = self.repository.salvar(agendamento)
+        self.lembrete_service.criar_para_agendamento(agendamento)
+        return agendamento
     
     def atualizar(self, agendamento_id: int, dados: AgendamentoAtualizarRequest) -> Agendamento:
         agendamento = self.buscar_por_id(agendamento_id)

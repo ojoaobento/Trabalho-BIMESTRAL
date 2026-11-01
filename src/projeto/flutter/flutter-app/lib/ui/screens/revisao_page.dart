@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 class RevisaoPage extends StatefulWidget {
@@ -29,6 +31,29 @@ class _RevisaoPageState extends State<RevisaoPage> {
   static const _corFundo = Color(0xFFFFF8FA);
   static const _corTexto = Color(0xFF4A1026);
   static const _corBorda = Color(0xFFF1DDE5);
+
+  int _segundosRestantes = 2 * 60 + 25;
+  Timer? _cronometro;
+
+  @override
+  void initState() {
+    super.initState();
+    _cronometro = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (_segundosRestantes == 0) {
+        timer.cancel();
+        return;
+      }
+
+      setState(() => _segundosRestantes--);
+    });
+  }
+
+  @override
+  void dispose() {
+    _cronometro?.cancel();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -174,9 +199,9 @@ class _RevisaoPageState extends State<RevisaoPage> {
               color: Colors.white,
               borderRadius: BorderRadius.circular(9),
             ),
-            child: const Text(
-              '02:25',
-              style: TextStyle(
+            child: Text(
+              _tempoRestanteFormatado(),
+              style: const TextStyle(
                 fontSize: 10,
                 fontWeight: FontWeight.bold,
                 color: _corPrincipal,
@@ -205,7 +230,15 @@ class _RevisaoPageState extends State<RevisaoPage> {
               ),
               const Spacer(),
               TextButton(
-                onPressed: () => Navigator.pop(context),
+                onPressed: () {
+                  // A pilha de navegação é Horário > Serviço > Seus dados >
+                  // Revisão. Voltar duas telas retorna diretamente à seleção
+                  // do serviço e preserva o horário escolhido.
+                  final navigator = Navigator.of(context);
+                  navigator
+                    ..pop()
+                    ..pop();
+                },
                 style: TextButton.styleFrom(
                   padding: EdgeInsets.zero,
                   foregroundColor: _corPrincipal,
@@ -394,9 +427,7 @@ class _RevisaoPageState extends State<RevisaoPage> {
           SizedBox(
             width: double.infinity,
             child: FilledButton.icon(
-              onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Agendamento confirmado!')),
-              ),
+              onPressed: () {},
               style: FilledButton.styleFrom(
                 backgroundColor: _corPrincipal,
                 padding: const EdgeInsets.symmetric(vertical: 15),
@@ -441,5 +472,11 @@ class _RevisaoPageState extends State<RevisaoPage> {
     final horas = (fimEmMinutos ~/ 60) % 24;
     final minutos = fimEmMinutos % 60;
     return '${horas.toString().padLeft(2, '0')}:${minutos.toString().padLeft(2, '0')}';
+  }
+
+  String _tempoRestanteFormatado() {
+    final minutos = _segundosRestantes ~/ 60;
+    final segundos = _segundosRestantes % 60;
+    return '${minutos.toString().padLeft(2, '0')}:${segundos.toString().padLeft(2, '0')}';
   }
 }
