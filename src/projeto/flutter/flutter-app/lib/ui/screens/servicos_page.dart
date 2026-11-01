@@ -20,7 +20,7 @@ class _ServicosPageState extends State<ServicosPage> {
   final _servicos = const [
     _Servico(
       'Manicure / Pedicure',
-      'Combo Manicure +\nPedicure',
+      'Combo Manicure + Pedicure',
       'Cuticulagem tradicional completa, esmaltação e hidratação nas mãos e pés.',
       75,
       80,

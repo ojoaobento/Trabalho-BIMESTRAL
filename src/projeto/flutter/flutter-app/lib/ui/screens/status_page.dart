@@ -202,46 +202,62 @@ class SolicitacaoConfirmadaPage extends StatelessWidget {
           child: Divider(height: 1, color: _corBorda),
         ),
         _linha('Serviço:', servico),
-        const SizedBox(height: 7),
         _linha('Data & horário:', _dataFormatada()),
-        const SizedBox(height: 7),
-        Row(
-          children: [
-            const Text('Status atual:', style: TextStyle(fontSize: 9, color: Color(0xFF976D7B))),
-            const Spacer(),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-              decoration: BoxDecoration(color: const Color(0xFFFFF1D9), borderRadius: BorderRadius.circular(10)),
-              child: const Text('Pendente de aprovação', style: TextStyle(fontSize: 8, color: Color(0xFF9B661E))),
+        _linhaStatus(),
+      ],
+    ),
+  );
+
+  Widget _linha(String rotulo, String valor) => SizedBox(
+    height: 24,
+    child: Row(
+      children: [
+        SizedBox(
+          width: 105,
+          child: Text(
+            rotulo,
+            style: const TextStyle(fontSize: 9, color: Color(0xFF976D7B)),
+          ),
+        ),
+        Expanded(
+          child: Text(
+            valor.replaceAll('\n', ' '),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.end,
+            style: const TextStyle(
+              fontSize: 9,
+              fontWeight: FontWeight.bold,
+              color: _corTexto,
             ),
-          ],
+          ),
         ),
       ],
     ),
   );
 
-  Widget _linha(String rotulo, String valor) => Row(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      SizedBox(
-        width: 105,
-        child: Text(
-          rotulo,
-          style: const TextStyle(fontSize: 9, color: Color(0xFF976D7B)),
+  Widget _linhaStatus() => SizedBox(
+    height: 24,
+    child: Row(
+      children: [
+        const Text(
+          'Status atual:',
+          style: TextStyle(fontSize: 9, color: Color(0xFF976D7B)),
         ),
-      ),
-      Expanded(
-        child: Text(
-          valor,
-          textAlign: TextAlign.end,
-          style: const TextStyle(
-            fontSize: 9,
-            fontWeight: FontWeight.bold,
-            color: _corTexto,
+        const Spacer(),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+          decoration: BoxDecoration(
+            color: const Color(0xFFFFF1D9),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: const Text(
+            'Pendente de aprovação',
+            style: TextStyle(fontSize: 8, color: Color(0xFF9B661E)),
           ),
         ),
-      ),
-    ],
+      ],
+    ),
   );
 
   String _dataFormatada() {
