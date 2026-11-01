@@ -116,23 +116,35 @@ class SolicitacaoConfirmadaPage extends StatelessWidget {
 
   Widget _progresso() => Container(
     color: Colors.white,
-    padding: const EdgeInsets.fromLTRB(8, 10, 8, 8),
+    padding: const EdgeInsets.fromLTRB(14, 10, 14, 8),
     child: Column(
       children: [
         const Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            _EtapaProgresso('1. Horário'),
-            _EtapaProgresso('2. Serviço'),
-            _EtapaProgresso('3. Seus dados'),
-            _EtapaProgresso('4. Confirmar'),
-            _EtapaProgresso('5. Status', ativa: true),
+            Text('1. Horário', style: TextStyle(fontSize: 10, color: _corPrincipal)),
+            Text('2. Serviço', style: TextStyle(fontSize: 10, color: _corPrincipal)),
+            Text('3. Seus dados', style: TextStyle(fontSize: 10, color: _corPrincipal)),
+            Text('4. Confirmar', style: TextStyle(fontSize: 10, color: _corPrincipal)),
+            Text(
+              '5. Status',
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.bold,
+                color: _corPrincipal,
+              ),
+            ),
           ],
         ),
         const SizedBox(height: 7),
-        Row(
-          children: List.generate(
-            5,
-            (_) => Expanded(child: Container(height: 3, color: _corPrincipal)),
+        SizedBox(
+          height: 16,
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: List.generate(
+              5,
+              (_) => Expanded(child: Container(height: 3, color: _corPrincipal)),
+            ),
           ),
         ),
       ],
@@ -237,27 +249,4 @@ class SolicitacaoConfirmadaPage extends StatelessWidget {
     const meses = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
     return '${dias[data.weekday - 1]} ${data.day} de ${meses[data.month - 1]} · $horario';
   }
-}
-
-class _EtapaProgresso extends StatelessWidget {
-  const _EtapaProgresso(this.texto, {this.ativa = false});
-
-  final String texto;
-  final bool ativa;
-
-  @override
-  Widget build(BuildContext context) => Expanded(
-    child: FittedBox(
-      fit: BoxFit.scaleDown,
-      alignment: Alignment.center,
-      child: Text(
-        texto,
-        style: TextStyle(
-          fontSize: 10,
-          fontWeight: ativa ? FontWeight.bold : FontWeight.normal,
-          color: ativa ? SolicitacaoConfirmadaPage._corPrincipal : Colors.black45,
-        ),
-      ),
-    ),
-  );
 }
