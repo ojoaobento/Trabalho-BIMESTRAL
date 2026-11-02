@@ -58,6 +58,22 @@ def atualizar(servico_id: int, dados: ServicoAtualizarRequest = Body(
         "so_nome":{
             "summary": "Atualizar Nome",
             "value": {"nome": "Alisamento de cabelo"}
+        },
+        "so_descricao":{
+            "summary": "Atualizar Descrição",
+            "value": {"descricao": "Propõe novos fios capilares"}
+        },
+        "so_preco":{
+            "summary": "Atualizar Preço",
+            "value": {"preco": "20,00"}
+        },
+        "so_duracao":{
+            "summary": "Atualizar Duração do Serviço",
+            "value":{"duracao_minutos": "40"}
+        },
+        "so_status":{
+            "summary":"Atualizar Status",
+            "value":{"status": "True"}
         }
     }
 ), service: ServicoService = Depends(get_service)):

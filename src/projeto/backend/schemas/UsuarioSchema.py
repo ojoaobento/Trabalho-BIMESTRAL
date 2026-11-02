@@ -16,6 +16,13 @@ class UsuarioAtualizarRequest(BaseModel):
     senha: Optional[str] = Field(default=None, min_length=2, max_length=265)
     ativo: Optional[bool] = None
 
+class UsuarioAtualizarCompletoRequest(BaseModel):
+
+    nome: str = Field(min_length=2, max_length=100)
+    email: str = Field(min_length=2, max_length=100)
+    senha: str = Field(min_length=2, max_length=265)
+    ativo: bool
+
 class UsuarioResponse(BaseModel):
 
     id: int

@@ -60,6 +60,11 @@ def atualizar(usuario_id: int, dados: UsuarioAtualizarRequest = Body(
 ), service: UsuarioService = Depends(get_service)):
     return service.atualizar(usuario_id, dados)
 
+@router.put("/{usuario_id}", response_model=UsuarioResponse)
+def atualizar_tudo(usuario_id: int, dados: UsuarioAtualizarRequest, service: UsuarioService = Depends(get_service)):
+    return service.atualizar_completo(usuario_id, dados)
+
+
 @router.delete("/{usuario_id}", status_code=status.HTTP_204_NO_CONTENT)
 def deletar(
     usuario_id: int,

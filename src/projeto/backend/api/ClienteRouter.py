@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, status, Body
 from core.dependencies import get_usuario_logado
 from sqlalchemy.orm import Session
 from core.database import get_db
@@ -33,7 +33,26 @@ def criar(dados: ClienteRequest, service: ClienteService = Depends(get_service))
     return service.criar(dados)
 
 @router.patch("/{cliente_id}", response_model=ClienteResponse)
-def atualizar(cliente_id: int, dados: ClienteAtualizarRequest, service: ClienteService = Depends(get_service)):
+def atualizar(cliente_id: int, dados: ClienteAtualizarRequest = Body(
+    openapi_examples={
+        "so_nome":{
+            "summary":"Atualizar Nome",
+            "value":{"nome": "Maria"}
+        },
+        "so_telefone":{
+            "summary":"Atualizat Telefone",
+            "value":{"telefone": "44988136876"}
+        },
+        "so_email":{
+            "summary":"Atualizar Email",
+            "value":{"email": "mariavitoria@gmail.com"}
+        },
+        "so_lembretes":{
+            "summary":"Atualizar Opção de Lembretes",
+            "value":{"aceita_lembretes":"True"}
+        }
+    }
+), service: ClienteService = Depends(get_service)):
     return service.atualizar(cliente_id, dados)
 
 @router.delete("/{cliente_id}", status_code=status.HTTP_204_NO_CONTENT)

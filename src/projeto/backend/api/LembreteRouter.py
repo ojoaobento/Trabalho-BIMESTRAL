@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, status, Body
 from sqlalchemy.orm import Session
  
 from core.database import get_db
@@ -40,7 +40,23 @@ def criar(dados: LembreteRequest, service: LembreteService = Depends(get_service
     return service.criar(dados)
 
 @router.patch("/{lembrete_id}", response_model=LembreteResponse)
-def atualizar(lembrete_id : int, dados: LembreteAtualizarRequest, service: LembreteService = Depends(get_service)):
+def atualizar(lembrete_id : int, dados: LembreteAtualizarRequest = Body(
+    openapi_examples={
+        "so_servico":{
+            "summary":"Atualizar ID do Serviço",
+            "value":{"servico_id": "5"}
+        },
+        "enviar_em":{
+            "summary":"Atualizar tempo de envio",
+            "value":{"enviar_em":"00:00:00:00"}
+        },
+        "so_tipo":{
+            "summary":"Atualizar Tipo de Lembrete",
+            "value":{"tipo": "CONFIRMACAO/LEMBRETE_24H"}
+        }
+        
+    }
+), service: LembreteService = Depends(get_service)):
     return service.atualizar(lembrete_id, dados)
 
 @router.patch("/{lembrete_id}/enviado", response_model=LembreteResponse)
