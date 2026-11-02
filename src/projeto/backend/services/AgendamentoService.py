@@ -83,18 +83,31 @@ class AgendamentoService:
                 detail="Este serviço não está disponível para agendamento.",
             )
         return servico
- 
     def _dentro_do_expediente(self, inicio: datetime, fim: datetime) -> bool:
+        if inicio.tzinfo is None:
+            inicio = inicio.replace(tzinfo=timezone.utc)
+        if fim.tzinfo is None:
+            fim = fim.replace(tzinfo=timezone.utc)
+
         local_inicio = inicio.astimezone(FUSO)
         local_fim = fim.astimezone(FUSO)
+
         if local_inicio.date() != local_fim.date():
             return False 
-        blocos = self.disponibilidade_repository.listar_por_dia_semana(local_inicio.weekday())
-        return any(
-            bloco.hora_inicio <= local_inicio.time() and local_fim.time() <= bloco.hora_fim
-            for bloco in blocos
-        )
- 
+
+        dia_semana = local_inicio.weekday()
+        blocos = self.disponibilidade_repository.listar_por_dia_semana(dia_semana)
+        
+        h_inicio_agendamento = local_inicio.time()
+        h_fim_agendamento = local_fim.time()
+
+        for bloco in blocos:
+            if not bloco.ativo:
+                continue
+            if bloco.hora_inicio <= h_inicio_agendamento and h_fim_agendamento <= bloco.hora_fim:
+                return True
+
+        return False
     def _validar_horario(
         self, servico: Servico, inicio: datetime, ignorar_id: int | None = None
     ) -> datetime:

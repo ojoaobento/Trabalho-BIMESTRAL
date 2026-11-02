@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, status, HTTPException
+from fastapi import APIRouter, Depends, status, HTTPException, Body
 from core.database import get_db
 from core.dependencies import get_usuario_logado
 from services.ServicoService import ServicoService
@@ -49,7 +49,18 @@ def criar(dados: ServicoRequest, service: ServicoService = Depends(get_service))
 
 @router.patch("/{servico_id}", response_model=ServicoResponse,
               dependencies=[Depends(get_usuario_logado)])
-def atualizar(servico_id: int, dados: ServicoAtualizarRequest, service: ServicoService = Depends(get_service)):
+def atualizar(servico_id: int, dados: ServicoAtualizarRequest = Body(
+    openapi_examples={
+        "so_categoria":{
+            "summary": "Atualizar Categoria",
+            "value": {"categoria": "Mega Hair"}
+        },
+        "so_nome":{
+            "summary": "Atualizar Nome",
+            "value": {"nome": "Alisamento de cabelo"}
+        }
+    }
+), service: ServicoService = Depends(get_service)):
     return service.atualizar(servico_id, dados)
 
 @router.delete("/{servico_id}", status_code=status.HTTP_204_NO_CONTENT,

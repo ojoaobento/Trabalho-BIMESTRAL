@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, status, Query
+from fastapi import APIRouter, Depends, status, Query, Body
 from sqlalchemy.orm import Session
  
 from core.database import get_db
@@ -36,7 +36,26 @@ def criar(dados: DisponibilidadeRequest, service: DisponibilidadeService = Depen
     return service.criar(dados)
 
 @router.patch("/{disponibilidade_id}", response_model=DisponibilidadeResponse)
-def atualizar(disponibilidade_id: int, dados: DisponibilidadeAtualizarRequest, service: DisponibilidadeService = Depends(get_service)):
+def atualizar(
+    disponibilidade_id: int,
+    dados: DisponibilidadeAtualizarRequest = Body(
+        openapi_examples={
+            "so_dia": {
+                "summary": "Alterar Dia da Semana",
+                "value": {"dia_semana": 3},
+            },
+            "so_horario": {
+                "summary": "Alterar Hórarios",
+                "value": {"hora_inicio": "09:00:00", "hora_fim": "17:00:00"},
+            },
+            "so_ativo": {
+                "summary": "Alterar Status",
+                "value": {"ativo": False},
+            },
+        }
+    ),
+    service: DisponibilidadeService = Depends(get_service),
+):
     return service.atualizar(disponibilidade_id, dados)
 
 @router.delete("/{disponibilidade_id}", status_code=status.HTTP_204_NO_CONTENT)

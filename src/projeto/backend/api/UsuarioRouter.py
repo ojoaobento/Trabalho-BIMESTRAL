@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, status, HTTPException
+from fastapi import APIRouter, Depends, status, HTTPException, Body
 from core.database import get_db
 from services.UsuarioService import UsuarioService
 from sqlalchemy.orm import Session
@@ -38,7 +38,26 @@ def criar(dados: UsuarioRequest, service: UsuarioService = Depends(get_service))
     return service.criar(dados)
 
 @router.patch("/{usuario_id}", response_model=UsuarioResponse)
-def atualizar(usuario_id: int, dados: UsuarioAtualizarRequest, service: UsuarioService = Depends(get_service)):
+def atualizar(usuario_id: int, dados: UsuarioAtualizarRequest = Body(
+    openapi_examples={
+        "so_nome": {
+            "summary": "Alterar Nome",
+            "value": {"nome": "João"}
+        },
+        "so_email": {
+            "summary": "Alterar E-mail",
+            "value": {"email": "exemplo@gmail.com"}
+        },
+        "so_senha": {
+            "summary": "Alterar Senha",
+            "value": {"senha": "********"}
+        },
+        "so_status": {
+            "summary": "Alterar Status",
+            "value":{"status": "ativo"}
+        }
+    }
+), service: UsuarioService = Depends(get_service)):
     return service.atualizar(usuario_id, dados)
 
 @router.delete("/{usuario_id}", status_code=status.HTTP_204_NO_CONTENT)
