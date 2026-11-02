@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:main/screens/admin_login.dart';
+import 'package:main/screens/usuario_page.dart';
 import 'package:main/services/api_client.dart';
 import 'package:main/screens/categoria_page.dart';
 import 'package:main/screens/servico_page.dart';
@@ -83,6 +84,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
 
       case 0:
         return const ServicosPage();
+      case 1:
+        return const UsuarioPage();
 
       case 4:
         return const CategoriasPage();
