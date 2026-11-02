@@ -7,7 +7,8 @@ from repositories.DisponibilidadeRepository import DisponibilidadeRepository
 from schemas.DisponibilidadeSchema import (
     DisponibilidadeAtualizarRequest,
     DisponibilidadeRequest,
-    DisponibilidadeResponse
+    DisponibilidadeResponse,
+    DisponibilidadeAtualizarCompletoRequest
 )
 from services.DisponibilidadeService import DisponibilidadeService
 
@@ -45,7 +46,7 @@ def atualizar(
                 "value": {"dia_semana": 3},
             },
             "so_horario": {
-                "summary": "Alterar Hórarios",
+                "summary": "Alterar Horários",
                 "value": {"hora_inicio": "09:00:00", "hora_fim": "17:00:00"},
             },
             "so_ativo": {
@@ -57,6 +58,10 @@ def atualizar(
     service: DisponibilidadeService = Depends(get_service),
 ):
     return service.atualizar(disponibilidade_id, dados)
+
+@router.put("/{disponibilidade_id}", response_model=DisponibilidadeResponse)
+def atualizar_completo(disponibilidade_id: int, dados: DisponibilidadeAtualizarCompletoRequest, service: DisponibilidadeService = Depends(get_service)):
+    return service.atualizar_completo(disponibilidade_id, dados)
 
 @router.delete("/{disponibilidade_id}", status_code=status.HTTP_204_NO_CONTENT)
 def deletar(disponibilidade_id: int, service: DisponibilidadeService = Depends(get_service)):

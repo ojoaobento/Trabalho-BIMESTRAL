@@ -3,7 +3,8 @@ from repositories.DisponibilidadeRepository import DisponibilidadeRepository
 from models.Disponibilidade import Disponibilidade
 from schemas.DisponibilidadeSchema import (
     DisponibilidadeAtualizarRequest,
-    DisponibilidadeRequest
+    DisponibilidadeRequest,
+    DisponibilidadeAtualizarCompletoRequest
 )
 
 from datetime import time 
@@ -19,12 +20,7 @@ class DisponibilidadeService:
 
     def listar_por_dia_semana(self, dia_semana: int):
         servico = self.repository.listar_por_dia_semana(dia_semana)
-
-        if not servico:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=(f"Não foi encontrado disponibilidades nesse dia {dia_semana}")
-            )
+        
         return servico
     
     def buscar_por_id(self, disponibilidade_id: int) -> Disponibilidade:
@@ -105,14 +101,11 @@ class DisponibilidadeService:
 
         return self.repository.salvar(disponibilidade)
 
-    def deletar(self, disponibilidade_id: int) -> None:
-        disponibilidade = self.repository.buscar_por_id(disponibilidade_id)
+    def atualizar_completo(self, disponibilidade_id: int, dados: DisponibilidadeAtualizarCompletoRequest) -> Disponibilidade:
+        return self.atualizar(disponibilidade_id, DisponibilidadeAtualizarRequest(**dados.model_dump()))
 
-        if not disponibilidade:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=(f"A disponibilidade {disponibilidade_id} não foi encontrada.")
-            )
+    def deletar(self, disponibilidade_id: int) -> None:
+        disponibilidade = self.buscar_por_id(disponibilidade_id)
 
         self.repository.deletar(disponibilidade)
 

@@ -1,15 +1,15 @@
-from fastapi import APIRouter, Depends, status, HTTPException, Body
+from fastapi import APIRouter, Depends, status, Body
 from core.database import get_db
 from core.dependencies import get_usuario_logado
 from services.ServicoService import ServicoService
 from sqlalchemy.orm import Session
-from core.dependencies import get_usuario_logado
 from repositories.ServicoRepository import ServicoRepository
 from repositories.CategoriaRepository import CategoriaRepository
 from schemas.ServicoSchema import (
     ServicoAtualizarRequest,
     ServicoRequest,
-    ServicoResponse
+    ServicoResponse,
+    ServicoAtualizarCompletoRequest
 )
 
 
@@ -53,7 +53,7 @@ def atualizar(servico_id: int, dados: ServicoAtualizarRequest = Body(
     openapi_examples={
         "so_categoria":{
             "summary": "Atualizar Categoria",
-            "value": {"categoria": "Mega Hair"}
+            "value": {"categoria": 2}
         },
         "so_nome":{
             "summary": "Atualizar Nome",
@@ -65,19 +65,24 @@ def atualizar(servico_id: int, dados: ServicoAtualizarRequest = Body(
         },
         "so_preco":{
             "summary": "Atualizar Preço",
-            "value": {"preco": "20,00"}
+            "value": {"preco": 20.00}
         },
         "so_duracao":{
-            "summary": "Atualizar Duração do Serviço",
-            "value":{"duracao_minutos": "40"}
+            "summary": "Atualizar duração",
+            "value":{"duracao_minutos": 40}
         },
         "so_status":{
-            "summary":"Atualizar Status",
-            "value":{"status": "True"}
+            "summary":"Ativar/desativar",
+            "value":{"status": False}
         }
     }
 ), service: ServicoService = Depends(get_service)):
     return service.atualizar(servico_id, dados)
+
+
+@router.put("/{servico_id}", response_model=ServicoResponse, dependencies=[Depends(get_usuario_logado)])
+def atualizar_completo(servico_id: int, dados: ServicoAtualizarCompletoRequest, service: ServicoService = Depends(get_service)):
+    return service.atualizar_completo(servico_id, dados)
 
 @router.delete("/{servico_id}", status_code=status.HTTP_204_NO_CONTENT,
                dependencies=[Depends(get_usuario_logado)])

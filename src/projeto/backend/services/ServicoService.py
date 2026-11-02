@@ -2,7 +2,8 @@ from fastapi import HTTPException, status
 from models.Servico import Servico
 from schemas.ServicoSchema import (
     ServicoAtualizarRequest,
-    ServicoRequest
+    ServicoRequest,
+    ServicoAtualizarCompletoRequest
 )
 from models.Categoria import Categoria
 from repositories.CategoriaRepository import CategoriaRepository
@@ -40,12 +41,6 @@ class ServicoService:
     def listar_ativos(self):
 
         servico = self.repository.listar_ativos()
-
-        if not servico: 
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Nenhum serviço ativo foi encontrado."
-            )
 
         return servico
 
@@ -85,11 +80,11 @@ class ServicoService:
             )
 
         servico = Servico(**dados.model_dump())
-
+        self._categoria_ativa(dados.categoria_id)
         return self.repository.salvar(servico)
 
     def atualizar(self, servico_id: int, dados: ServicoAtualizarRequest) -> Servico:
-        servico = self.repository.buscar_por_id(servico_id)
+        servico = self.buscar_por_id(servico_id)
 
         campos = dados.model_dump(exclude_unset=True)
 
@@ -116,14 +111,11 @@ class ServicoService:
             setattr(servico, campo, valor)
         return self.repository.salvar(servico)
 
-    def deletar(self, servico_id: int):
-        servico = self.repository.buscar_por_id(servico_id)
+    def atualizar_completo(self, servico_id: int, dados: ServicoAtualizarCompletoRequest) -> Servico:
+        return self.atualizar(servico_id, ServicoAtualizarRequest(**dados.model_dump()))
 
-        if not servico:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=(f"Servico {servico_id} não encontrado.")
-            )
+    def deletar(self, servico_id: int):
+        servico = self.buscar_por_id(servico_id)
 
         try:
             self.repository.deletar(servico)

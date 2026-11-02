@@ -19,6 +19,14 @@ class ServicoAtualizarRequest(BaseModel):
     duracao_minutos: Optional[int] = None
     ativo: Optional[bool] = None
 
+class ServicoAtualizarCompletoRequest(BaseModel):
+    categoria_id: int 
+    nome: str = Field(min_length=2, max_length=100)
+    descricao: str = Field(min_length=2, max_length=100)
+    preco: Decimal = Field(gt=0)
+    duracao_minutos: int 
+    ativo: bool
+
 class ServicoResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

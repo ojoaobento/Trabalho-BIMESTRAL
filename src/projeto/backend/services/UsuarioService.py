@@ -78,33 +78,10 @@ class UsuarioService:
         return self.repository.salvar(usuario)
 
     def atualizar_completo(self, usuario_id: int, dados: UsuarioAtualizarCompletoRequest) -> Usuario:
-        usuario = self.buscar_por_id(usuario_id)  
-        campos = dados.model_dump()
-
-        for campo in ["nome", "email", "senha", "ativo"]:
-            if campo in campos and campos[campo] is None:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=(f"O campo {campo} não pode ser nulo")
-                )
-
-        novo_email = campos.get("email")
-        if novo_email is not None and novo_email != usuario.email:
-            if self.repository.buscar_por_email(novo_email):
-                raise HTTPException(
-                    status_code=status.HTTP_409_CONFLICT,
-                    detail="Este e-mail já pertence a outro usuário.",
-                )
- 
-        if "senha" in campos:
-            usuario.senha_hash = gerar_hash(campos.pop("senha"))
- 
-        for campo, valor in campos.items():
-            setattr(usuario, campo, valor)
-        return self.repository.salvar(usuario)
+        return self.atualizar(usuario_id, UsuarioAtualizarRequest(**dados.model_dump()))
 
     def deletar(self, usuario_id : int) -> None:
-        usuario = self.repository.buscar_por_id(usuario_id)
+        usuario = self.buscar_por_id(usuario_id)
         try:
             self.repository.deletar(usuario)
         except IntegrityError:

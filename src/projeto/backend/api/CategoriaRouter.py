@@ -8,7 +8,8 @@ from services.CategoriaService import CategoriaService
 from schemas.CategoriaSchema import (
     CategoriaRequest,
     CategoriaAtualizarRequest,
-    CategoriaResponse
+    CategoriaResponse,
+    CategoriaAtualizarCompletoRequest
 )
 
 router = APIRouter(prefix="/categorias", tags=["Categorias"])
@@ -39,11 +40,15 @@ def atualizar(categoria_id: int, dados: CategoriaAtualizarRequest = Body(
         },
         "so_status":{
             "summary":"Atualizar Status",
-            "value":{"status": "True"}
+            "value":{"status": False}
         }
     }
 ),service: CategoriaService = Depends(get_service)):
     return service.atualizar(categoria_id, dados)
+
+@router.put("/{categoria_id}", response_model=CategoriaResponse, dependencies=[Depends(get_usuario_logado)])
+def atualizar_completo(categoria_id: int, dados: CategoriaAtualizarCompletoRequest, service: CategoriaService = Depends(get_service)):
+    return service.atualizar_completo(categoria_id, dados)
 
 @router.delete("/{categoria_id}", status_code=status.HTTP_204_NO_CONTENT,
                dependencies=[Depends(get_usuario_logado)])

@@ -143,18 +143,20 @@ class AgendamentoService:
         return fim
 
     def criar(self, dados: AgendamentoRequest) -> Agendamento:
+        dt_inicio = datetime.combine(dados.data, dados.hora, tzinfo=FUSO)
+
         servico = self._servico_agendavel(dados.servico_id)
-        fim = self._validar_horario(servico, dados.dt_inicio)
- 
+        fim = self._validar_horario(servico, dt_inicio)
+
         cliente = self.cliente_service.buscar_ou_criar(dados.cliente)
- 
+
         agendamento = Agendamento(
             cliente_id=cliente.id,
             servico_id=servico.id,
-            dt_inicio=dados.dt_inicio,
+            dt_inicio=dt_inicio,
             dt_fim=fim,
             status=StatusAgendamento.PENDENTE,
-            valor_cobrado=servico.preco, 
+            valor_cobrado=servico.preco,
             observacoes=dados.observacoes,
         )
         agendamento = self.repository.salvar(agendamento)
@@ -164,32 +166,40 @@ class AgendamentoService:
     def atualizar(self, agendamento_id: int, dados: AgendamentoAtualizarRequest) -> Agendamento:
         agendamento = self.buscar_por_id(agendamento_id)
         campos = dados.model_dump(exclude_unset=True)
- 
-        if "dt_inicio" in campos and campos["dt_inicio"] is None:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="O campo 'dt_inicio' não pode ser nulo.",
-            )
- 
+
+        for campo in ("data", "hora"):
+            if campo in campos and campos[campo] is None:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"O campo '{campo}' não pode ser nulo.",
+                )
+
         if agendamento.status not in (StatusAgendamento.PENDENTE, StatusAgendamento.CONFIRMADO):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Só agendamentos pendentes ou confirmados podem ser alterados.",
             )
- 
-        novo_inicio = campos.get("dt_inicio")
-        remarcou = novo_inicio is not None and novo_inicio != agendamento.dt_inicio
-        if remarcou:
-            fim = self._validar_horario(agendamento.servico, novo_inicio, ignorar_id=agendamento.id)
-            agendamento.dt_inicio = novo_inicio
-            agendamento.dt_fim = fim
- 
+
+        remarcou = False
+        if "data" in campos or "hora" in campos:
+            atual = agendamento.dt_inicio.astimezone(FUSO)
+            novo_inicio = datetime.combine(
+                campos.get("data", atual.date()),
+                campos.get("hora", atual.time()),
+                tzinfo=FUSO,
+            )
+            remarcou = novo_inicio != agendamento.dt_inicio
+            if remarcou:
+                fim = self._validar_horario(agendamento.servico, novo_inicio, ignorar_id=agendamento.id)
+                agendamento.dt_inicio = novo_inicio
+                agendamento.dt_fim = fim
+
         if "observacoes" in campos:
             agendamento.observacoes = campos["observacoes"]
- 
+
         agendamento = self.repository.salvar(agendamento)
- 
-        if remarcou and agendamento.status == StatusAgendamento.CONFIRMADO:
+
+        if remarcou:
             self.lembrete_service.cancelar_pendentes(agendamento.id)
             self.lembrete_service.criar_para_agendamento(agendamento)
         return agendamento

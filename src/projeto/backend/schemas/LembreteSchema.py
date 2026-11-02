@@ -14,14 +14,18 @@ class LembreteRequest(BaseModel):
     servico_id: Optional[int] = None
     enviar_em: datetime
     tipo: TipoLembrete
-    enviado: bool = False
-    enviado_em: Optional[datetime] = None
 
 class LembreteAtualizarRequest(BaseModel):
 
     servico_id: Optional[int] = None
     enviar_em: Optional[datetime] = None
     tipo: Optional[TipoLembrete] = None
+
+class LembreteAtualizarCompletoRequest(BaseModel):
+
+    servico_id: int
+    enviar_em: datetime
+    tipo: TipoLembrete
 
 class LembreteResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)

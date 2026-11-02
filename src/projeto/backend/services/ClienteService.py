@@ -6,6 +6,7 @@ from repositories.ClienteRepository import ClienteRepository
 from schemas.ClienteSchema import (
     ClienteAtualizarRequest,
     ClienteRequest,
+    ClienteAtualizarCompletoRequest
 )
 
 class ClienteService:
@@ -50,14 +51,21 @@ class ClienteService:
 
         campos = dados.model_dump(exclude={"consentimento"})
         cliente = Cliente(**campos, consentimento_em=datetime.now(timezone.utc))
-        return self.repository.salvar(cliente)
+
+        try:
+            return self.repository.salvar(cliente)
+        except IntegrityError:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="O cliente que está tentando inserir já possui um cadastro"
+            )
 
     def atualizar(self, cliente_id: int, dados: ClienteAtualizarRequest) -> Cliente:
         cliente = self.buscar_por_id(cliente_id)
 
         campos = dados.model_dump(exclude_unset=True)
 
-        for campo in ["nome", "telefone", "email", "aceita_lembretes"]:
+        for campo in ["nome", "telefone", "aceita_lembretes"]:
             if campo in campos and campos[campo] is None:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
@@ -75,7 +83,16 @@ class ClienteService:
         for campo, valor in campos.items():
             setattr(cliente, campo, valor)
 
-        return self.repository.salvar(cliente)
+        try:
+            return self.repository.salvar(cliente)
+        except IntegrityError:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Este telefone já pertence a outro cliente.",
+            )
+
+    def atualizar_completo(self, cliente_id: int, dados: ClienteAtualizarCompletoRequest) -> Cliente:
+        return self.atualizar(cliente_id, ClienteAtualizarRequest(**dados.model_dump()))
 
     def deletar(self, cliente_id : int):
         cliente = self.buscar_por_id(cliente_id)

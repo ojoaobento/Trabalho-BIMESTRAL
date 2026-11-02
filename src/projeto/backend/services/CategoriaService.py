@@ -4,7 +4,7 @@ from sqlalchemy.exc import IntegrityError
 
 from models.Categoria import Categoria
 from repositories.CategoriaRepository import CategoriaRepository
-from schemas.CategoriaSchema import CategoriaRequest, CategoriaAtualizarRequest
+from schemas.CategoriaSchema import CategoriaRequest, CategoriaAtualizarRequest, CategoriaAtualizarCompletoRequest
 
 class CategoriaService:
     def __init__(self, repository: CategoriaRepository):
@@ -30,7 +30,13 @@ class CategoriaService:
             )
         categoria = Categoria(nome=dados.nome)
 
-        return self.repository.salvar(categoria)
+        try:
+            return self.repository.salvar(categoria)
+        except IntegrityError:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=f"Já existe uma categoria com o nome: {dados.nome}"
+            )
 
     def atualizar(self, categoria_id : int, dados: CategoriaAtualizarRequest) -> Categoria:
         categoria = self.buscar(categoria_id)
@@ -44,11 +50,29 @@ class CategoriaService:
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail=(f"O campo '{campo}' não pode ser nulo")
                 )
+
+        novo_nome = campos.get("nome")
+        if novo_nome is not None and novo_nome != categoria.nome:
+            if self.repository.buscar_por_nome(novo_nome):
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail=f"Já existe uma categoria com o nome: {novo_nome}"
+                )
+    
         for campo, valor in campos.items():
             setattr(categoria, campo, valor)
 
-        return self.repository.salvar(categoria)
-
+        try:
+            return self.repository.salvar(categoria)
+        except IntegrityError:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Já existe uma categoria com este nome."
+            )
+        
+    def atualizar_completo(self, categoria_id: int, dados: CategoriaAtualizarCompletoRequest) -> Categoria:
+        return self.atualizar(categoria_id, CategoriaAtualizarRequest(**dados.model_dump()))
+    
     def deletar(self, categoria_id : int) -> None:
         categoria = self.buscar(categoria_id)  
 

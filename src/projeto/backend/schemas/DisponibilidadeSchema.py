@@ -14,6 +14,13 @@ class DisponibilidadeAtualizarRequest(BaseModel):
     hora_fim: Optional[time] = None
     ativo: Optional[bool] = None
 
+
+class DisponibilidadeAtualizarCompletoRequest(BaseModel):
+    dia_semana: int = Field(ge=0, le=6)
+    hora_inicio: time
+    hora_fim: time 
+    ativo: bool 
+
 class DisponibilidadeResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

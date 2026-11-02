@@ -20,6 +20,14 @@ class ClienteAtualizarRequest(BaseModel):
     email: Optional[EmailStr] = None
     aceita_lembretes: Optional[bool] = None
 
+class ClienteAtualizarCompletoRequest(BaseModel):
+    model_config = ConfigDict(str_strip_whitespace=True)
+
+    nome: str = Field(min_length=2, max_length=100)
+    telefone: str = Field(pattern=r"^\d{11}$")
+    email: EmailStr | None = None
+    aceita_lembretes: bool 
+
 class ClienteResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

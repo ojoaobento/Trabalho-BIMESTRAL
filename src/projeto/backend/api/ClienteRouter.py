@@ -5,7 +5,8 @@ from core.database import get_db
 from schemas.ClienteSchema import (
     ClienteAtualizarRequest,
     ClienteRequest,
-    ClienteResponse
+    ClienteResponse,
+    ClienteAtualizarCompletoRequest
 )
 from repositories.ClienteRepository import ClienteRepository
 from services.ClienteService import ClienteService
@@ -49,11 +50,15 @@ def atualizar(cliente_id: int, dados: ClienteAtualizarRequest = Body(
         },
         "so_lembretes":{
             "summary":"Atualizar Opção de Lembretes",
-            "value":{"aceita_lembretes":"True"}
+            "value":{"aceita_lembretes": True}
         }
     }
 ), service: ClienteService = Depends(get_service)):
     return service.atualizar(cliente_id, dados)
+
+@router.put("/{cliente_id}", response_model=ClienteResponse)
+def atualizar_completo(cliente_id: int, dados: ClienteAtualizarCompletoRequest, service: ClienteService = Depends(get_service)):
+    return service.atualizar_completo(cliente_id, dados)
 
 @router.delete("/{cliente_id}", status_code=status.HTTP_204_NO_CONTENT)
 def deletar(cliente_id: int, service: ClienteService = Depends(get_service)):

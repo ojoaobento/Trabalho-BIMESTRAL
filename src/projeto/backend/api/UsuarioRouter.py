@@ -7,7 +7,8 @@ from repositories.UsuarioRepository import UsuarioRepository
 from schemas.UsuarioSchema import (
     UsuarioAtualizarRequest,
     UsuarioRequest,
-    UsuarioResponse
+    UsuarioResponse,
+    UsuarioAtualizarCompletoRequest
 )
 from models.Usuario import Usuario
 
@@ -29,11 +30,11 @@ def listar(service: UsuarioService = Depends(get_service)):
 def buscar_por_id(usuario_id: int, service: UsuarioService = Depends(get_service)):
     return service.buscar_por_id(usuario_id)
 
-@router.get("/{usuario_email}", response_model=UsuarioResponse)
+@router.get("/email/{email}", response_model=UsuarioResponse)
 def buscar_por_email(email: str, service: UsuarioService = Depends(get_service)):
     return service.buscar_por_email(email)
 
-@router.post("", status_code=status.HTTP_201_CREATED)
+@router.post("", response_model= UsuarioResponse, status_code=status.HTTP_201_CREATED)
 def criar(dados: UsuarioRequest, service: UsuarioService = Depends(get_service)):
     return service.criar(dados)
 
@@ -54,14 +55,14 @@ def atualizar(usuario_id: int, dados: UsuarioAtualizarRequest = Body(
         },
         "so_status": {
             "summary": "Alterar Status",
-            "value":{"status": "ativo"}
+            "value":{"status": False}
         }
     }
 ), service: UsuarioService = Depends(get_service)):
     return service.atualizar(usuario_id, dados)
 
 @router.put("/{usuario_id}", response_model=UsuarioResponse)
-def atualizar_tudo(usuario_id: int, dados: UsuarioAtualizarRequest, service: UsuarioService = Depends(get_service)):
+def atualizar_tudo(usuario_id: int, dados: UsuarioAtualizarCompletoRequest, service: UsuarioService = Depends(get_service)):
     return service.atualizar_completo(usuario_id, dados)
 
 

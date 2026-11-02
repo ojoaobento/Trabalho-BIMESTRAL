@@ -14,6 +14,7 @@ from schemas.AgendamentoSchema import (
     AgendamentoRequest,
     AgendamentoResponse,
     AgendamentoStatusRequest,
+    AgendamentoPublicoResponse
 )
 from services.AgendamentoService import AgendamentoService
 from services.ClienteService import ClienteService
@@ -24,17 +25,18 @@ router = APIRouter(prefix="/agendamentos", tags=["Agendamentos"])
 
 def get_service(db: Session = Depends(get_db)) -> AgendamentoService:
     agendamento_repository = AgendamentoRepository(db)
+    servico_repository = ServicoRepository(db)
     return AgendamentoService(
         agendamento_repository,
         ClienteService(ClienteRepository(db)),
-        ServicoRepository(db),
+        servico_repository,
         DisponibilidadeRepository(db),
-        LembreteService(LembreteRepository(db), agendamento_repository),
+        LembreteService(LembreteRepository(db), agendamento_repository, servico_repository),
     )
 
 
 
-@router.post("", response_model=AgendamentoResponse, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=AgendamentoPublicoResponse, status_code=status.HTTP_201_CREATED)
 def criar(dados: AgendamentoRequest, service: AgendamentoService = Depends(get_service)):
     return service.criar(dados)
  

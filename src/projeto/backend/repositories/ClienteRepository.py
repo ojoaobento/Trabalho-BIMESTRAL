@@ -1,6 +1,6 @@
 from sqlalchemy import select
 from sqlalchemy.orm import Session
-
+from sqlalchemy.exc import IntegrityError
 from models.Cliente import Cliente
 
 class ClienteRepository:
@@ -16,12 +16,20 @@ class ClienteRepository:
     def buscar_por_telefone(self, telefone: str):
         return self.db.scalar(select(Cliente).where(Cliente.telefone == telefone))
 
-    def salvar(self, cliente : Cliente):
-        self.db.add(cliente)
-        self.db.commit()
+    def salvar(self, cliente: Cliente):
+        try:
+            self.db.add(cliente)
+            self.db.commit()
+        except IntegrityError:
+            self.db.rollback()
+            raise
         self.db.refresh(cliente)
         return cliente
 
-    def deletar(self, cliente : Cliente):
-        self.db.delete(cliente)
-        self.db.commit()
+    def deletar(self, cliente: Cliente):
+        try:
+            self.db.delete(cliente)
+            self.db.commit()
+        except IntegrityError:
+            self.db.rollback()
+            raise
