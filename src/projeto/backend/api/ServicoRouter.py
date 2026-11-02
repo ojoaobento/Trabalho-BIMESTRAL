@@ -67,6 +67,3 @@ def atualizar(servico_id: int, dados: ServicoAtualizarRequest = Body(
                dependencies=[Depends(get_usuario_logado)])
 def deletar(servico_id: int, service: ServicoService = Depends(get_service)):
     return service.deletar(servico_id)
-
-
-
