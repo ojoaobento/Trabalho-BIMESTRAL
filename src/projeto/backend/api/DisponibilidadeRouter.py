@@ -50,7 +50,7 @@ def atualizar(
                 "value": {"hora_inicio": "09:00:00", "hora_fim": "17:00:00"},
             },
             "so_ativo": {
-                "summary": "Alterar Status",
+                "summary": "Ativar/Desativar",
                 "value": {"ativo": False},
             },
         }

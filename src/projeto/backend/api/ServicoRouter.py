@@ -71,9 +71,9 @@ def atualizar(servico_id: int, dados: ServicoAtualizarRequest = Body(
             "summary": "Atualizar duração",
             "value":{"duracao_minutos": 40}
         },
-        "so_status":{
+        "so_ativo":{
             "summary":"Ativar/desativar",
-            "value":{"status": False}
+            "value":{"ativo": False}
         }
     }
 ), service: ServicoService = Depends(get_service)):

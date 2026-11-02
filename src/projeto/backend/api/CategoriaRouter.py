@@ -38,9 +38,9 @@ def atualizar(categoria_id: int, dados: CategoriaAtualizarRequest = Body(
             "summary":"Atualizar Nome",
             "value":{"nome": "Cabelo"}
         },
-        "so_status":{
-            "summary":"Atualizar Status",
-            "value":{"status": False}
+        "so_ativo":{
+            "summary":"Ativar/Desativar",
+            "value":{"ativo": False}
         }
     }
 ),service: CategoriaService = Depends(get_service)):

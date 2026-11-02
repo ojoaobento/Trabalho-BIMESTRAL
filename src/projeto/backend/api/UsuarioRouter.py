@@ -53,9 +53,9 @@ def atualizar(usuario_id: int, dados: UsuarioAtualizarRequest = Body(
             "summary": "Alterar Senha",
             "value": {"senha": "********"}
         },
-        "so_status": {
-            "summary": "Alterar Status",
-            "value":{"status": False}
+        "so_ativo": {
+            "summary": "Ativar/Desativar",
+            "value":{"ativo": False}
         }
     }
 ), service: UsuarioService = Depends(get_service)):
