@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:main/ui/screens/status_page.dart';
 
 class RevisaoPage extends StatefulWidget {
   const RevisaoPage({
@@ -116,6 +117,10 @@ class _RevisaoPageState extends State<RevisaoPage> {
                   color: _corPrincipal,
                 ),
               ),
+              Text(
+                '5. Status',
+                style: TextStyle(fontSize: 10, color: Colors.black45),
+              ),
             ],
           ),
           const SizedBox(height: 7),
@@ -127,6 +132,7 @@ class _RevisaoPageState extends State<RevisaoPage> {
               Expanded(child: Container(height: 3, color: _corPrincipal)),
               Expanded(child: Container(height: 3, color: _corPrincipal)),
               Expanded(child: Container(height: 3, color: _corPrincipal)),
+              const Expanded(child: Divider(color: _corBorda, thickness: 3)),
             ],
           ),
         ],
@@ -427,7 +433,16 @@ class _RevisaoPageState extends State<RevisaoPage> {
           SizedBox(
             width: double.infinity,
             child: FilledButton.icon(
-              onPressed: () {},
+              onPressed: () => Navigator.of(context).pushReplacement(
+                MaterialPageRoute(
+                  builder: (_) => SolicitacaoConfirmadaPage(
+                    data: widget.data,
+                    horario: widget.horario,
+                    servico: widget.servico,
+                    whatsApp: widget.whatsApp,
+                  ),
+                ),
+              ),
               style: FilledButton.styleFrom(
                 backgroundColor: _corPrincipal,
                 padding: const EdgeInsets.symmetric(vertical: 15),

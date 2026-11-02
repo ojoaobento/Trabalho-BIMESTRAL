@@ -20,7 +20,7 @@ class _ServicosPageState extends State<ServicosPage> {
   final _servicos = const [
     _Servico(
       'Manicure / Pedicure',
-      'Combo Manicure +\nPedicure',
+      'Combo Manicure + Pedicure',
       'Cuticulagem tradicional completa, esmaltação e hidratação nas mãos e pés.',
       75,
       80,
@@ -159,6 +159,10 @@ class _ServicosPageState extends State<ServicosPage> {
                 '4. Confirmar',
                 style: TextStyle(fontSize: 10, color: Colors.black45),
               ),
+              Text(
+                '5. Status',
+                style: TextStyle(fontSize: 10, color: Colors.black45),
+              ),
             ],
           ),
           const SizedBox(height: 7),
@@ -168,6 +172,7 @@ class _ServicosPageState extends State<ServicosPage> {
                 child: Divider(color: _corPrincipal, thickness: 3),
               ),
               Expanded(child: Container(height: 3, color: _corPrincipal)),
+              const Expanded(child: Divider(color: _corBorda, thickness: 3)),
               const Expanded(child: Divider(color: _corBorda, thickness: 3)),
               const Expanded(child: Divider(color: _corBorda, thickness: 3)),
             ],

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:main/ui/screens/revisao_page.dart';
 
 class IdentificacaoPage extends StatefulWidget {
@@ -27,7 +28,8 @@ class _IdentificacaoPageState extends State<IdentificacaoPage> {
   static const _corTexto = Color(0xFF4A1026);
   static const _corBorda = Color(0xFFF1DDE5);
 
-  bool _autorizouDados = true;
+  bool _autorizouDados = false;
+  bool _autorizouWhatsApp = false;
   final _nomeController = TextEditingController(text: 'Maria Cleusa');
   final _whatsAppController = TextEditingController(text: '(44) 99876-5432');
 
@@ -124,6 +126,18 @@ class _IdentificacaoPageState extends State<IdentificacaoPage> {
                       style: TextStyle(fontSize: 9, color: Color(0xFF6F5360)),
                     ),
                   ),
+                  CheckboxListTile(
+                    value: _autorizouWhatsApp,
+                    onChanged: (valor) =>
+                        setState(() => _autorizouWhatsApp = valor ?? false),
+                    contentPadding: EdgeInsets.zero,
+                    controlAffinity: ListTileControlAffinity.leading,
+                    activeColor: _corPrincipal,
+                    title: const Text(
+                      'Autorizo o envio de confirmações e lembretes pelo WhatsApp.',
+                      style: TextStyle(fontSize: 9, color: Color(0xFF6F5360)),
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -163,6 +177,10 @@ class _IdentificacaoPageState extends State<IdentificacaoPage> {
                 '4. Confirmar',
                 style: TextStyle(fontSize: 10, color: Colors.black45),
               ),
+              Text(
+                '5. Status',
+                style: TextStyle(fontSize: 10, color: Colors.black45),
+              ),
             ],
           ),
           const SizedBox(height: 7),
@@ -173,6 +191,7 @@ class _IdentificacaoPageState extends State<IdentificacaoPage> {
               ),
               Expanded(child: Container(height: 3, color: _corPrincipal)),
               Expanded(child: Container(height: 3, color: _corPrincipal)),
+              const Expanded(child: Divider(color: _corBorda, thickness: 3)),
               const Expanded(child: Divider(color: _corBorda, thickness: 3)),
             ],
           ),
@@ -256,26 +275,6 @@ class _IdentificacaoPageState extends State<IdentificacaoPage> {
                         ),
                       ),
                     ),
-                    SizedBox(width: 6),
-                    DecoratedBox(
-                      decoration: BoxDecoration(
-                        color: Color(0xFFDDF5E9),
-                        borderRadius: BorderRadius.all(Radius.circular(4)),
-                      ),
-                      child: Padding(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: 5,
-                          vertical: 2,
-                        ),
-                        child: Text(
-                          'Salvo',
-                          style: TextStyle(
-                            fontSize: 8,
-                            color: Color(0xFF16836D),
-                          ),
-                        ),
-                      ),
-                    ),
                   ],
                 ),
                 SizedBox(height: 4),
@@ -284,13 +283,6 @@ class _IdentificacaoPageState extends State<IdentificacaoPage> {
                   style: const TextStyle(fontSize: 9, color: Color(0xFF976D7B)),
                 ),
               ],
-            ),
-          ),
-          TextButton(
-            onPressed: () {},
-            child: const Text(
-              'Editar',
-              style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
             ),
           ),
         ],
@@ -305,16 +297,15 @@ class _IdentificacaoPageState extends State<IdentificacaoPage> {
         onPressed: () {},
         style: OutlinedButton.styleFrom(
           foregroundColor: _corTexto,
+          backgroundColor: Colors.white,
+          surfaceTintColor: Colors.white,
           side: const BorderSide(color: _corBorda),
           padding: const EdgeInsets.symmetric(vertical: 12),
         ),
-        icon: const Text(
-          'G',
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-            color: Color(0xFF4285F4),
-          ),
+        icon: SvgPicture.asset(
+          'assets/icons/google_g.svg',
+          width: 18,
+          height: 18,
         ),
         label: const Text(
           'Continuar com o Google',
@@ -394,22 +385,20 @@ class _IdentificacaoPageState extends State<IdentificacaoPage> {
             ),
           ),
           FilledButton.icon(
-            onPressed: _autorizouDados
-                ? () => Navigator.push(
-                    context,
-                    _InstantPageRoute(
-                      builder: (_) => RevisaoPage(
-                        data: widget.data,
-                        horario: widget.horario,
-                        servico: widget.servico,
-                        preco: widget.preco,
-                        duracao: widget.duracao,
-                        nome: _nomeController.text,
-                        whatsApp: _whatsAppController.text,
-                      ),
-                    ),
-                  )
-                : null,
+            onPressed: () => Navigator.push(
+              context,
+              _InstantPageRoute(
+                builder: (_) => RevisaoPage(
+                  data: widget.data,
+                  horario: widget.horario,
+                  servico: widget.servico,
+                  preco: widget.preco,
+                  duracao: widget.duracao,
+                  nome: _nomeController.text,
+                  whatsApp: _whatsAppController.text,
+                ),
+              ),
+            ),
             style: FilledButton.styleFrom(
               backgroundColor: _corPrincipal,
               padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 13),
