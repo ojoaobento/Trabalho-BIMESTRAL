@@ -2,14 +2,16 @@
 import 'package:flutter/material.dart';
 
 import 'package:main/screens/admin_login.dart';
+import 'package:main/screens/visao_geral_page.dart';
 import 'package:main/screens/agendamento_page.dart';
 import 'package:main/screens/cliente_page.dart';
 import 'package:main/screens/disponibilidade_page.dart';
 import 'package:main/screens/lembrete_page.dart';
 import 'package:main/screens/usuario_page.dart';
-import 'package:main/services/api_client.dart';
 import 'package:main/screens/categoria_page.dart';
 import 'package:main/screens/servico_page.dart';
+
+import 'package:main/services/api_client.dart';
 
 class _ItemMenu {
   final IconData icone;
@@ -26,6 +28,7 @@ class AdminDashboard extends StatefulWidget {
 }
 
 class _AdminDashboardState extends State<AdminDashboard> {
+  // Começa na Visão Geral
   int _selectedIndex = 0;
 
   static const Color vinho = Color(0xFF8E2348);
@@ -34,15 +37,21 @@ class _AdminDashboardState extends State<AdminDashboard> {
   static const Color texto = Color(0xFF4A1026);
 
   static const double larguraMinimaMenuFixo = 800;
+  static const double larguraCompacta = 600;
+  static const double larguraMenuAmplo = 1100;
 
+  static const double tamanhoMinimoValido = 1;
+
+  // Itens do menu
   static const List<_ItemMenu> _itens = [
-    _ItemMenu(Icons.room_service, 'Gerenciar Serviços'),
-    _ItemMenu(Icons.people, 'Gerenciar Usuários'),
-    _ItemMenu(Icons.calendar_month, 'Gerenciar Agendamentos'),
-    _ItemMenu(Icons.badge, 'Gerenciar Clientes'),
-    _ItemMenu(Icons.category, 'Gerenciar Categorias'),
-    _ItemMenu(Icons.notifications, 'Gerenciar Lembretes'),
-    _ItemMenu(Icons.access_time, 'Gerenciar Disponibilidades'),
+    _ItemMenu(Icons.dashboard, 'Visão Geral'),
+    _ItemMenu(Icons.room_service, 'Serviços'),
+    _ItemMenu(Icons.people, 'Usuários'),
+    _ItemMenu(Icons.calendar_month, 'Agendamentos'),
+    _ItemMenu(Icons.badge, 'Clientes'),
+    _ItemMenu(Icons.category, 'Categorias'),
+    _ItemMenu(Icons.notifications, 'Lembretes'),
+    _ItemMenu(Icons.access_time, 'Disponibilidades'),
   ];
 
   @override
@@ -59,6 +68,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
     super.dispose();
   }
 
+  // Volta para a tela de login
   void _voltarParaLogin({bool sessaoExpirou = false}) {
     if (!mounted) return;
 
@@ -76,78 +86,112 @@ class _AdminDashboardState extends State<AdminDashboard> {
     if (sessaoExpirou) {
       messenger.showSnackBar(
         const SnackBar(
-          content: Text('Sua sessão expirou. Entre novamente.'),
+          content: Text(
+            'Sua sessão expirou. Entre novamente.',
+          ),
           backgroundColor: vinho,
         ),
       );
     }
   }
 
+  // Controla qual página será exibida
   Widget _construirConteudo() {
     switch (_selectedIndex) {
-
       case 0:
-        return const ServicosPage();
+        return const VisaoGeralPage();
+
       case 1:
-        return const UsuarioPage();
+        return const ServicosPage();
 
       case 2:
-        return const AgendamentoPage();
-      
+        return const UsuarioPage();
+
       case 3:
-        return const ClientePage();
+        return const AgendamentoPage();
 
       case 4:
-        return const CategoriasPage();
+        return const ClientePage();
 
       case 5:
-        return const LembretePage();
+        return const CategoriasPage();
 
       case 6:
+        return const LembretePage();
+
+      case 7:
         return const DisponibilidadePage();
 
       default:
-        return Center(
-          child: Text(
-            ''
-            '"${_itens[_selectedIndex].titulo}"',
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontSize: 16,
-              color: Colors.grey,
-            ),
-          ),
+        return const Center(
+          child: Text('Página não encontrada'),
         );
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final bool menuFixo =
-        MediaQuery.of(context).size.width >= larguraMinimaMenuFixo;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // Verifica se as dimensões são válidas
+        if (!constraints.hasBoundedWidth ||
+            !constraints.hasBoundedHeight ||
+            constraints.maxWidth <= tamanhoMinimoValido ||
+            constraints.maxHeight <= tamanhoMinimoValido) {
+          return const ColoredBox(
+            color: fundo,
+            child: SizedBox.expand(),
+          );
+        }
+
+        return _estrutura(constraints.maxWidth);
+      },
+    );
+  }
+
+  // Estrutura principal
+  Widget _estrutura(double largura) {
+    final bool menuFixo = largura >= larguraMinimaMenuFixo;
+    final bool compacto = largura < larguraCompacta;
+
+    final double larguraMenu =
+        largura >= larguraMenuAmplo ? 280 : 240;
 
     return Scaffold(
       backgroundColor: fundo,
 
+      // Barra superior
       appBar: AppBar(
         backgroundColor: vinho,
         foregroundColor: Colors.white,
         elevation: 0,
-        title: const Text(
+        centerTitle: false,
+        titleSpacing: 8,
+        toolbarHeight: 56,
+        title: Text(
           'Painel Administrativo',
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
           style: TextStyle(
             fontWeight: FontWeight.bold,
+            fontSize: compacto ? 16 : 20,
           ),
         ),
         actions: [
           IconButton(
             icon: const Icon(Icons.logout),
             tooltip: 'Sair',
+            padding: const EdgeInsets.all(8),
+            constraints: const BoxConstraints(
+              minWidth: 48,
+              minHeight: 48,
+            ),
             onPressed: _voltarParaLogin,
           ),
         ],
       ),
 
+      // Menu lateral responsivo
       drawer: menuFixo
           ? null
           : Drawer(
@@ -155,17 +199,17 @@ class _AdminDashboardState extends State<AdminDashboard> {
               child: _menu(fecharAoSelecionar: true),
             ),
 
+      // Corpo principal
       body: Row(
         children: [
           if (menuFixo) ...[
             Material(
               color: rosaClaro,
               child: SizedBox(
-                width: 280,
+                width: larguraMenu,
                 child: _menu(),
               ),
             ),
-
             const VerticalDivider(
               width: 1,
               thickness: 1,
@@ -173,25 +217,28 @@ class _AdminDashboardState extends State<AdminDashboard> {
             ),
           ],
 
+          // Conteúdo da página
           Expanded(
             child: Container(
               color: Colors.white,
-              padding: const EdgeInsets.all(24),
+              padding: EdgeInsets.all(compacto ? 12 : 24),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     _itens[_selectedIndex].titulo,
-                    style: const TextStyle(
-                      fontSize: 24,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: compacto ? 20 : 24,
                       fontWeight: FontWeight.bold,
                       color: texto,
                     ),
                   ),
 
-                  const Divider(
-                    height: 30,
-                    color: Color(0xFFF1DDE5),
+                  Divider(
+                    height: compacto ? 20 : 30,
+                    color: const Color(0xFFF1DDE5),
                   ),
 
                   Expanded(
@@ -206,6 +253,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
     );
   }
 
+  // Menu principal
   Widget _menu({bool fecharAoSelecionar = false}) {
     return ListView(
       padding: const EdgeInsets.symmetric(vertical: 16),
@@ -235,6 +283,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
     );
   }
 
+  // Itens de navegação
   Widget _buildNavItem(
     int index,
     _ItemMenu item,
@@ -250,6 +299,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
 
       title: Text(
         item.titulo,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
         style: TextStyle(
           fontWeight:
               isSelected ? FontWeight.bold : FontWeight.normal,

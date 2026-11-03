@@ -5,6 +5,8 @@ import 'package:main/models/cliente_model.dart';
 import 'package:main/services/api_client.dart';
 import 'package:main/widgets/painel_widgets.dart';
 
+const double _larguraMinimaTabela = 720;
+
 class ClientePage extends StatefulWidget {
   const ClientePage({super.key});
 
@@ -133,8 +135,8 @@ class _ClientePageState extends State<ClientePage> {
           onPressed: () => _abrirFormulario(),
         ),
         const SizedBox(height: 12),
-        SizedBox(
-          width: 360,
+        ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 360),
           child: TextField(
             onChanged: (v) => setState(() => _busca = v),
             decoration: decoracaoFormulario('Buscar por nome, telefone ou e-mail')
@@ -166,55 +168,165 @@ class _ClientePageState extends State<ClientePage> {
     }
 
     return LayoutBuilder(
-      builder: (context, constraints) => SingleChildScrollView(
-        child: SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: ConstrainedBox(
-            constraints: BoxConstraints(minWidth: constraints.maxWidth),
-            child: DataTable(
-              headingTextStyle: const TextStyle(
-                fontWeight: FontWeight.bold,
-                color: PainelCores.vinho,
-              ),
-              columns: const [
-                DataColumn(label: Text('Nome')),
-                DataColumn(label: Text('Telefone')),
-                DataColumn(label: Text('E-mail')),
-                DataColumn(label: Text('Lembretes')),
-                DataColumn(label: Text('Cadastro')),
-                DataColumn(label: Text('Ações')),
-              ],
-              rows: lista.map((c) {
-                return DataRow(cells: [
-                  DataCell(Text(c.nome)),
-                  DataCell(Text(_formatarTelefone(c.telefone))),
-                  DataCell(Text(c.email ?? '-')),
-                  DataCell(Switch(
-                    value: c.aceitaLembretes,
-                    activeColor: PainelCores.vinho,
-                    onChanged: (valor) => _alternarLembretes(c, valor),
-                  )),
-                  DataCell(Text(_formatarData(c.dtCadastro))),
-                  DataCell(Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.edit_outlined),
-                        tooltip: 'Editar',
-                        onPressed: () => _abrirFormulario(cliente: c),
-                      ),
-                      IconButton(
-                        icon: Icon(Icons.delete_outline,
-                            color: Colors.red.shade700),
-                        tooltip: 'Excluir',
-                        onPressed: () => _excluir(c),
-                      ),
-                    ],
-                  )),
-                ]);
-              }).toList(),
+      builder: (context, constraints) {
+        if (constraints.maxWidth < _larguraMinimaTabela) {
+          return _listaCards(lista);
+        }
+        return _tabela(constraints, lista);
+      },
+    );
+  }
+
+  Widget _tabela(BoxConstraints constraints, List<ClienteModel> lista) {
+    return SingleChildScrollView(
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minWidth: constraints.maxWidth),
+          child: DataTable(
+            headingTextStyle: const TextStyle(
+              fontWeight: FontWeight.bold,
+              color: PainelCores.vinho,
             ),
+            columns: const [
+              DataColumn(label: Text('Nome')),
+              DataColumn(label: Text('Telefone')),
+              DataColumn(label: Text('E-mail')),
+              DataColumn(label: Text('Lembretes')),
+              DataColumn(label: Text('Cadastro')),
+              DataColumn(label: Text('Ações')),
+            ],
+            rows: lista.map((c) {
+              return DataRow(cells: [
+                DataCell(Text(c.nome)),
+                DataCell(Text(_formatarTelefone(c.telefone))),
+                DataCell(Text(c.email ?? '-')),
+                DataCell(Switch(
+                  value: c.aceitaLembretes,
+                  activeColor: PainelCores.vinho,
+                  onChanged: (valor) => _alternarLembretes(c, valor),
+                )),
+                DataCell(Text(_formatarData(c.dtCadastro))),
+                DataCell(Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.edit_outlined),
+                      tooltip: 'Editar',
+                      onPressed: () => _abrirFormulario(cliente: c),
+                    ),
+                    IconButton(
+                      icon: Icon(Icons.delete_outline,
+                          color: Colors.red.shade700),
+                      tooltip: 'Excluir',
+                      onPressed: () => _excluir(c),
+                    ),
+                  ],
+                )),
+              ]);
+            }).toList(),
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _listaCards(List<ClienteModel> lista) {
+    return ListView.separated(
+      itemCount: lista.length,
+      separatorBuilder: (_, __) => const SizedBox(height: 12),
+      itemBuilder: (_, i) => _cartaoCliente(lista[i]),
+    );
+  }
+
+  Widget _info(IconData icone, String texto) {
+    return Row(
+      children: [
+        Icon(icone, size: 16, color: Colors.grey.shade600),
+        const SizedBox(width: 6),
+        Expanded(
+          child: Text(
+            texto,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(color: Colors.grey.shade800),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _cartaoCliente(ClienteModel c) {
+    final email = c.email;
+    return Card(
+      elevation: 0,
+      margin: EdgeInsets.zero,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: Colors.grey.shade300),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 14, 8, 8),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: Text(
+                c.nome,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            const SizedBox(height: 6),
+            Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: _info(Icons.phone_outlined, _formatarTelefone(c.telefone)),
+            ),
+            if (email != null && email.isNotEmpty) ...[
+              const SizedBox(height: 4),
+              Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: _info(Icons.mail_outline, email),
+              ),
+            ],
+            const SizedBox(height: 4),
+            Text(
+              'Cadastro: ${_formatarData(c.dtCadastro)}',
+              style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+            ),
+            const SizedBox(height: 4),
+            Row(
+              children: [
+                Switch(
+                  value: c.aceitaLembretes,
+                  activeColor: PainelCores.vinho,
+                  onChanged: (valor) => _alternarLembretes(c, valor),
+                ),
+                const Flexible(
+                  child: Text(
+                    'Lembretes',
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                const Spacer(),
+                IconButton(
+                  icon: const Icon(Icons.edit_outlined),
+                  tooltip: 'Editar',
+                  onPressed: () => _abrirFormulario(cliente: c),
+                ),
+                IconButton(
+                  icon: Icon(Icons.delete_outline, color: Colors.red.shade700),
+                  tooltip: 'Excluir',
+                  onPressed: () => _excluir(c),
+                ),
+              ],
+            ),
+          ],
         ),
       ),
     );
@@ -302,94 +414,101 @@ class _FormularioClienteState extends State<_FormularioCliente> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
+      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
       title: Text(_editando ? 'Editar cliente' : 'Novo cliente'),
-      content: SizedBox(
-        width: 400,
-        child: Form(
-          key: _formKey,
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextFormField(
-                  controller: _nomeController,
-                  autofocus: true,
-                  enabled: !_salvando,
-                  textInputAction: TextInputAction.next,
-                  decoration: decoracaoFormulario('Nome'),
-                  validator: (valor) {
-                    final texto = (valor ?? '').trim();
-                    if (texto.isEmpty) return 'Informe o nome';
-                    if (texto.length < 2) return 'Mínimo de 2 caracteres';
-                    if (texto.length > 100) return 'No máximo 100 caracteres';
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 12),
-                TextFormField(
-                  controller: _telefoneController,
-                  enabled: !_salvando,
-                  keyboardType: TextInputType.phone,
-                  textInputAction: TextInputAction.next,
-                  inputFormatters: [
-                    FilteringTextInputFormatter.digitsOnly,
-                    LengthLimitingTextInputFormatter(11),
-                  ],
-                  decoration: decoracaoFormulario('Telefone (DDD + número)'),
-                  validator: (valor) {
-                    final texto = (valor ?? '').trim();
-                    if (texto.isEmpty) return 'Informe o telefone';
-                    if (texto.length != 11) return 'Use 11 dígitos, ex.: 44988136876';
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 12),
-                TextFormField(
-                  controller: _emailController,
-                  enabled: !_salvando,
-                  keyboardType: TextInputType.emailAddress,
-                  textInputAction: TextInputAction.done,
-                  onFieldSubmitted: (_) => _salvar(),
-                  decoration: decoracaoFormulario('E-mail (opcional)'),
-                  validator: (valor) {
-                    final texto = (valor ?? '').trim();
-                    if (texto.isEmpty) return null;
-                    final valido = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
-                    if (!valido.hasMatch(texto)) return 'E-mail inválido';
-                    return null;
-                  },
-                ),
-                SwitchListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: const Text('Aceita lembretes'),
-                  value: _aceitaLembretes,
-                  activeColor: PainelCores.vinho,
-                  onChanged:
-                      _salvando ? null : (v) => setState(() => _aceitaLembretes = v),
-                ),
-                if (!_editando)
-                  CheckboxListTile(
+      content: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 400),
+        child: SizedBox(
+          width: double.maxFinite,
+          child: Form(
+            key: _formKey,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextFormField(
+                    controller: _nomeController,
+                    autofocus: true,
+                    enabled: !_salvando,
+                    textInputAction: TextInputAction.next,
+                    decoration: decoracaoFormulario('Nome'),
+                    validator: (valor) {
+                      final texto = (valor ?? '').trim();
+                      if (texto.isEmpty) return 'Informe o nome';
+                      if (texto.length < 2) return 'Mínimo de 2 caracteres';
+                      if (texto.length > 100) return 'No máximo 100 caracteres';
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: _telefoneController,
+                    enabled: !_salvando,
+                    keyboardType: TextInputType.phone,
+                    textInputAction: TextInputAction.next,
+                    inputFormatters: [
+                      FilteringTextInputFormatter.digitsOnly,
+                      LengthLimitingTextInputFormatter(11),
+                    ],
+                    decoration: decoracaoFormulario('Telefone (DDD + número)'),
+                    validator: (valor) {
+                      final texto = (valor ?? '').trim();
+                      if (texto.isEmpty) return 'Informe o telefone';
+                      if (texto.length != 11) {
+                        return 'Use 11 dígitos, ex.: 44988136876';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: _emailController,
+                    enabled: !_salvando,
+                    keyboardType: TextInputType.emailAddress,
+                    textInputAction: TextInputAction.done,
+                    onFieldSubmitted: (_) => _salvar(),
+                    decoration: decoracaoFormulario('E-mail (opcional)'),
+                    validator: (valor) {
+                      final texto = (valor ?? '').trim();
+                      if (texto.isEmpty) return null;
+                      final valido = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
+                      if (!valido.hasMatch(texto)) return 'E-mail inválido';
+                      return null;
+                    },
+                  ),
+                  SwitchListTile(
                     contentPadding: EdgeInsets.zero,
-                    controlAffinity: ListTileControlAffinity.leading,
+                    title: const Text('Aceita lembretes'),
+                    value: _aceitaLembretes,
                     activeColor: PainelCores.vinho,
-                    title: const Text(
-                      'O cliente consentiu com o tratamento dos seus dados.',
-                      style: TextStyle(fontSize: 13),
-                    ),
-                    value: _consentimento,
                     onChanged: _salvando
                         ? null
-                        : (v) => setState(() => _consentimento = v ?? false),
+                        : (v) => setState(() => _aceitaLembretes = v),
                   ),
-                if (_erro != null)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 12),
-                    child: Text(
-                      _erro!,
-                      style: TextStyle(color: Colors.red.shade700),
+                  if (!_editando)
+                    CheckboxListTile(
+                      contentPadding: EdgeInsets.zero,
+                      controlAffinity: ListTileControlAffinity.leading,
+                      activeColor: PainelCores.vinho,
+                      title: const Text(
+                        'O cliente consentiu com o tratamento dos seus dados.',
+                        style: TextStyle(fontSize: 13),
+                      ),
+                      value: _consentimento,
+                      onChanged: _salvando
+                          ? null
+                          : (v) => setState(() => _consentimento = v ?? false),
                     ),
-                  ),
-              ],
+                  if (_erro != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 12),
+                      child: Text(
+                        _erro!,
+                        style: TextStyle(color: Colors.red.shade700),
+                      ),
+                    ),
+                ],
+              ),
             ),
           ),
         ),

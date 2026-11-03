@@ -4,6 +4,8 @@ import 'package:main/models/agendamento_model.dart';
 import 'package:main/services/api_client.dart';
 import 'package:main/widgets/painel_widgets.dart';
 
+const double _larguraMinimaTabela = 720;
+
 String _dois(int n) => n.toString().padLeft(2, '0');
 
 String _formatarData(DateTime d) => '${_dois(d.day)}/${_dois(d.month)}/${d.year}';
@@ -85,7 +87,6 @@ class _AgendamentoPageState extends State<AgendamentoPage> {
       if (periodo != null) {
         final inicio = DateTime(
             periodo.start.year, periodo.start.month, periodo.start.day);
-        // O fim da API é exclusivo, então vai até o começo do dia seguinte.
         final fim = DateTime(
             periodo.end.year, periodo.end.month, periodo.end.day + 1);
         caminho += '?inicio=${Uri.encodeQueryComponent(inicio.toUtc().toIso8601String())}'
@@ -247,8 +248,7 @@ class _AgendamentoPageState extends State<AgendamentoPage> {
             periodo == null
                 ? 'Todo o período'
                 : '${_formatarData(periodo.start)} – ${_formatarData(periodo.end)}',
-                
-          ), 
+          ),
         ),
         if (periodo != null)
           IconButton(
@@ -258,6 +258,7 @@ class _AgendamentoPageState extends State<AgendamentoPage> {
           ),
         DropdownButton<StatusAgendamento?>(
           value: _statusFiltro,
+          isDense: true,
           items: [
             const DropdownMenuItem(value: null, child: Text('Todos os status')),
             ...StatusAgendamento.values.map(
@@ -294,83 +295,189 @@ class _AgendamentoPageState extends State<AgendamentoPage> {
     }
 
     return LayoutBuilder(
-      builder: (context, constraints) => SingleChildScrollView(
-        child: SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: ConstrainedBox(
-            constraints: BoxConstraints(minWidth: constraints.maxWidth),
-            child: DataTable(
-              headingTextStyle: const TextStyle(
-                fontWeight: FontWeight.bold,
-                color: PainelCores.vinho,
-              ),
-              columns: const [
-                DataColumn(label: Text('Data')),
-                DataColumn(label: Text('Horário')),
-                DataColumn(label: Text('Cliente')),
-                DataColumn(label: Text('Serviço')),
-                DataColumn(label: Text('Valor')),
-                DataColumn(label: Text('Status')),
-                DataColumn(label: Text('Ações')),
-              ],
-              rows: lista.map((a) {
-                final proximos = a.status.proximos;
-                return DataRow(cells: [
-                  DataCell(Text(a.dataTexto)),
-                  DataCell(Text('${a.horaInicioTexto} – ${a.horaFimTexto}')),
-                  DataCell(Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(a.cliente?.nome ?? '-'),
-                      if (a.cliente != null)
-                        Text(
-                          a.cliente!.telefone,
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey.shade600,
-                          ),
-                        ),
-                    ],
-                  )),
-                  DataCell(Text(a.servico?.nome ?? '-')),
-                  DataCell(Text(a.valorTexto)),
-                  DataCell(_ChipStatus(status: a.status)),
-                  DataCell(Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      PopupMenuButton<StatusAgendamento>(
-                        icon: const Icon(Icons.swap_horiz),
-                        tooltip: 'Alterar status',
-                        enabled: proximos.isNotEmpty,
-                        onSelected: (novo) => _alterarStatus(a, novo),
-                        itemBuilder: (_) => proximos
-                            .map((s) => PopupMenuItem(
-                                  value: s,
-                                  child: Text(
-                                    s.rotulo,
-                                    style: TextStyle(color: _coresStatus[s]),
-                                  ),
-                                ))
-                            .toList(),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.edit_calendar_outlined),
-                        tooltip: 'Remarcar',
-                        onPressed: a.podeRemarcar ? () => _remarcar(a) : null,
-                      ),
-                      IconButton(
-                        icon: Icon(Icons.delete_outline,
-                            color: Colors.red.shade700),
-                        tooltip: 'Excluir',
-                        onPressed: () => _excluir(a),
-                      ),
-                    ],
-                  )),
-                ]);
-              }).toList(),
+      builder: (context, constraints) {
+        if (constraints.maxWidth < _larguraMinimaTabela) {
+          return _listaCards(lista);
+        }
+        return _tabela(constraints, lista);
+      },
+    );
+  }
+
+  Widget _tabela(BoxConstraints constraints, List<AgendamentoModel> lista) {
+    return SingleChildScrollView(
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minWidth: constraints.maxWidth),
+          child: DataTable(
+            headingTextStyle: const TextStyle(
+              fontWeight: FontWeight.bold,
+              color: PainelCores.vinho,
             ),
+            columns: const [
+              DataColumn(label: Text('Data')),
+              DataColumn(label: Text('Horário')),
+              DataColumn(label: Text('Cliente')),
+              DataColumn(label: Text('Serviço')),
+              DataColumn(label: Text('Valor')),
+              DataColumn(label: Text('Status')),
+              DataColumn(label: Text('Ações')),
+            ],
+            rows: lista.map((a) {
+              return DataRow(cells: [
+                DataCell(Text(a.dataTexto)),
+                DataCell(Text('${a.horaInicioTexto} – ${a.horaFimTexto}')),
+                DataCell(Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(a.cliente?.nome ?? '-'),
+                    if (a.cliente != null)
+                      Text(
+                        a.cliente!.telefone,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey.shade600,
+                        ),
+                      ),
+                  ],
+                )),
+                DataCell(Text(a.servico?.nome ?? '-')),
+                DataCell(Text(a.valorTexto)),
+                DataCell(_ChipStatus(status: a.status)),
+                DataCell(_acoes(a)),
+              ]);
+            }).toList(),
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _acoes(AgendamentoModel a) {
+    final proximos = a.status.proximos;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        PopupMenuButton<StatusAgendamento>(
+          icon: const Icon(Icons.swap_horiz),
+          tooltip: 'Alterar status',
+          enabled: proximos.isNotEmpty,
+          onSelected: (novo) => _alterarStatus(a, novo),
+          itemBuilder: (_) => proximos
+              .map((s) => PopupMenuItem(
+                    value: s,
+                    child: Text(
+                      s.rotulo,
+                      style: TextStyle(color: _coresStatus[s]),
+                    ),
+                  ))
+              .toList(),
+        ),
+        IconButton(
+          icon: const Icon(Icons.edit_calendar_outlined),
+          tooltip: 'Remarcar',
+          onPressed: a.podeRemarcar ? () => _remarcar(a) : null,
+        ),
+        IconButton(
+          icon: Icon(Icons.delete_outline, color: Colors.red.shade700),
+          tooltip: 'Excluir',
+          onPressed: () => _excluir(a),
+        ),
+      ],
+    );
+  }
+
+  Widget _listaCards(List<AgendamentoModel> lista) {
+    return ListView.separated(
+      itemCount: lista.length,
+      separatorBuilder: (_, __) => const SizedBox(height: 12),
+      itemBuilder: (_, i) => _cartaoAgendamento(lista[i]),
+    );
+  }
+
+  Widget _info(IconData icone, String texto) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icone, size: 16, color: Colors.grey.shade600),
+        const SizedBox(width: 4),
+        Flexible(
+          child: Text(
+            texto,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(color: Colors.grey.shade800),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _cartaoAgendamento(AgendamentoModel a) {
+    final cliente = a.cliente;
+    return Card(
+      elevation: 0,
+      margin: EdgeInsets.zero,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: Colors.grey.shade300),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 14, 8, 8),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    '${a.dataTexto} • ${a.horaInicioTexto} – ${a.horaFimTexto}',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.only(left: 8, right: 8),
+                  child: _ChipStatus(status: a.status),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: _info(Icons.person_outline, cliente?.nome ?? '-'),
+            ),
+            if (cliente != null) ...[
+              const SizedBox(height: 4),
+              Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: _info(Icons.phone_outlined, cliente.telefone),
+              ),
+            ],
+            const SizedBox(height: 4),
+            Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: Wrap(
+                spacing: 16,
+                runSpacing: 4,
+                children: [
+                  _info(Icons.spa_outlined, a.servico?.nome ?? '-'),
+                  _info(Icons.payments_outlined, a.valorTexto),
+                ],
+              ),
+            ),
+            const SizedBox(height: 4),
+            Align(
+              alignment: Alignment.centerRight,
+              child: _acoes(a),
+            ),
+          ],
         ),
       ),
     );
@@ -480,63 +587,67 @@ class _FormularioRemarcarState extends State<_FormularioRemarcar> {
     final duracao = a.servico?.duracaoMinutos;
 
     return AlertDialog(
+      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
       title: const Text('Remarcar agendamento'),
-      content: SizedBox(
-        width: 400,
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                '${a.cliente?.nome ?? 'Cliente'} • ${a.servico?.nome ?? 'Serviço'}',
-                style: const TextStyle(fontWeight: FontWeight.w600),
-              ),
-              if (duracao != null)
-                Padding(
-                  padding: const EdgeInsets.only(top: 4),
-                  child: Text(
-                    'Duração: $duracao min. O horário de término é calculado automaticamente.',
-                    style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+      content: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 400),
+        child: SizedBox(
+          width: double.maxFinite,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '${a.cliente?.nome ?? 'Cliente'} • ${a.servico?.nome ?? 'Serviço'}',
+                  style: const TextStyle(fontWeight: FontWeight.w600),
+                ),
+                if (duracao != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Text(
+                      'Duração: $duracao min. O horário de término é calculado automaticamente.',
+                      style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                    ),
+                  ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: _dataController,
+                  readOnly: true,
+                  enabled: !_salvando,
+                  onTap: _escolherData,
+                  decoration: decoracaoFormulario('Data').copyWith(
+                    suffixIcon: const Icon(Icons.calendar_today_outlined),
                   ),
                 ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: _dataController,
-                readOnly: true,
-                enabled: !_salvando,
-                onTap: _escolherData,
-                decoration: decoracaoFormulario('Data').copyWith(
-                  suffixIcon: const Icon(Icons.calendar_today_outlined),
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: _horaController,
-                readOnly: true,
-                enabled: !_salvando,
-                onTap: _escolherHora,
-                decoration: decoracaoFormulario('Horário de início').copyWith(
-                  suffixIcon: const Icon(Icons.access_time),
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: _obsController,
-                enabled: !_salvando,
-                maxLines: 3,
-                maxLength: 500,
-                decoration: decoracaoFormulario('Observações (opcional)'),
-              ),
-              if (_erro != null)
-                Padding(
-                  padding: const EdgeInsets.only(top: 4),
-                  child: Text(
-                    _erro!,
-                    style: TextStyle(color: Colors.red.shade700),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _horaController,
+                  readOnly: true,
+                  enabled: !_salvando,
+                  onTap: _escolherHora,
+                  decoration: decoracaoFormulario('Horário de início').copyWith(
+                    suffixIcon: const Icon(Icons.access_time),
                   ),
                 ),
-            ],
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _obsController,
+                  enabled: !_salvando,
+                  maxLines: 3,
+                  maxLength: 500,
+                  decoration: decoracaoFormulario('Observações (opcional)'),
+                ),
+                if (_erro != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Text(
+                      _erro!,
+                      style: TextStyle(color: Colors.red.shade700),
+                    ),
+                  ),
+              ],
+            ),
           ),
         ),
       ),

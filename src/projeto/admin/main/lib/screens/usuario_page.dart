@@ -4,6 +4,8 @@ import 'package:main/models/usuario_model.dart';
 import 'package:main/services/api_client.dart';
 import 'package:main/widgets/painel_widgets.dart';
 
+const double _larguraMinimaTabela = 720;
+
 class UsuarioPage extends StatefulWidget {
   const UsuarioPage({super.key});
 
@@ -134,59 +136,148 @@ class _UsuarioPageState extends State<UsuarioPage> {
     }
 
     return LayoutBuilder(
-      builder: (context, constraints) => SingleChildScrollView(
-        child: SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: ConstrainedBox(
-            constraints: BoxConstraints(minWidth: constraints.maxWidth),
-            child: DataTable(
-              headingTextStyle: const TextStyle(
-                fontWeight: FontWeight.bold,
-                color: PainelCores.vinho,
-              ),
-              columns: const [
-                DataColumn(label: Text('Nome')),
-                DataColumn(label: Text('E-mail')),
-                DataColumn(label: Text('Status')),
-                DataColumn(label: Text('Cadastro')),
-                DataColumn(label: Text('Ações')),
-              ],
-              rows: _usuarios.map((u) {
-                return DataRow(cells: [
-                  DataCell(Text(u.nome)),
-                  DataCell(Text(u.email)),
-                  DataCell(Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Switch(
-                        value: u.ativo,
-                        activeColor: PainelCores.vinho,
-                        onChanged: (valor) => _alternarAtivo(u, valor),
-                      ),
-                      StatusChip(ativo: u.ativo),
-                    ],
-                  )),
-                  DataCell(Text(_formatarData(u.dt_cadastro))),
-                  DataCell(Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.edit_outlined),
-                        tooltip: 'Editar',
-                        onPressed: () => _abrirFormulario(usuario: u),
-                      ),
-                      IconButton(
-                        icon: Icon(Icons.delete_outline,
-                            color: Colors.red.shade700),
-                        tooltip: 'Excluir',
-                        onPressed: () => _excluir(u),
-                      ),
-                    ],
-                  )),
-                ]);
-              }).toList(),
+      builder: (context, constraints) {
+        if (constraints.maxWidth < _larguraMinimaTabela) {
+          return _listaCards();
+        }
+        return _tabela(constraints);
+      },
+    );
+  }
+
+  Widget _tabela(BoxConstraints constraints) {
+    return SingleChildScrollView(
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minWidth: constraints.maxWidth),
+          child: DataTable(
+            headingTextStyle: const TextStyle(
+              fontWeight: FontWeight.bold,
+              color: PainelCores.vinho,
             ),
+            columns: const [
+              DataColumn(label: Text('Nome')),
+              DataColumn(label: Text('E-mail')),
+              DataColumn(label: Text('Status')),
+              DataColumn(label: Text('Cadastro')),
+              DataColumn(label: Text('Ações')),
+            ],
+            rows: _usuarios.map((u) {
+              return DataRow(cells: [
+                DataCell(Text(u.nome)),
+                DataCell(Text(u.email)),
+                DataCell(Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Switch(
+                      value: u.ativo,
+                      activeColor: PainelCores.vinho,
+                      onChanged: (valor) => _alternarAtivo(u, valor),
+                    ),
+                    StatusChip(ativo: u.ativo),
+                  ],
+                )),
+                DataCell(Text(_formatarData(u.dt_cadastro))),
+                DataCell(Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.edit_outlined),
+                      tooltip: 'Editar',
+                      onPressed: () => _abrirFormulario(usuario: u),
+                    ),
+                    IconButton(
+                      icon: Icon(Icons.delete_outline,
+                          color: Colors.red.shade700),
+                      tooltip: 'Excluir',
+                      onPressed: () => _excluir(u),
+                    ),
+                  ],
+                )),
+              ]);
+            }).toList(),
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _listaCards() {
+    return ListView.separated(
+      itemCount: _usuarios.length,
+      separatorBuilder: (_, __) => const SizedBox(height: 12),
+      itemBuilder: (_, i) => _cartaoUsuario(_usuarios[i]),
+    );
+  }
+
+  Widget _cartaoUsuario(UsuarioModel u) {
+    return Card(
+      elevation: 0,
+      margin: EdgeInsets.zero,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: Colors.grey.shade300),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 14, 8, 8),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    u.nome,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: StatusChip(ativo: u.ativo),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Text(
+              u.email,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(color: Colors.grey.shade700),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              'Cadastro: ${_formatarData(u.dt_cadastro)}',
+              style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+            ),
+            const SizedBox(height: 4),
+            Row(
+              children: [
+                Switch(
+                  value: u.ativo,
+                  activeColor: PainelCores.vinho,
+                  onChanged: (valor) => _alternarAtivo(u, valor),
+                ),
+                const Text('Ativo'),
+                const Spacer(),
+                IconButton(
+                  icon: const Icon(Icons.edit_outlined),
+                  tooltip: 'Editar',
+                  onPressed: () => _abrirFormulario(usuario: u),
+                ),
+                IconButton(
+                  icon: Icon(Icons.delete_outline, color: Colors.red.shade700),
+                  tooltip: 'Excluir',
+                  onPressed: () => _excluir(u),
+                ),
+              ],
+            ),
+          ],
         ),
       ),
     );
@@ -268,87 +359,93 @@ class _FormularioUsuarioState extends State<_FormularioUsuario> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
+      // Margem menor nas laterais para aproveitar melhor telas estreitas.
+      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
       title: Text(_editando ? 'Editar usuário' : 'Novo usuário'),
-      content: SizedBox(
-        width: 400,
-        child: Form(
-          key: _formKey,
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextFormField(
-                  controller: _nomeController,
-                  autofocus: true,
-                  enabled: !_salvando,
-                  textInputAction: TextInputAction.next,
-                  decoration: decoracaoFormulario('Nome'),
-                  validator: (valor) {
-                    final texto = (valor ?? '').trim();
-                    if (texto.isEmpty) return 'Informe o nome';
-                    if (texto.length < 2) return 'Mínimo de 2 caracteres';
-                    if (texto.length > 100) return 'No máximo 100 caracteres';
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 12),
-                TextFormField(
-                  controller: _emailController,
-                  enabled: !_salvando,
-                  keyboardType: TextInputType.emailAddress,
-                  textInputAction: TextInputAction.next,
-                  decoration: decoracaoFormulario('E-mail'),
-                  validator: (valor) {
-                    final texto = (valor ?? '').trim();
-                    if (texto.isEmpty) return 'Informe o e-mail';
-                    final valido = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
-                    if (!valido.hasMatch(texto)) return 'E-mail inválido';
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 12),
-                TextFormField(
-                  controller: _senhaController,
-                  enabled: !_salvando,
-                  obscureText: _ocultarSenha,
-                  textInputAction: TextInputAction.done,
-                  onFieldSubmitted: (_) => _salvar(),
-                  decoration: decoracaoFormulario(
-                    _editando ? 'Nova senha (opcional)' : 'Senha',
-                  ).copyWith(
-                    suffixIcon: IconButton(
-                      icon: Icon(_ocultarSenha
-                          ? Icons.visibility_outlined
-                          : Icons.visibility_off_outlined),
-                      onPressed: () =>
-                          setState(() => _ocultarSenha = !_ocultarSenha),
-                    ),
+      content: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 400),
+        child: SizedBox(
+          width: double.maxFinite,
+          child: Form(
+            key: _formKey,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextFormField(
+                    controller: _nomeController,
+                    autofocus: true,
+                    enabled: !_salvando,
+                    textInputAction: TextInputAction.next,
+                    decoration: decoracaoFormulario('Nome'),
+                    validator: (valor) {
+                      final texto = (valor ?? '').trim();
+                      if (texto.isEmpty) return 'Informe o nome';
+                      if (texto.length < 2) return 'Mínimo de 2 caracteres';
+                      if (texto.length > 100) return 'No máximo 100 caracteres';
+                      return null;
+                    },
                   ),
-                  validator: (valor) {
-                    final texto = valor ?? '';
-                    if (_editando && texto.isEmpty) return null;
-                    if (texto.isEmpty) return 'Informe a senha';
-                    if (texto.length < 6) return 'Mínimo de 6 caracteres';
-                    if (texto.length > 265) return 'Senha muito longa';
-                    return null;
-                  },
-                ),
-                SwitchListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: const Text('Ativo'),
-                  value: _ativo,
-                  activeColor: PainelCores.vinho,
-                  onChanged: _salvando ? null : (v) => setState(() => _ativo = v),
-                ),
-                if (_erro != null)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 12),
-                    child: Text(
-                      _erro!,
-                      style: TextStyle(color: Colors.red.shade700),
-                    ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: _emailController,
+                    enabled: !_salvando,
+                    keyboardType: TextInputType.emailAddress,
+                    textInputAction: TextInputAction.next,
+                    decoration: decoracaoFormulario('E-mail'),
+                    validator: (valor) {
+                      final texto = (valor ?? '').trim();
+                      if (texto.isEmpty) return 'Informe o e-mail';
+                      final valido = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
+                      if (!valido.hasMatch(texto)) return 'E-mail inválido';
+                      return null;
+                    },
                   ),
-              ],
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: _senhaController,
+                    enabled: !_salvando,
+                    obscureText: _ocultarSenha,
+                    textInputAction: TextInputAction.done,
+                    onFieldSubmitted: (_) => _salvar(),
+                    decoration: decoracaoFormulario(
+                      _editando ? 'Nova senha (opcional)' : 'Senha',
+                    ).copyWith(
+                      suffixIcon: IconButton(
+                        icon: Icon(_ocultarSenha
+                            ? Icons.visibility_outlined
+                            : Icons.visibility_off_outlined),
+                        onPressed: () =>
+                            setState(() => _ocultarSenha = !_ocultarSenha),
+                      ),
+                    ),
+                    validator: (valor) {
+                      final texto = valor ?? '';
+                      if (_editando && texto.isEmpty) return null;
+                      if (texto.isEmpty) return 'Informe a senha';
+                      if (texto.length < 6) return 'Mínimo de 6 caracteres';
+                      if (texto.length > 265) return 'Senha muito longa';
+                      return null;
+                    },
+                  ),
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Ativo'),
+                    value: _ativo,
+                    activeColor: PainelCores.vinho,
+                    onChanged:
+                        _salvando ? null : (v) => setState(() => _ativo = v),
+                  ),
+                  if (_erro != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 12),
+                      child: Text(
+                        _erro!,
+                        style: TextStyle(color: Colors.red.shade700),
+                      ),
+                    ),
+                ],
+              ),
             ),
           ),
         ),

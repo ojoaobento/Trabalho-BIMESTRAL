@@ -28,7 +28,7 @@ class _AdminloginState extends State<Adminlogin> {
   }
 
   Future<void> _fazerLogin() async {
-    if (_isLoading) return; 
+    if (_isLoading) return;
     if (_emailController.text.trim().isEmpty ||
         _senhaController.text.isEmpty) {
       _mostrarMensagem('Preencha todos os campos', vinho);
@@ -50,7 +50,7 @@ class _AdminloginState extends State<Adminlogin> {
       );
     } on ApiException catch (e) {
       if (!mounted) return;
-      _mostrarMensagem(e.mensagem, vinho); 
+      _mostrarMensagem(e.mensagem, vinho);
     } catch (_) {
       if (!mounted) return;
       _mostrarMensagem('Erro inesperado. Tente novamente.', vinho);
@@ -101,6 +101,50 @@ class _AdminloginState extends State<Adminlogin> {
     );
   }
 
+  Widget _logo(double tamanho) {
+    final escala = tamanho / 110;
+    return Container(
+      width: tamanho,
+      height: tamanho,
+      decoration: BoxDecoration(
+        color: rosaClaro,
+        shape: BoxShape.circle,
+        border: Border.all(color: vinho, width: 2),
+        boxShadow: [
+          BoxShadow(
+            color: vinho.withOpacity(0.15),
+            blurRadius: 15,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.spa_outlined, size: 42 * escala, color: vinho),
+          SizedBox(height: 4 * escala),
+          Text(
+            'CLEUSA',
+            style: TextStyle(
+              fontSize: 16 * escala,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 2 * escala,
+              color: vinho,
+            ),
+          ),
+          Text(
+            'STUDIO',
+            style: TextStyle(
+              fontSize: 8 * escala,
+              letterSpacing: 3 * escala,
+              color: vinho,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -109,105 +153,80 @@ class _AdminloginState extends State<Adminlogin> {
         backgroundColor: const Color(0xFFFFF8FA),
         elevation: 0,
       ),
-      body: Center(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 420),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 110,
-                  height: 110,
-                  decoration: BoxDecoration(
-                    color: rosaClaro,
-                    shape: BoxShape.circle,
-                    border: Border.all(color: vinho, width: 2),
-                    boxShadow: [
-                      BoxShadow(
-                        color: vinho.withOpacity(0.15),
-                        blurRadius: 15,
-                        offset: const Offset(0, 5),
-                      ),
-                    ],
-                  ),
-                  child: const Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
+      body: SafeArea(
+        top: false,
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final compacto =
+                constraints.maxHeight < 560 || constraints.maxWidth < 360;
+            final tamanhoLogo = compacto ? 88.0 : 110.0;
+            final espaco = compacto ? 20.0 : 32.0;
+            final topo = (constraints.maxHeight * 0.04).clamp(8.0, 32.0).toDouble();
+
+            return SingleChildScrollView(
+              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+              padding: EdgeInsets.fromLTRB(16, topo, 16, 16),
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 420),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.spa_outlined, size: 42, color: vinho),
-                      SizedBox(height: 4),
-                      Text(
-                        'CLEUSA',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 2,
-                          color: vinho,
+                      _logo(tamanhoLogo),
+                      SizedBox(height: espaco),
+                      TextField(
+                        controller: _emailController,
+                        keyboardType: TextInputType.emailAddress,
+                        textInputAction: TextInputAction.next,
+                        decoration: _decoracaoCampo(
+                          label: 'E-mail',
+                          icone: Icons.email_outlined,
                         ),
                       ),
-                      Text(
-                        'STUDIO',
-                        style: TextStyle(
-                          fontSize: 8,
-                          letterSpacing: 3,
-                          color: vinho,
+                      const SizedBox(height: 16),
+                      TextField(
+                        controller: _senhaController,
+                        obscureText: true,
+                        textInputAction: TextInputAction.done,
+                        onSubmitted: (_) => _fazerLogin(),
+                        decoration: _decoracaoCampo(
+                          label: 'Senha',
+                          icone: Icons.lock_outline,
                         ),
+                      ),
+                      SizedBox(height: compacto ? 20 : 24),
+                      SizedBox(
+                        width: double.infinity,
+                        height: 50,
+                        child: _isLoading
+                            ? const Center(
+                                child: CircularProgressIndicator(color: vinho),
+                              )
+                            : ElevatedButton(
+                                onPressed: _fazerLogin,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: vinho,
+                                  foregroundColor: Colors.white,
+                                  elevation: 3,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(14),
+                                  ),
+                                ),
+                                child: const Text(
+                                  'Entrar',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
                       ),
                     ],
                   ),
                 ),
-                const SizedBox(height: 32),
-                TextField(
-                  controller: _emailController,
-                  keyboardType: TextInputType.emailAddress,
-                  textInputAction: TextInputAction.next,
-                  decoration: _decoracaoCampo(
-                    label: 'E-mail',
-                    icone: Icons.email_outlined,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: _senhaController,
-                  obscureText: true,
-                  textInputAction: TextInputAction.done,
-                  onSubmitted: (_) => _fazerLogin(), 
-                  decoration: _decoracaoCampo(
-                    label: 'Senha',
-                    icone: Icons.lock_outline,
-                  ),
-                ),
-                const SizedBox(height: 24),
-                SizedBox(
-                  width: double.infinity,
-                  height: 50,
-                  child: _isLoading
-                      ? const Center(
-                          child: CircularProgressIndicator(color: vinho),
-                        )
-                      : ElevatedButton(
-                          onPressed: _fazerLogin,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: vinho,
-                            foregroundColor: Colors.white,
-                            elevation: 3,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(14),
-                            ),
-                          ),
-                          child: const Text(
-                            'Entrar',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                ),
-              ],
-            ),
-          ),
+              ),
+            );
+          },
         ),
       ),
     );

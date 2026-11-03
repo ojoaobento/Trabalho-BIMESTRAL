@@ -4,6 +4,8 @@ import 'package:main/models/disponibilidade_model.dart';
 import 'package:main/services/api_client.dart';
 import 'package:main/widgets/painel_widgets.dart';
 
+const double _larguraMinimaTabela = 720;
+
 const _nomesDias = [
   'Segunda-feira',
   'Terça-feira',
@@ -149,59 +151,147 @@ class _DisponibilidadePageState extends State<DisponibilidadePage> {
     }
 
     return LayoutBuilder(
-      builder: (context, constraints) => SingleChildScrollView(
-        child: SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: ConstrainedBox(
-            constraints: BoxConstraints(minWidth: constraints.maxWidth),
-            child: DataTable(
-              headingTextStyle: const TextStyle(
-                fontWeight: FontWeight.bold,
-                color: PainelCores.vinho,
-              ),
-              columns: const [
-                DataColumn(label: Text('Dia')),
-                DataColumn(label: Text('Início')),
-                DataColumn(label: Text('Fim')),
-                DataColumn(label: Text('Status')),
-                DataColumn(label: Text('Ações')),
-              ],
-              rows: _blocos.map((b) {
-                return DataRow(cells: [
-                  DataCell(Text(b.nomeDia)),
-                  DataCell(Text(b.inicioCurto)),
-                  DataCell(Text(b.fimCurto)),
-                  DataCell(Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Switch(
-                        value: b.ativo,
-                        activeColor: PainelCores.vinho,
-                        onChanged: (valor) => _alternarAtivo(b, valor),
-                      ),
-                      StatusChip(ativo: b.ativo),
-                    ],
-                  )),
-                  DataCell(Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.edit_outlined),
-                        tooltip: 'Editar',
-                        onPressed: () => _abrirFormulario(bloco: b),
-                      ),
-                      IconButton(
-                        icon: Icon(Icons.delete_outline,
-                            color: Colors.red.shade700),
-                        tooltip: 'Excluir',
-                        onPressed: () => _excluir(b),
-                      ),
-                    ],
-                  )),
-                ]);
-              }).toList(),
+      builder: (context, constraints) {
+        if (constraints.maxWidth < _larguraMinimaTabela) {
+          return _listaCards();
+        }
+        return _tabela(constraints);
+      },
+    );
+  }
+
+  Widget _tabela(BoxConstraints constraints) {
+    return SingleChildScrollView(
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minWidth: constraints.maxWidth),
+          child: DataTable(
+            headingTextStyle: const TextStyle(
+              fontWeight: FontWeight.bold,
+              color: PainelCores.vinho,
             ),
+            columns: const [
+              DataColumn(label: Text('Dia')),
+              DataColumn(label: Text('Início')),
+              DataColumn(label: Text('Fim')),
+              DataColumn(label: Text('Status')),
+              DataColumn(label: Text('Ações')),
+            ],
+            rows: _blocos.map((b) {
+              return DataRow(cells: [
+                DataCell(Text(b.nomeDia)),
+                DataCell(Text(b.inicioCurto)),
+                DataCell(Text(b.fimCurto)),
+                DataCell(Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Switch(
+                      value: b.ativo,
+                      activeColor: PainelCores.vinho,
+                      onChanged: (valor) => _alternarAtivo(b, valor),
+                    ),
+                    StatusChip(ativo: b.ativo),
+                  ],
+                )),
+                DataCell(Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.edit_outlined),
+                      tooltip: 'Editar',
+                      onPressed: () => _abrirFormulario(bloco: b),
+                    ),
+                    IconButton(
+                      icon: Icon(Icons.delete_outline,
+                          color: Colors.red.shade700),
+                      tooltip: 'Excluir',
+                      onPressed: () => _excluir(b),
+                    ),
+                  ],
+                )),
+              ]);
+            }).toList(),
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _listaCards() {
+    return ListView.separated(
+      itemCount: _blocos.length,
+      separatorBuilder: (_, __) => const SizedBox(height: 12),
+      itemBuilder: (_, i) => _cartaoBloco(_blocos[i]),
+    );
+  }
+
+  Widget _cartaoBloco(DisponibilidadeModel b) {
+    return Card(
+      elevation: 0,
+      margin: EdgeInsets.zero,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: Colors.grey.shade300),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 14, 8, 8),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    b.nomeDia,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.only(left: 8, right: 8),
+                  child: StatusChip(ativo: b.ativo),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Row(
+              children: [
+                Icon(Icons.schedule, size: 16, color: Colors.grey.shade600),
+                const SizedBox(width: 4),
+                Text(
+                  '${b.inicioCurto} – ${b.fimCurto}',
+                  style: TextStyle(color: Colors.grey.shade800),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Row(
+              children: [
+                Switch(
+                  value: b.ativo,
+                  activeColor: PainelCores.vinho,
+                  onChanged: (valor) => _alternarAtivo(b, valor),
+                ),
+                const Text('Ativo'),
+                const Spacer(),
+                IconButton(
+                  icon: const Icon(Icons.edit_outlined),
+                  tooltip: 'Editar',
+                  onPressed: () => _abrirFormulario(bloco: b),
+                ),
+                IconButton(
+                  icon: Icon(Icons.delete_outline, color: Colors.red.shade700),
+                  tooltip: 'Excluir',
+                  onPressed: () => _excluir(b),
+                ),
+              ],
+            ),
+          ],
         ),
       ),
     );
@@ -311,72 +401,85 @@ class _FormularioDisponibilidadeState
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
+      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
       title: Text(_editando ? 'Editar horário' : 'Novo horário'),
-      content: SizedBox(
-        width: 400,
-        child: Form(
-          key: _formKey,
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                DropdownButtonFormField<int>(
-                  value: _dia,
-                  decoration: decoracaoFormulario('Dia da semana'),
-                  items: List.generate(
-                    7,
-                    (i) => DropdownMenuItem(value: i, child: Text(_nomesDias[i])),
-                  ),
-                  onChanged: _salvando ? null : (v) => setState(() => _dia = v),
-                  validator: (v) => v == null ? 'Escolha o dia' : null,
-                ),
-                const SizedBox(height: 12),
-                TextFormField(
-                  controller: _inicioController,
-                  readOnly: true,
-                  enabled: !_salvando,
-                  onTap: () => _escolherHorario(inicio: true),
-                  decoration: decoracaoFormulario('Início').copyWith(
-                    suffixIcon: const Icon(Icons.access_time),
-                  ),
-                  validator: (valor) =>
-                      (valor ?? '').isEmpty ? 'Informe o horário de início' : null,
-                ),
-                const SizedBox(height: 12),
-                TextFormField(
-                  controller: _fimController,
-                  readOnly: true,
-                  enabled: !_salvando,
-                  onTap: () => _escolherHorario(inicio: false),
-                  decoration: decoracaoFormulario('Fim').copyWith(
-                    suffixIcon: const Icon(Icons.access_time),
-                  ),
-                  validator: (valor) {
-                    if ((valor ?? '').isEmpty) return 'Informe o horário de fim';
-                    if (_inicio != null &&
-                        _fim != null &&
-                        _minutos(_fim!) <= _minutos(_inicio!)) {
-                      return 'O fim deve ser depois do início';
-                    }
-                    return null;
-                  },
-                ),
-                SwitchListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: const Text('Ativo'),
-                  value: _ativo,
-                  activeColor: PainelCores.vinho,
-                  onChanged: _salvando ? null : (v) => setState(() => _ativo = v),
-                ),
-                if (_erro != null)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 12),
-                    child: Text(
-                      _erro!,
-                      style: TextStyle(color: Colors.red.shade700),
+      content: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 400),
+        child: SizedBox(
+          width: double.maxFinite,
+          child: Form(
+            key: _formKey,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  DropdownButtonFormField<int>(
+                    value: _dia,
+                    isExpanded: true,
+                    decoration: decoracaoFormulario('Dia da semana'),
+                    items: List.generate(
+                      7,
+                      (i) => DropdownMenuItem(
+                        value: i,
+                        child: Text(_nomesDias[i]),
+                      ),
                     ),
+                    onChanged:
+                        _salvando ? null : (v) => setState(() => _dia = v),
+                    validator: (v) => v == null ? 'Escolha o dia' : null,
                   ),
-              ],
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: _inicioController,
+                    readOnly: true,
+                    enabled: !_salvando,
+                    onTap: () => _escolherHorario(inicio: true),
+                    decoration: decoracaoFormulario('Início').copyWith(
+                      suffixIcon: const Icon(Icons.access_time),
+                    ),
+                    validator: (valor) => (valor ?? '').isEmpty
+                        ? 'Informe o horário de início'
+                        : null,
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: _fimController,
+                    readOnly: true,
+                    enabled: !_salvando,
+                    onTap: () => _escolherHorario(inicio: false),
+                    decoration: decoracaoFormulario('Fim').copyWith(
+                      suffixIcon: const Icon(Icons.access_time),
+                    ),
+                    validator: (valor) {
+                      if ((valor ?? '').isEmpty) {
+                        return 'Informe o horário de fim';
+                      }
+                      if (_inicio != null &&
+                          _fim != null &&
+                          _minutos(_fim!) <= _minutos(_inicio!)) {
+                        return 'O fim deve ser depois do início';
+                      }
+                      return null;
+                    },
+                  ),
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Ativo'),
+                    value: _ativo,
+                    activeColor: PainelCores.vinho,
+                    onChanged:
+                        _salvando ? null : (v) => setState(() => _ativo = v),
+                  ),
+                  if (_erro != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 12),
+                      child: Text(
+                        _erro!,
+                        style: TextStyle(color: Colors.red.shade700),
+                      ),
+                    ),
+                ],
+              ),
             ),
           ),
         ),

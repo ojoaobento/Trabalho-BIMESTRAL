@@ -4,6 +4,8 @@ import 'package:main/models/categoria_model.dart';
 import 'package:main/services/api_client.dart';
 import 'package:main/widgets/painel_widgets.dart';
 
+const double _larguraMinimaTabela = 600;
+
 class CategoriasPage extends StatefulWidget {
   const CategoriasPage({super.key});
 
@@ -92,7 +94,7 @@ class _CategoriasPageState extends State<CategoriasPage> {
       await _carregar(silencioso: true);
     } on ApiException catch (e) {
       if (!mounted) return;
-      mostrarMensagem(context, e.mensagem, erro: true); 
+      mostrarMensagem(context, e.mensagem, erro: true);
     }
   }
 
@@ -126,55 +128,132 @@ class _CategoriasPageState extends State<CategoriasPage> {
     }
 
     return LayoutBuilder(
-      builder: (context, constraints) => SingleChildScrollView(
-        child: SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: ConstrainedBox(
-            constraints: BoxConstraints(minWidth: constraints.maxWidth),
-            child: DataTable(
-              headingTextStyle: const TextStyle(
-                fontWeight: FontWeight.bold,
-                color: PainelCores.vinho,
-              ),
-              columns: const [
-                DataColumn(label: Text('Nome')),
-                DataColumn(label: Text('Status')),
-                DataColumn(label: Text('Ações')),
-              ],
-              rows: _categorias.map((c) {
-                return DataRow(cells: [
-                  DataCell(Text(c.nome)),
-                  DataCell(Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Switch(
-                        value: c.ativo,
-                        activeColor: PainelCores.vinho,
-                        onChanged: (valor) => _alternarAtivo(c, valor),
-                      ),
-                      StatusChip(ativo: c.ativo),
-                    ],
-                  )),
-                  DataCell(Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.edit_outlined),
-                        tooltip: 'Editar',
-                        onPressed: () => _abrirFormulario(categoria: c),
-                      ),
-                      IconButton(
-                        icon: Icon(Icons.delete_outline,
-                            color: Colors.red.shade700),
-                        tooltip: 'Excluir',
-                        onPressed: () => _excluir(c),
-                      ),
-                    ],
-                  )),
-                ]);
-              }).toList(),
+      builder: (context, constraints) {
+        if (constraints.maxWidth < _larguraMinimaTabela) {
+          return _listaCards();
+        }
+        return _tabela(constraints);
+      },
+    );
+  }
+
+  Widget _tabela(BoxConstraints constraints) {
+    return SingleChildScrollView(
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minWidth: constraints.maxWidth),
+          child: DataTable(
+            headingTextStyle: const TextStyle(
+              fontWeight: FontWeight.bold,
+              color: PainelCores.vinho,
             ),
+            columns: const [
+              DataColumn(label: Text('Nome')),
+              DataColumn(label: Text('Status')),
+              DataColumn(label: Text('Ações')),
+            ],
+            rows: _categorias.map((c) {
+              return DataRow(cells: [
+                DataCell(Text(c.nome)),
+                DataCell(Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Switch(
+                      value: c.ativo,
+                      activeColor: PainelCores.vinho,
+                      onChanged: (valor) => _alternarAtivo(c, valor),
+                    ),
+                    StatusChip(ativo: c.ativo),
+                  ],
+                )),
+                DataCell(Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.edit_outlined),
+                      tooltip: 'Editar',
+                      onPressed: () => _abrirFormulario(categoria: c),
+                    ),
+                    IconButton(
+                      icon: Icon(Icons.delete_outline,
+                          color: Colors.red.shade700),
+                      tooltip: 'Excluir',
+                      onPressed: () => _excluir(c),
+                    ),
+                  ],
+                )),
+              ]);
+            }).toList(),
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _listaCards() {
+    return ListView.separated(
+      itemCount: _categorias.length,
+      separatorBuilder: (_, __) => const SizedBox(height: 12),
+      itemBuilder: (_, i) => _cartaoCategoria(_categorias[i]),
+    );
+  }
+
+  Widget _cartaoCategoria(CategoriaModel c) {
+    return Card(
+      elevation: 0,
+      margin: EdgeInsets.zero,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: Colors.grey.shade300),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 14, 8, 8),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    c.nome,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.only(left: 8, right: 8),
+                  child: StatusChip(ativo: c.ativo),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Row(
+              children: [
+                Switch(
+                  value: c.ativo,
+                  activeColor: PainelCores.vinho,
+                  onChanged: (valor) => _alternarAtivo(c, valor),
+                ),
+                const Text('Ativa'),
+                const Spacer(),
+                IconButton(
+                  icon: const Icon(Icons.edit_outlined),
+                  tooltip: 'Editar',
+                  onPressed: () => _abrirFormulario(categoria: c),
+                ),
+                IconButton(
+                  icon: Icon(Icons.delete_outline, color: Colors.red.shade700),
+                  tooltip: 'Excluir',
+                  onPressed: () => _excluir(c),
+                ),
+              ],
+            ),
+          ],
         ),
       ),
     );
@@ -236,7 +315,7 @@ class _FormularioCategoriaState extends State<_FormularioCategoria> {
       if (!mounted) return;
       setState(() {
         _salvando = false;
-        _erro = e.mensagem; 
+        _erro = e.mensagem;
       });
     }
   }
@@ -244,45 +323,52 @@ class _FormularioCategoriaState extends State<_FormularioCategoria> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
+      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
       title: Text(_editando ? 'Editar categoria' : 'Nova categoria'),
-      content: SizedBox(
-        width: 400,
-        child: Form(
-          key: _formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextFormField(
-                controller: _nomeController,
-                autofocus: true,
-                enabled: !_salvando,
-                textInputAction: TextInputAction.done,
-                onFieldSubmitted: (_) => _salvar(),
-                decoration: decoracaoFormulario('Nome'),
-                validator: (valor) {
-                  final texto = (valor ?? '').trim();
-                  if (texto.isEmpty) return 'Informe o nome';
-                  if (texto.length > 100) return 'No máximo 100 caracteres';
-                  return null;
-                },
-              ),
-              if (_editando)
-                SwitchListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: const Text('Ativa'),
-                  value: _ativo,
-                  activeColor: PainelCores.vinho,
-                  onChanged: _salvando ? null : (v) => setState(() => _ativo = v),
-                ),
-              if (_erro != null)
-                Padding(
-                  padding: const EdgeInsets.only(top: 12),
-                  child: Text(
-                    _erro!,
-                    style: TextStyle(color: Colors.red.shade700),
+      content: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 400),
+        child: SizedBox(
+          width: double.maxFinite,
+          child: Form(
+            key: _formKey,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextFormField(
+                    controller: _nomeController,
+                    autofocus: true,
+                    enabled: !_salvando,
+                    textInputAction: TextInputAction.done,
+                    onFieldSubmitted: (_) => _salvar(),
+                    decoration: decoracaoFormulario('Nome'),
+                    validator: (valor) {
+                      final texto = (valor ?? '').trim();
+                      if (texto.isEmpty) return 'Informe o nome';
+                      if (texto.length > 100) return 'No máximo 100 caracteres';
+                      return null;
+                    },
                   ),
-                ),
-            ],
+                  if (_editando)
+                    SwitchListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text('Ativa'),
+                      value: _ativo,
+                      activeColor: PainelCores.vinho,
+                      onChanged:
+                          _salvando ? null : (v) => setState(() => _ativo = v),
+                    ),
+                  if (_erro != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 12),
+                      child: Text(
+                        _erro!,
+                        style: TextStyle(color: Colors.red.shade700),
+                      ),
+                    ),
+                ],
+              ),
+            ),
           ),
         ),
       ),

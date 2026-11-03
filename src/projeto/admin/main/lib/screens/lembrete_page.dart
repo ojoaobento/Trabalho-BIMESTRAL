@@ -4,6 +4,8 @@ import 'package:main/models/lembrete_model.dart';
 import 'package:main/services/api_client.dart';
 import 'package:main/widgets/painel_widgets.dart';
 
+const double _larguraMinimaTabela = 720;
+
 String _dois(int n) => n.toString().padLeft(2, '0');
 
 String _formatarData(DateTime d) => '${_dois(d.day)}/${_dois(d.month)}/${d.year}';
@@ -230,6 +232,7 @@ class _LembretePageState extends State<LembretePage> {
         ),
         DropdownButton<_Situacao?>(
           value: _situacaoFiltro,
+          isDense: true,
           items: [
             const DropdownMenuItem(value: null, child: Text('Todas as situações')),
             ..._Situacao.values.map(
@@ -240,6 +243,7 @@ class _LembretePageState extends State<LembretePage> {
         ),
         DropdownButton<TipoLembrete?>(
           value: _tipoFiltro,
+          isDense: true,
           items: [
             const DropdownMenuItem(value: null, child: Text('Todos os tipos')),
             ...TipoLembrete.values.map(
@@ -276,60 +280,153 @@ class _LembretePageState extends State<LembretePage> {
     }
 
     return LayoutBuilder(
-      builder: (context, constraints) => SingleChildScrollView(
-        child: SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: ConstrainedBox(
-            constraints: BoxConstraints(minWidth: constraints.maxWidth),
-            child: DataTable(
-              headingTextStyle: const TextStyle(
-                fontWeight: FontWeight.bold,
-                color: PainelCores.vinho,
-              ),
-              columns: const [
-                DataColumn(label: Text('Envio programado')),
-                DataColumn(label: Text('Tipo')),
-                DataColumn(label: Text('Agendamento')),
-                DataColumn(label: Text('Serviço')),
-                DataColumn(label: Text('Situação')),
-                DataColumn(label: Text('Enviado em')),
-                DataColumn(label: Text('Ações')),
-              ],
-              rows: lista.map((l) {
-                return DataRow(cells: [
-                  DataCell(Text(_formatarDataHora(l.enviarEm))),
-                  DataCell(Text(_rotulosTipo[l.tipo]!)),
-                  DataCell(Text('#${l.agendamentoId}')),
-                  DataCell(Text(l.servicoId != null ? '#${l.servicoId}' : '-')),
-                  DataCell(_ChipSituacao(situacao: _situacaoDe(l))),
-                  DataCell(Text(
-                    l.enviadoEm != null ? _formatarDataHora(l.enviadoEm!) : '-',
-                  )),
-                  DataCell(Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.mark_email_read_outlined),
-                        tooltip: 'Marcar como enviado',
-                        onPressed: l.enviado ? null : () => _marcarEnviado(l),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.edit_calendar_outlined),
-                        tooltip: 'Editar',
-                        onPressed: l.enviado ? null : () => _editar(l),
-                      ),
-                      IconButton(
-                        icon: Icon(Icons.delete_outline,
-                            color: Colors.red.shade700),
-                        tooltip: 'Excluir',
-                        onPressed: () => _excluir(l),
-                      ),
-                    ],
-                  )),
-                ]);
-              }).toList(),
+      builder: (context, constraints) {
+        if (constraints.maxWidth < _larguraMinimaTabela) {
+          return _listaCards(lista);
+        }
+        return _tabela(constraints, lista);
+      },
+    );
+  }
+
+  Widget _tabela(BoxConstraints constraints, List<LembreteModel> lista) {
+    return SingleChildScrollView(
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minWidth: constraints.maxWidth),
+          child: DataTable(
+            headingTextStyle: const TextStyle(
+              fontWeight: FontWeight.bold,
+              color: PainelCores.vinho,
             ),
+            columns: const [
+              DataColumn(label: Text('Envio programado')),
+              DataColumn(label: Text('Tipo')),
+              DataColumn(label: Text('Agendamento')),
+              DataColumn(label: Text('Serviço')),
+              DataColumn(label: Text('Situação')),
+              DataColumn(label: Text('Enviado em')),
+              DataColumn(label: Text('Ações')),
+            ],
+            rows: lista.map((l) {
+              return DataRow(cells: [
+                DataCell(Text(_formatarDataHora(l.enviarEm))),
+                DataCell(Text(_rotulosTipo[l.tipo]!)),
+                DataCell(Text('#${l.agendamentoId}')),
+                DataCell(Text(l.servicoId != null ? '#${l.servicoId}' : '-')),
+                DataCell(_ChipSituacao(situacao: _situacaoDe(l))),
+                DataCell(Text(
+                  l.enviadoEm != null ? _formatarDataHora(l.enviadoEm!) : '-',
+                )),
+                DataCell(_acoes(l)),
+              ]);
+            }).toList(),
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _acoes(LembreteModel l) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        IconButton(
+          icon: const Icon(Icons.mark_email_read_outlined),
+          tooltip: 'Marcar como enviado',
+          onPressed: l.enviado ? null : () => _marcarEnviado(l),
+        ),
+        IconButton(
+          icon: const Icon(Icons.edit_calendar_outlined),
+          tooltip: 'Editar',
+          onPressed: l.enviado ? null : () => _editar(l),
+        ),
+        IconButton(
+          icon: Icon(Icons.delete_outline, color: Colors.red.shade700),
+          tooltip: 'Excluir',
+          onPressed: () => _excluir(l),
+        ),
+      ],
+    );
+  }
+
+  Widget _listaCards(List<LembreteModel> lista) {
+    return ListView.separated(
+      itemCount: lista.length,
+      separatorBuilder: (_, __) => const SizedBox(height: 12),
+      itemBuilder: (_, i) => _cartaoLembrete(lista[i]),
+    );
+  }
+
+  Widget _info(IconData icone, String texto) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icone, size: 16, color: Colors.grey.shade600),
+        const SizedBox(width: 4),
+        Text(texto, style: TextStyle(color: Colors.grey.shade800)),
+      ],
+    );
+  }
+
+  Widget _cartaoLembrete(LembreteModel l) {
+    return Card(
+      elevation: 0,
+      margin: EdgeInsets.zero,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: Colors.grey.shade300),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 14, 8, 8),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    _rotulosTipo[l.tipo]!,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.only(left: 8, right: 8),
+                  child: _ChipSituacao(situacao: _situacaoDe(l)),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 16,
+              runSpacing: 4,
+              children: [
+                _info(Icons.schedule, _formatarDataHora(l.enviarEm)),
+                _info(Icons.event_note_outlined, 'Agendamento #${l.agendamentoId}'),
+                if (l.servicoId != null)
+                  _info(Icons.spa_outlined, 'Serviço #${l.servicoId}'),
+              ],
+            ),
+            if (l.enviadoEm != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 6),
+                child: Text(
+                  'Enviado em ${_formatarDataHora(l.enviadoEm!)}',
+                  style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                ),
+              ),
+            const SizedBox(height: 4),
+            Align(
+              alignment: Alignment.centerRight,
+              child: _acoes(l),
+            ),
+          ],
         ),
       ),
     );
@@ -441,63 +538,68 @@ class _FormularioEditarLembreteState extends State<_FormularioEditarLembrete> {
     final l = widget.lembrete;
 
     return AlertDialog(
+      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
       title: const Text('Editar lembrete'),
-      content: SizedBox(
-        width: 400,
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Lembrete #${l.id} • Agendamento #${l.agendamentoId}',
-                style: const TextStyle(fontWeight: FontWeight.w600),
-              ),
-              const SizedBox(height: 16),
-              DropdownButtonFormField<TipoLembrete>(
-                value: _tipo,
-                decoration: decoracaoFormulario('Tipo'),
-                items: TipoLembrete.values
-                    .map((t) => DropdownMenuItem(
-                          value: t,
-                          child: Text(_rotulosTipo[t]!),
-                        ))
-                    .toList(),
-                onChanged: _salvando
-                    ? null
-                    : (v) {
-                        if (v != null) setState(() => _tipo = v);
-                      },
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: _dataController,
-                readOnly: true,
-                enabled: !_salvando,
-                onTap: _escolherData,
-                decoration: decoracaoFormulario('Data de envio').copyWith(
-                  suffixIcon: const Icon(Icons.calendar_today_outlined),
+      content: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 400),
+        child: SizedBox(
+          width: double.maxFinite,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Lembrete #${l.id} • Agendamento #${l.agendamentoId}',
+                  style: const TextStyle(fontWeight: FontWeight.w600),
                 ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: _horaController,
-                readOnly: true,
-                enabled: !_salvando,
-                onTap: _escolherHora,
-                decoration: decoracaoFormulario('Horário de envio').copyWith(
-                  suffixIcon: const Icon(Icons.access_time),
+                const SizedBox(height: 16),
+                DropdownButtonFormField<TipoLembrete>(
+                  value: _tipo,
+                  isExpanded: true,
+                  decoration: decoracaoFormulario('Tipo'),
+                  items: TipoLembrete.values
+                      .map((t) => DropdownMenuItem(
+                            value: t,
+                            child: Text(_rotulosTipo[t]!),
+                          ))
+                      .toList(),
+                  onChanged: _salvando
+                      ? null
+                      : (v) {
+                          if (v != null) setState(() => _tipo = v);
+                        },
                 ),
-              ),
-              if (_erro != null)
-                Padding(
-                  padding: const EdgeInsets.only(top: 8),
-                  child: Text(
-                    _erro!,
-                    style: TextStyle(color: Colors.red.shade700),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _dataController,
+                  readOnly: true,
+                  enabled: !_salvando,
+                  onTap: _escolherData,
+                  decoration: decoracaoFormulario('Data de envio').copyWith(
+                    suffixIcon: const Icon(Icons.calendar_today_outlined),
                   ),
                 ),
-            ],
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _horaController,
+                  readOnly: true,
+                  enabled: !_salvando,
+                  onTap: _escolherHora,
+                  decoration: decoracaoFormulario('Horário de envio').copyWith(
+                    suffixIcon: const Icon(Icons.access_time),
+                  ),
+                ),
+                if (_erro != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Text(
+                      _erro!,
+                      style: TextStyle(color: Colors.red.shade700),
+                    ),
+                  ),
+              ],
+            ),
           ),
         ),
       ),
