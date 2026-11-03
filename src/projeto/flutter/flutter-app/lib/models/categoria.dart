@@ -1,11 +1,16 @@
 class Categoria {
-  final int? id;
+  final int id;
   final String nome;
-  final bool ativo;
 
-  Categoria({
-    this.id,
+  const Categoria({
+    required this.id,
     required this.nome,
-    this.ativo = true,
   });
+
+  factory Categoria.fromJson(Map<String, dynamic> json) {
+    return Categoria(
+      id: json['id'] as int,
+      nome: json['nome'] as String,
+    );
+  }
 }

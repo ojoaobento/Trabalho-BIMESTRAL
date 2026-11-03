@@ -14,12 +14,14 @@ from schemas.AgendamentoSchema import (
     AgendamentoRequest,
     AgendamentoResponse,
     AgendamentoStatusRequest,
-    AgendamentoPublicoResponse
+    AgendamentoPublicoResponse,
+    HorarioLivreResponse
 )
 from services.AgendamentoService import AgendamentoService
 from services.ClienteService import ClienteService
 from services.LembreteService import LembreteService
 from models.Usuario import Usuario
+from datetime import date, time
 router = APIRouter(prefix="/agendamentos", tags=["Agendamentos"])
 
 
@@ -54,12 +56,15 @@ def listar(
         return service.listar_por_periodo(inicio, fim)
     return service.listar()
  
+@router.get("/horarios-livres", response_model=list[HorarioLivreResponse])
+def horarios_livres(data: date, service: AgendamentoService = Depends(get_service)):
+    return service.horarios_livres(data)
  
 @router.get("/{agendamento_id}", response_model=AgendamentoResponse, dependencies=[Depends(get_usuario_logado)])
 def buscar(agendamento_id: int, service: AgendamentoService = Depends(get_service)):
     return service.buscar_por_id(agendamento_id)
  
- 
+
 @router.patch("/{agendamento_id}", response_model=AgendamentoResponse, dependencies=[Depends(get_usuario_logado)])
 def atualizar(
     agendamento_id: int,

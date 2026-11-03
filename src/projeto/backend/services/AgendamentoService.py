@@ -1,6 +1,5 @@
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone, date, time
 from zoneinfo import ZoneInfo
- 
 from fastapi import HTTPException, status
 from sqlalchemy.exc import IntegrityError
  
@@ -9,7 +8,7 @@ from models.Servico import Servico
 from repositories.AgendamentoRepository import AgendamentoRepository
 from repositories.DisponibilidadeRepository import DisponibilidadeRepository
 from repositories.ServicoRepository import ServicoRepository
-from schemas.AgendamentoSchema import AgendamentoAtualizarRequest, AgendamentoRequest
+from schemas.AgendamentoSchema import AgendamentoAtualizarRequest, AgendamentoRequest, HorarioLivreResponse
 from services.ClienteService import ClienteService
 from services.LembreteService import LembreteService
 
@@ -24,6 +23,8 @@ TRANSICOES = {
     S.CONCLUIDO: set(),
     S.FALTOU: set(),
 }
+
+PASSO = timedelta(minutes=30)  
 
 class AgendamentoService:
 
@@ -255,6 +256,49 @@ class AgendamentoService:
         elif novo_status == StatusAgendamento.CANCELADO:
             self.lembrete_service.cancelar_pendentes(agendamento.id)
         return agendamento
+
+    def _como_local(self, dt: datetime) -> datetime:
+        if dt.tzinfo is None:                     
+            dt = dt.replace(tzinfo=timezone.utc)
+        return dt.astimezone(FUSO)
+
+    def horarios_livres(self, dia: date) -> list[HorarioLivreResponse]:
+        agora = datetime.now(timezone.utc)
+        inicio_dia = datetime.combine(dia, time.min, tzinfo=FUSO)
+        fim_dia = inicio_dia + timedelta(days=1)
+
+        ocupados = []
+        for a in self.repository.buscar_conflitos(inicio_dia, fim_dia):
+            if a.status == StatusAgendamento.CANCELADO:
+                continue
+            reserva_vencida = (
+                a.status == StatusAgendamento.RESERVADO
+                and a.reserva_expira_em is not None
+                and self._como_local(a.reserva_expira_em) <= agora
+            )
+            if reserva_vencida:                   
+                continue
+            ocupados.append((self._como_local(a.dt_inicio), self._como_local(a.dt_fim)))
+
+        horarios: dict[str, int] = {}
+        for bloco in self.disponibilidade_repository.listar_por_dia_semana(dia.weekday()):
+            if not bloco.ativo:
+                continue
+            atual = datetime.combine(dia, bloco.hora_inicio, tzinfo=FUSO)
+            fim_bloco = datetime.combine(dia, bloco.hora_fim, tzinfo=FUSO)
+            while atual < fim_bloco:
+                if atual > agora and not any(i <= atual < f for i, f in ocupados):
+                    proximo = min([i for i, _ in ocupados if i > atual] + [fim_bloco])
+                    minutos = int((proximo - atual).total_seconds() // 60)
+                    if minutos > 0:
+                        chave = atual.strftime("%H:%M")
+                        horarios[chave] = max(horarios.get(chave, 0), minutos)
+                atual += PASSO
+
+        return [
+            HorarioLivreResponse(horario=h, minutos_livres=m)
+            for h, m in sorted(horarios.items())
+        ]
 
     def deletar(self, agendamento_id: int) -> None:
         agendamento = self.buscar_por_id(agendamento_id)

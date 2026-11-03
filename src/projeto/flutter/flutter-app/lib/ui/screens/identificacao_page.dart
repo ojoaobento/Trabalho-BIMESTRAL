@@ -1,5 +1,8 @@
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:main/models/servico.dart';
 import 'package:main/ui/screens/revisao_page.dart';
 
 class IdentificacaoPage extends StatefulWidget {
@@ -8,15 +11,11 @@ class IdentificacaoPage extends StatefulWidget {
     required this.data,
     required this.horario,
     required this.servico,
-    required this.preco,
-    required this.duracao,
   });
 
   final DateTime data;
   final String horario;
-  final String servico;
-  final double preco;
-  final int duracao;
+  final Servico servico;
 
   @override
   State<IdentificacaoPage> createState() => _IdentificacaoPageState();
@@ -28,16 +27,65 @@ class _IdentificacaoPageState extends State<IdentificacaoPage> {
   static const _corTexto = Color(0xFF4A1026);
   static const _corBorda = Color(0xFFF1DDE5);
 
+  final _formKey = GlobalKey<FormState>();
+  final _nomeController = TextEditingController();
+  final _whatsAppController = TextEditingController();
+
   bool _autorizouDados = false;
   bool _autorizouWhatsApp = false;
-  final _nomeController = TextEditingController(text: 'Maria Cleusa');
-  final _whatsAppController = TextEditingController(text: '(44) 99876-5432');
 
   @override
   void dispose() {
     _nomeController.dispose();
     _whatsAppController.dispose();
     super.dispose();
+  }
+
+  void _continuar() {
+    if (!(_formKey.currentState?.validate() ?? false)) {
+      return;
+    }
+
+    if (!_autorizouDados) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Autorize o uso dos dados para continuar.'),
+        ),
+      );
+      return;
+    }
+
+    final nome = _nomeController.text.trim();
+
+    final whatsApp = _whatsAppController.text.replaceAll(
+      RegExp(r'\D'),
+      '',
+    );
+
+    Navigator.push(
+      context,
+      _InstantPageRoute(
+        builder: (_) => RevisaoPage(
+          data: widget.data,
+          horario: widget.horario,
+          servico: widget.servico,
+          nome: nome,
+          whatsApp: whatsApp,
+          aceitaLembretes: _autorizouWhatsApp,
+          consentimento: _autorizouDados,
+        ),
+      ),
+    );
+  }
+
+  void _continuarComGoogle() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          'O login com Google ainda não está disponível.',
+        ),
+      ),
+    );
   }
 
   @override
@@ -49,96 +97,145 @@ class _IdentificacaoPageState extends State<IdentificacaoPage> {
           children: [
             _progresso(),
             Expanded(
-              child: ListView(
-                padding: const EdgeInsets.fromLTRB(13, 16, 13, 22),
-                children: [
-                  _titulo(),
-                  const SizedBox(height: 15),
-                  _clienteAgendado(),
-                  const SizedBox(height: 18),
-                  const Text(
-                    'Quase lá! Como podemos te\navisar?',
-                    style: TextStyle(
-                      fontSize: 21,
-                      height: 1.12,
-                      fontWeight: FontWeight.bold,
-                      color: _corTexto,
+              child: Form(
+                key: _formKey,
+                child: ListView(
+                  padding: const EdgeInsets.fromLTRB(13, 16, 13, 22),
+                  children: [
+                    _titulo(),
+                    const SizedBox(height: 15),
+                    _clienteAgendado(),
+                    const SizedBox(height: 18),
+                    const Text(
+                      'Quase lá! Como podemos te\navisar?',
+                      style: TextStyle(
+                        fontSize: 21,
+                        height: 1.12,
+                        fontWeight: FontWeight.bold,
+                        color: _corTexto,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 5),
-                  const Text(
-                    'Sem senha e sem cadastro longo. Apenas o essencial para garantir seu horário.',
-                    style: TextStyle(fontSize: 10, color: Color(0xFF976D7B)),
-                  ),
-                  const SizedBox(height: 12),
-                  _botaoGoogle(),
-                  const SizedBox(height: 10),
-                  const Row(
-                    children: [
-                      Expanded(child: Divider(color: _corBorda)),
-                      Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 10),
-                        child: Text(
-                          'OU PREENCHA ABAIXO',
-                          style: TextStyle(
-                            fontSize: 9,
-                            color: Color(0xFF976D7B),
+                    const SizedBox(height: 5),
+                    const Text(
+                      'Sem senha e sem cadastro longo. Apenas o essencial para garantir seu horário.',
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: Color(0xFF976D7B),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    _botaoGoogle(),
+                    const SizedBox(height: 10),
+                    const Row(
+                      children: [
+                        Expanded(child: Divider(color: _corBorda)),
+                        Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 10),
+                          child: Text(
+                            'OU PREENCHA ABAIXO',
+                            style: TextStyle(
+                              fontSize: 9,
+                              color: Color(0xFF976D7B),
+                            ),
                           ),
                         ),
-                      ),
-                      Expanded(child: Divider(color: _corBorda)),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  _campo('Nome completo *', _nomeController),
-                  const SizedBox(height: 11),
-                  _campo(
-                    'WhatsApp para confirmação *',
-                    _whatsAppController,
-                    prefixo: 'BR',
-                  ),
-                  const SizedBox(height: 5),
-                  const Row(
-                    children: [
-                      Icon(Icons.info_outline, size: 12, color: _corPrincipal),
-                      SizedBox(width: 5),
-                      Expanded(
-                        child: Text(
-                          'Enviaremos a confirmação e o lembrete 24h antes por mensagem.',
-                          style: TextStyle(
-                            fontSize: 9,
-                            color: Color(0xFF976D7B),
+                        Expanded(child: Divider(color: _corBorda)),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    _campo(
+                      'Nome completo *',
+                      _nomeController,
+                      capitalizacao: TextCapitalization.words,
+                      validador: (valor) {
+                        final nome = (valor ?? '').trim();
+
+                        if (nome.length < 2) {
+                          return 'Informe seu nome completo';
+                        }
+
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 11),
+                    _campo(
+                      'WhatsApp para confirmação *',
+                      _whatsAppController,
+                      prefixo: 'BR',
+                      teclado: TextInputType.phone,
+                      formatadores: [_TelefoneFormatter()],
+                      validador: (valor) {
+                        final digitos = (valor ?? '').replaceAll(
+                          RegExp(r'\D'),
+                          '',
+                        );
+
+                        if (digitos.length != 11) {
+                          return 'Informe o WhatsApp com DDD e 9 dígitos';
+                        }
+
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 5),
+                    const Row(
+                      children: [
+                        Icon(
+                          Icons.info_outline,
+                          size: 12,
+                          color: _corPrincipal,
+                        ),
+                        SizedBox(width: 5),
+                        Expanded(
+                          child: Text(
+                            'Enviaremos a confirmação e o lembrete 24h antes por mensagem, caso você autorize.',
+                            style: TextStyle(
+                              fontSize: 9,
+                              color: Color(0xFF976D7B),
+                            ),
                           ),
                         ),
+                      ],
+                    ),
+                    const SizedBox(height: 18),
+                    CheckboxListTile(
+                      value: _autorizouDados,
+                      onChanged: (valor) {
+                        setState(() {
+                          _autorizouDados = valor ?? false;
+                        });
+                      },
+                      contentPadding: EdgeInsets.zero,
+                      controlAffinity: ListTileControlAffinity.leading,
+                      activeColor: _corPrincipal,
+                      title: const Text(
+                        'Autorizo o uso dos meus dados para agendamento conforme a LGPD. *',
+                        style: TextStyle(
+                          fontSize: 9,
+                          color: Color(0xFF6F5360),
+                        ),
                       ),
-                    ],
-                  ),
-                  const SizedBox(height: 18),
-                  CheckboxListTile(
-                    value: _autorizouDados,
-                    onChanged: (valor) =>
-                        setState(() => _autorizouDados = valor ?? false),
-                    contentPadding: EdgeInsets.zero,
-                    controlAffinity: ListTileControlAffinity.leading,
-                    activeColor: _corPrincipal,
-                    title: const Text(
-                      'Autorizo o uso dos meus dados para agendamento e lembretes conforme a LGPD.',
-                      style: TextStyle(fontSize: 9, color: Color(0xFF6F5360)),
                     ),
-                  ),
-                  CheckboxListTile(
-                    value: _autorizouWhatsApp,
-                    onChanged: (valor) =>
-                        setState(() => _autorizouWhatsApp = valor ?? false),
-                    contentPadding: EdgeInsets.zero,
-                    controlAffinity: ListTileControlAffinity.leading,
-                    activeColor: _corPrincipal,
-                    title: const Text(
-                      'Autorizo o envio de confirmações e lembretes pelo WhatsApp.',
-                      style: TextStyle(fontSize: 9, color: Color(0xFF6F5360)),
+                    CheckboxListTile(
+                      value: _autorizouWhatsApp,
+                      onChanged: (valor) {
+                        setState(() {
+                          _autorizouWhatsApp = valor ?? false;
+                        });
+                      },
+                      contentPadding: EdgeInsets.zero,
+                      controlAffinity: ListTileControlAffinity.leading,
+                      activeColor: _corPrincipal,
+                      title: const Text(
+                        'Autorizo o envio de confirmações e lembretes pelo WhatsApp.',
+                        style: TextStyle(
+                          fontSize: 9,
+                          color: Color(0xFF6F5360),
+                        ),
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
             _rodape(),
@@ -189,10 +286,18 @@ class _IdentificacaoPageState extends State<IdentificacaoPage> {
               const Expanded(
                 child: Divider(color: _corPrincipal, thickness: 3),
               ),
-              Expanded(child: Container(height: 3, color: _corPrincipal)),
-              Expanded(child: Container(height: 3, color: _corPrincipal)),
-              const Expanded(child: Divider(color: _corBorda, thickness: 3)),
-              const Expanded(child: Divider(color: _corBorda, thickness: 3)),
+              Expanded(
+                child: Container(height: 3, color: _corPrincipal),
+              ),
+              Expanded(
+                child: Container(height: 3, color: _corPrincipal),
+              ),
+              const Expanded(
+                child: Divider(color: _corBorda, thickness: 3),
+              ),
+              const Expanded(
+                child: Divider(color: _corBorda, thickness: 3),
+              ),
             ],
           ),
         ],
@@ -228,29 +333,56 @@ class _IdentificacaoPageState extends State<IdentificacaoPage> {
   Widget _clienteAgendado() {
     return ValueListenableBuilder<TextEditingValue>(
       valueListenable: _nomeController,
-      builder: (context, _, _) => ValueListenableBuilder<TextEditingValue>(
-        valueListenable: _whatsAppController,
-        builder: (context, _, _) => _clienteAgendadoConteudo(),
-      ),
+      builder: (context, nome, _) {
+        return ValueListenableBuilder<TextEditingValue>(
+          valueListenable: _whatsAppController,
+          builder: (context, telefone, _) {
+            return _clienteAgendadoConteudo();
+          },
+        );
+      },
     );
   }
 
+  String _iniciais() {
+    final partes = _nomeController.text
+        .trim()
+        .split(RegExp(r'\s+'))
+        .where((parte) => parte.isNotEmpty)
+        .toList();
+
+    if (partes.isEmpty) return '?';
+
+    if (partes.length == 1) {
+      return partes.first[0].toUpperCase();
+    }
+
+    return (partes.first[0] + partes.last[0]).toUpperCase();
+  }
+
   Widget _clienteAgendadoConteudo() {
+    if (_nomeController.text.trim().isEmpty) {
+      return const SizedBox.shrink();
+    }
+
     return Container(
       padding: const EdgeInsets.all(13),
       decoration: BoxDecoration(
         color: const Color(0xFFFFF5F7),
         borderRadius: BorderRadius.circular(13),
-        border: Border.all(color: _corPrincipal, width: 1.3),
+        border: Border.all(
+          color: _corPrincipal,
+          width: 1.3,
+        ),
       ),
       child: Row(
         children: [
-          const CircleAvatar(
+          CircleAvatar(
             radius: 16,
             backgroundColor: _corPrincipal,
             child: Text(
-              'MC',
-              style: TextStyle(
+              _iniciais(),
+              style: const TextStyle(
                 fontSize: 11,
                 fontWeight: FontWeight.bold,
                 color: Colors.white,
@@ -262,26 +394,25 @@ class _IdentificacaoPageState extends State<IdentificacaoPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        'Agendando como ${_nomeController.text}',
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                          color: _corTexto,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                SizedBox(height: 4),
                 Text(
-                  _whatsAppController.text,
-                  style: const TextStyle(fontSize: 9, color: Color(0xFF976D7B)),
+                  'Agendando como ${_nomeController.text.trim()}',
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    color: _corTexto,
+                  ),
                 ),
+                if (_whatsAppController.text.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    _whatsAppController.text,
+                    style: const TextStyle(
+                      fontSize: 9,
+                      color: Color(0xFF976D7B),
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
@@ -294,7 +425,7 @@ class _IdentificacaoPageState extends State<IdentificacaoPage> {
     return SizedBox(
       width: double.infinity,
       child: OutlinedButton.icon(
-        onPressed: () {},
+        onPressed: _continuarComGoogle,
         style: OutlinedButton.styleFrom(
           foregroundColor: _corTexto,
           backgroundColor: Colors.white,
@@ -309,7 +440,10 @@ class _IdentificacaoPageState extends State<IdentificacaoPage> {
         ),
         label: const Text(
           'Continuar com o Google',
-          style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.bold,
+          ),
         ),
       ),
     );
@@ -319,7 +453,18 @@ class _IdentificacaoPageState extends State<IdentificacaoPage> {
     String titulo,
     TextEditingController controller, {
     String? prefixo,
+    TextInputType? teclado,
+    TextCapitalization capitalizacao = TextCapitalization.none,
+    List<TextInputFormatter>? formatadores,
+    String? Function(String?)? validador,
   }) {
+    OutlineInputBorder borda(Color cor) {
+      return OutlineInputBorder(
+        borderRadius: BorderRadius.circular(11),
+        borderSide: BorderSide(color: cor),
+      );
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -334,29 +479,33 @@ class _IdentificacaoPageState extends State<IdentificacaoPage> {
         const SizedBox(height: 5),
         TextFormField(
           controller: controller,
-          style: const TextStyle(fontSize: 11, color: _corTexto),
+          keyboardType: teclado,
+          textCapitalization: capitalizacao,
+          inputFormatters: formatadores,
+          validator: validador,
+          style: const TextStyle(
+            fontSize: 11,
+            color: _corTexto,
+          ),
           decoration: InputDecoration(
             isDense: true,
             filled: true,
             fillColor: Colors.white,
             prefixText: prefixo == null ? null : '$prefixo   ',
-            prefixStyle: const TextStyle(fontSize: 10, color: _corTexto),
+            prefixStyle: const TextStyle(
+              fontSize: 10,
+              color: _corTexto,
+            ),
+            errorStyle: const TextStyle(fontSize: 9),
             contentPadding: const EdgeInsets.symmetric(
               horizontal: 12,
               vertical: 11,
             ),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(11),
-              borderSide: const BorderSide(color: _corBorda),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(11),
-              borderSide: const BorderSide(color: _corBorda),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(11),
-              borderSide: const BorderSide(color: _corPrincipal),
-            ),
+            border: borda(_corBorda),
+            enabledBorder: borda(_corBorda),
+            focusedBorder: borda(_corPrincipal),
+            errorBorder: borda(const Color(0xFFB3261E)),
+            focusedErrorBorder: borda(const Color(0xFFB3261E)),
           ),
         ),
       ],
@@ -385,23 +534,13 @@ class _IdentificacaoPageState extends State<IdentificacaoPage> {
             ),
           ),
           FilledButton.icon(
-            onPressed: () => Navigator.push(
-              context,
-              _InstantPageRoute(
-                builder: (_) => RevisaoPage(
-                  data: widget.data,
-                  horario: widget.horario,
-                  servico: widget.servico,
-                  preco: widget.preco,
-                  duracao: widget.duracao,
-                  nome: _nomeController.text,
-                  whatsApp: _whatsAppController.text,
-                ),
-              ),
-            ),
+            onPressed: _continuar,
             style: FilledButton.styleFrom(
               backgroundColor: _corPrincipal,
-              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 13),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 18,
+                vertical: 13,
+              ),
             ),
             label: const Text('Continuar'),
             icon: const Icon(Icons.arrow_forward, size: 16),
@@ -413,12 +552,46 @@ class _IdentificacaoPageState extends State<IdentificacaoPage> {
   }
 }
 
+class _TelefoneFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue antigo,
+    TextEditingValue novo,
+  ) {
+    var digitos = novo.text.replaceAll(RegExp(r'\D'), '');
+
+    if (digitos.length > 11) {
+      digitos = digitos.substring(0, 11);
+    }
+
+    const posicaoHifen = 7;
+    final buffer = StringBuffer();
+
+    for (var i = 0; i < digitos.length; i++) {
+      if (i == 0) buffer.write('(');
+      if (i == 2) buffer.write(') ');
+      if (i == posicaoHifen) buffer.write('-');
+
+      buffer.write(digitos[i]);
+    }
+
+    final texto = buffer.toString();
+
+    return TextEditingValue(
+      text: texto,
+      selection: TextSelection.collapsed(offset: texto.length),
+    );
+  }
+}
+
 class _InstantPageRoute<T> extends PageRouteBuilder<T> {
-  _InstantPageRoute({required WidgetBuilder builder})
-    : super(
-        pageBuilder: (context, animation, secondaryAnimation) =>
-            builder(context),
-        transitionDuration: Duration.zero,
-        reverseTransitionDuration: Duration.zero,
-      );
+  _InstantPageRoute({
+    required WidgetBuilder builder,
+  }) : super(
+          pageBuilder: (context, animation, secondaryAnimation) {
+            return builder(context);
+          },
+          transitionDuration: Duration.zero,
+          reverseTransitionDuration: Duration.zero,
+        );
 }

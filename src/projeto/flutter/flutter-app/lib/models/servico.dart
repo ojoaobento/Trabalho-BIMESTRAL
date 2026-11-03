@@ -1,19 +1,28 @@
 class Servico {
-  final int? id;
-  final int categoriaId;  
+  final int id;
+  final int categoriaId;
   final String nome;
-  final String descricao;
+  final String? descricao;
   final double preco;
   final int duracaoMinutos;
-  final bool ativo;
 
-  Servico({
-    this.id,
+  const Servico({
+    required this.id,
     required this.categoriaId,
     required this.nome,
-    required this.descricao,
+    this.descricao,
     required this.preco,
     required this.duracaoMinutos,
-    this.ativo = true,
   });
+
+  factory Servico.fromJson(Map<String, dynamic> json) {
+    return Servico(
+      id: json['id'] as int,
+      categoriaId: json['categoria_id'] as int,
+      nome: json['nome'] as String,
+      descricao: json['descricao'] as String?,
+      preco: double.parse(json['preco'].toString()),
+      duracaoMinutos: json['duracao_minutos'] as int,
+    );
+  }
 }

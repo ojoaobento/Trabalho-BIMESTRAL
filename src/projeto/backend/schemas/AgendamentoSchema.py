@@ -51,3 +51,7 @@ class AgendamentoPublicoResponse(BaseModel):
     dt_fim: datetime
     status: StatusAgendamento
     servico: ServicoResponse
+
+class HorarioLivreResponse(BaseModel):
+    horario: str          
+    minutos_livres: int

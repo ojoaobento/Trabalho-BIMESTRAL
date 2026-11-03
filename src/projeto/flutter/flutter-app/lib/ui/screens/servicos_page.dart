@@ -1,11 +1,22 @@
+
 import 'package:flutter/material.dart';
+import 'package:main/data/agendamento_repository.dart';
+import 'package:main/data/api_service.dart';
+import 'package:main/models/servico.dart';
+import 'package:main/models/categoria.dart';
 import 'package:main/ui/screens/identificacao_page.dart';
 
 class ServicosPage extends StatefulWidget {
-  const ServicosPage({super.key, required this.data, required this.horario});
+  const ServicosPage({
+    super.key,
+    required this.data,
+    required this.horario,
+    required this.minutosLivres,
+  });
 
   final DateTime data;
   final String horario;
+  final int minutosLivres;
 
   @override
   State<ServicosPage> createState() => _ServicosPageState();
@@ -17,79 +28,75 @@ class _ServicosPageState extends State<ServicosPage> {
   static const _corTexto = Color(0xFF4A1026);
   static const _corBorda = Color(0xFFF1DDE5);
 
-  final _servicos = const [
-    _Servico(
-      'Manicure / Pedicure',
-      'Combo Manicure + Pedicure',
-      'Cuticulagem tradicional completa, esmaltação e hidratação nas mãos e pés.',
-      75,
-      80,
-    ),
-    _Servico(
-      'Manicure / Pedicure',
-      'Manicure Tradicional',
-      'Cuticulagem, lixamento técnico e esmaltação tradicional.',
-      38,
-      40,
-    ),
-    _Servico(
-      'Manicure / Pedicure',
-      'Pedicure Tradicional',
-      'Higienização, cuticulagem, esfoliação suave e esmaltação nos pés.',
-      42,
-      45,
-    ),
-    _Servico(
-      'Manicure / Pedicure',
-      'Spa dos Pés Tradicional',
-      'Imersão emoliente, esfoliação com sais minerais e hidratação profunda.',
-      60,
-      50,
-    ),
-    _Servico(
-      'Cabelo',
-      'Corte & Escova Modelada',
-      'Corte personalizado de acordo com o estilo e finalização com escova modelada.',
-      95,
-      60,
-    ),
-    _Servico(
-      'Cabelo',
-      'Hidratação Profunda & Escova',
-      'Tratamento de nutrição capilar intensiva seguido de escovação com brilho acetinado.',
-      130,
-      75,
-    ),
-    _Servico(
-      'Cabelo',
-      'Coloração / Tonalização',
-      'Aplicação de coloração ou tonalizante com proteção da fibra capilar.',
-      180,
-      120,
-    ),
-    _Servico(
-      'Cabelo',
-      'Escova & Finalização',
-      'Lavagem suave com massagem relaxante e escova modeladora.',
-      60,
-      45,
-    ),
-  ];
+  final _repositorio = AgendamentoRepository();
 
-  String _filtro = 'Todos';
-  _Servico? _servicoSelecionado;
+  List<Servico> _servicos = const [];
+  List<Categoria> _categorias = const [];
+
+  int? _categoriaFiltro;
+  Servico? _servicoSelecionado;
+
+  bool _carregando = true;
+  String? _erro;
+
+  String _formatarPreco(num valor) {
+    return 'R\$ ${valor.toStringAsFixed(2).replaceAll('.', ',')}';
+  }
+
+  String _formatarDuracao(int minutos) {
+    final horas = minutos ~/ 60;
+    final resto = minutos % 60;
+
+    if (horas == 0) return '$resto min';
+    if (resto == 0) return '${horas}h';
+
+    return '${horas}h${resto.toString().padLeft(2, '0')}';
+  }
 
   @override
   void initState() {
     super.initState();
-    _servicoSelecionado = _servicos.first;
+    _carregar();
+  }
+
+  Future<void> _carregar() async {
+    setState(() {
+      _carregando = true;
+      _erro = null;
+    });
+
+    try {
+      final resultado = await Future.wait<Object>([
+        _repositorio.servicosAtivos(),
+        _repositorio.categorias(),
+      ]);
+
+      if (!mounted) return;
+
+      setState(() {
+        _servicos = resultado[0] as List<Servico>;
+        _categorias = resultado[1] as List<Categoria>;
+        _carregando = false;
+      });
+    } on ApiException catch (e) {
+      if (!mounted) return;
+
+      setState(() {
+        _erro = e.mensagem;
+        _carregando = false;
+      });
+    }
+  }
+
+  bool _cabe(Servico servico) {
+    return servico.duracaoMinutos <= widget.minutosLivres;
   }
 
   @override
   Widget build(BuildContext context) {
-    final servicosFiltrados = _filtro == 'Todos'
+    final servicosFiltrados = _categoriaFiltro == null
         ? _servicos
-        : _servicos.where((servico) => servico.categoria == _filtro).toList();
+        : _servicos.where((s) => s.categoriaId == _categoriaFiltro).toList();
 
     return Scaffold(
       backgroundColor: _corFundo,
@@ -112,14 +119,15 @@ class _ServicosPageState extends State<ServicosPage> {
                     ),
                   ),
                   const SizedBox(height: 4),
-                  const Text(
-                    '• Estes serviços cabem na sua janela livre de 2h30',
-                    style: TextStyle(fontSize: 11, color: _corPrincipal),
+                  Text(
+                    '• Sua janela livre neste horário é de ${_formatarDuracao(widget.minutosLivres)}',
+                    style: const TextStyle(
+                      fontSize: 11,
+                      color: _corPrincipal,
+                    ),
                   ),
                   const SizedBox(height: 12),
-                  _filtros(),
-                  const SizedBox(height: 14),
-                  ...servicosFiltrados.map(_cardServico),
+                  ..._conteudo(servicosFiltrados),
                 ],
               ),
             ),
@@ -128,6 +136,61 @@ class _ServicosPageState extends State<ServicosPage> {
         ),
       ),
     );
+  }
+
+  List<Widget> _conteudo(List<Servico> servicosFiltrados) {
+    if (_carregando) {
+      return const [
+        Padding(
+          padding: EdgeInsets.symmetric(vertical: 40),
+          child: Center(
+            child: CircularProgressIndicator(color: _corPrincipal),
+          ),
+        ),
+      ];
+    }
+
+    if (_erro != null) {
+      return [
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(13),
+            border: Border.all(color: _corBorda),
+          ),
+          child: Column(
+            children: [
+              Text(_erro!, textAlign: TextAlign.center),
+              TextButton(
+                onPressed: _carregar,
+                style: TextButton.styleFrom(
+                  foregroundColor: _corPrincipal,
+                ),
+                child: const Text('Tentar de novo'),
+              ),
+            ],
+          ),
+        ),
+      ];
+    }
+
+    if (_servicos.isEmpty) {
+      return const [
+        Padding(
+          padding: EdgeInsets.symmetric(vertical: 24),
+          child: Center(
+            child: Text('Nenhum serviço disponível no momento.'),
+          ),
+        ),
+      ];
+    }
+
+    return [
+      _filtros(),
+      const SizedBox(height: 14),
+      ...servicosFiltrados.map(_cardServico),
+    ];
   }
 
   Widget _progresso() {
@@ -139,10 +202,7 @@ class _ServicosPageState extends State<ServicosPage> {
           const Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                '1. Horário',
-                style: TextStyle(fontSize: 10, color: _corPrincipal),
-              ),
+              Text('1. Horário', style: TextStyle(fontSize: 10, color: _corPrincipal)),
               Text(
                 '2. Serviço',
                 style: TextStyle(
@@ -151,26 +211,15 @@ class _ServicosPageState extends State<ServicosPage> {
                   color: _corPrincipal,
                 ),
               ),
-              Text(
-                '3. Seus dados',
-                style: TextStyle(fontSize: 10, color: Colors.black45),
-              ),
-              Text(
-                '4. Confirmar',
-                style: TextStyle(fontSize: 10, color: Colors.black45),
-              ),
-              Text(
-                '5. Status',
-                style: TextStyle(fontSize: 10, color: Colors.black45),
-              ),
+              Text('3. Seus dados', style: TextStyle(fontSize: 10, color: Colors.black45)),
+              Text('4. Confirmar', style: TextStyle(fontSize: 10, color: Colors.black45)),
+              Text('5. Status', style: TextStyle(fontSize: 10, color: Colors.black45)),
             ],
           ),
           const SizedBox(height: 7),
           Row(
             children: [
-              const Expanded(
-                child: Divider(color: _corPrincipal, thickness: 3),
-              ),
+              const Expanded(child: Divider(color: _corPrincipal, thickness: 3)),
               Expanded(child: Container(height: 3, color: _corPrincipal)),
               const Expanded(child: Divider(color: _corBorda, thickness: 3)),
               const Expanded(child: Divider(color: _corBorda, thickness: 3)),
@@ -235,137 +284,165 @@ class _ServicosPageState extends State<ServicosPage> {
   }
 
   Widget _filtros() {
-    const filtros = ['Todos', 'Cabelo', 'Manicure / Pedicure'];
+    final categoriasComServico = _categorias
+        .where((c) => _servicos.any((s) => s.categoriaId == c.id))
+        .toList();
+
+    Widget chip(String rotulo, int quantidade, int? id) {
+      final selecionado = _categoriaFiltro == id;
+
+      return ChoiceChip(
+        label: Text(
+          '$rotulo ($quantidade)',
+          style: const TextStyle(
+            fontSize: 10,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        selected: selecionado,
+        showCheckmark: false,
+        selectedColor: _corPrincipal,
+        backgroundColor: Colors.white,
+        side: BorderSide(
+          color: selecionado ? _corPrincipal : _corBorda,
+        ),
+        labelStyle: TextStyle(
+          color: selecionado ? Colors.white : _corTexto,
+        ),
+        onSelected: (_) => setState(() => _categoriaFiltro = id),
+      );
+    }
+
     return Wrap(
       spacing: 8,
-      children: filtros.map((filtro) {
-        final quantidade = filtro == 'Todos'
-            ? _servicos.length
-            : _servicos.where((servico) => servico.categoria == filtro).length;
-        return ChoiceChip(
-          label: Text(
-            '$filtro ($quantidade)',
-            style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
+      children: [
+        chip('Todos', _servicos.length, null),
+        ...categoriasComServico.map(
+          (c) => chip(
+            c.nome,
+            _servicos.where((s) => s.categoriaId == c.id).length,
+            c.id,
           ),
-          selected: _filtro == filtro,
-          showCheckmark: false,
-          selectedColor: _corPrincipal,
-          backgroundColor: Colors.white,
-          side: BorderSide(
-            color: _filtro == filtro ? _corPrincipal : _corBorda,
-          ),
-          labelStyle: TextStyle(
-            color: _filtro == filtro ? Colors.white : _corTexto,
-          ),
-          onSelected: (_) => setState(() => _filtro = filtro),
-        );
-      }).toList(),
+        ),
+      ],
     );
   }
 
-  Widget _cardServico(_Servico servico) {
+  Widget _cardServico(Servico servico) {
     final selecionado = _servicoSelecionado == servico;
-    return InkWell(
-      onTap: () => setState(() => _servicoSelecionado = servico),
-      borderRadius: BorderRadius.circular(13),
-      // Os cartões já mostram a seleção pela borda e pelo ícone. Desativar a
-      // onda de toque evita o clarão circular ao escolher um serviço.
-      splashFactory: NoSplash.splashFactory,
-      splashColor: Colors.transparent,
-      highlightColor: Colors.transparent,
-      hoverColor: Colors.transparent,
-      focusColor: Colors.transparent,
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 9),
-        padding: const EdgeInsets.all(13),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(13),
-          border: Border.all(
-            color: selecionado ? _corPrincipal : _corBorda,
-            width: selecionado ? 1.5 : 1,
+    final cabe = _cabe(servico);
+
+    return Opacity(
+      opacity: cabe ? 1 : .5,
+      child: InkWell(
+        onTap: cabe
+            ? () => setState(() => _servicoSelecionado = servico)
+            : null,
+        borderRadius: BorderRadius.circular(13),
+        splashFactory: NoSplash.splashFactory,
+        splashColor: Colors.transparent,
+        highlightColor: Colors.transparent,
+        hoverColor: Colors.transparent,
+        focusColor: Colors.transparent,
+        child: Container(
+          margin: const EdgeInsets.only(bottom: 9),
+          padding: const EdgeInsets.all(13),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(13),
+            border: Border.all(
+              color: selecionado ? _corPrincipal : _corBorda,
+              width: selecionado ? 1.5 : 1,
+            ),
           ),
-        ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      servico.nome,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: _corTexto,
+                      ),
+                    ),
+                    if ((servico.descricao ?? '').isNotEmpty) ...[
+                      const SizedBox(height: 3),
+                      Text(
+                        servico.descricao ?? '',
+                        style: const TextStyle(
+                          fontSize: 10,
+                          height: 1.15,
+                          color: Color(0xFF9A6C7C),
+                        ),
+                      ),
+                    ],
+                    const SizedBox(height: 9),
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.schedule_outlined,
+                          size: 13,
+                          color: _corPrincipal,
+                        ),
+                        const SizedBox(width: 3),
+                        Text(
+                          '${servico.duracaoMinutos} min',
+                          style: const TextStyle(
+                            fontSize: 10,
+                            color: _corTexto,
+                          ),
+                        ),
+                        const Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 9),
+                          child: Text(
+                            '•',
+                            style: TextStyle(color: _corPrincipal),
+                          ),
+                        ),
+                        Text(
+                          cabe ? 'Cabe no horário' : 'Não cabe neste horário',
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            color: cabe
+                                ? const Color(0xFF16836D)
+                                : const Color(0xFFB3261E),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Text(
-                    servico.nome,
+                    _formatarPreco(servico.preco),
                     style: const TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
                       color: _corTexto,
                     ),
                   ),
-                  const SizedBox(height: 3),
-                  Text(
-                    servico.descricao,
-                    style: const TextStyle(
-                      fontSize: 10,
-                      height: 1.15,
-                      color: Color(0xFF9A6C7C),
-                    ),
-                  ),
-                  const SizedBox(height: 9),
-                  Row(
-                    children: [
-                      const Icon(
-                        Icons.schedule_outlined,
-                        size: 13,
-                        color: _corPrincipal,
-                      ),
-                      const SizedBox(width: 3),
-                      Text(
-                        '${servico.duracao} min',
-                        style: const TextStyle(fontSize: 10, color: _corTexto),
-                      ),
-                      const Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 9),
-                        child: Text(
-                          '•',
-                          style: TextStyle(color: _corPrincipal),
-                        ),
-                      ),
-                      const Text(
-                        'Cabe no horário',
-                        style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF16836D),
-                        ),
-                      ),
-                    ],
+                  const SizedBox(height: 16),
+                  Icon(
+                    selecionado
+                        ? Icons.check_circle
+                        : Icons.radio_button_unchecked,
+                    color: selecionado ? _corPrincipal : _corBorda,
+                    size: 20,
                   ),
                 ],
               ),
-            ),
-            const SizedBox(width: 8),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(
-                  'R\$ ${servico.preco.toStringAsFixed(2).replaceAll('.', ',')}',
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    color: _corTexto,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Icon(
-                  selecionado
-                      ? Icons.check_circle
-                      : Icons.radio_button_unchecked,
-                  color: selecionado ? _corPrincipal : _corBorda,
-                  size: 20,
-                ),
-              ],
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -373,6 +450,7 @@ class _ServicosPageState extends State<ServicosPage> {
 
   Widget _rodape() {
     final servico = _servicoSelecionado;
+
     return Container(
       color: Colors.white,
       padding: const EdgeInsets.fromLTRB(14, 10, 14, 14),
@@ -389,9 +467,7 @@ class _ServicosPageState extends State<ServicosPage> {
                   style: const TextStyle(fontSize: 9, color: Colors.black45),
                 ),
                 Text(
-                  servico == null
-                      ? 'Total: R\$ 0,00'
-                      : 'Total: R\$ ${servico.preco.toStringAsFixed(2).replaceAll('.', ',')}',
+                  'Total: ${_formatarPreco(servico?.preco ?? 0)}',
                   style: const TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
@@ -405,20 +481,21 @@ class _ServicosPageState extends State<ServicosPage> {
             onPressed: servico == null
                 ? null
                 : () => Navigator.push(
-                    context,
-                    _InstantPageRoute(
-                      builder: (_) => IdentificacaoPage(
-                        data: widget.data,
-                        horario: widget.horario,
-                        servico: servico.nome,
-                        preco: servico.preco,
-                        duracao: servico.duracao,
+                      context,
+                      _InstantPageRoute(
+                        builder: (_) => IdentificacaoPage(
+                          data: widget.data,
+                          horario: widget.horario,
+                          servico: servico,
+                        ),
                       ),
                     ),
-                  ),
             style: FilledButton.styleFrom(
               backgroundColor: _corPrincipal,
-              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 13),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 18,
+                vertical: 13,
+              ),
             ),
             label: const Text('Continuar'),
             icon: const Icon(Icons.arrow_forward, size: 16),
@@ -431,46 +508,22 @@ class _ServicosPageState extends State<ServicosPage> {
 
   String _dataCurta() {
     const dias = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
+
     const meses = [
-      'jan.',
-      'fev.',
-      'mar.',
-      'abr.',
-      'mai.',
-      'jun.',
-      'jul.',
-      'ago.',
-      'set.',
-      'out.',
-      'nov.',
-      'dez.',
+      'jan.', 'fev.', 'mar.', 'abr.', 'mai.', 'jun.',
+      'jul.', 'ago.', 'set.', 'out.', 'nov.', 'dez.',
     ];
+
     return '${dias[widget.data.weekday - 1]} ${widget.data.day} de ${meses[widget.data.month - 1]} às ${widget.horario}';
   }
 }
 
 class _InstantPageRoute<T> extends PageRouteBuilder<T> {
   _InstantPageRoute({required WidgetBuilder builder})
-    : super(
-        pageBuilder: (context, animation, secondaryAnimation) =>
-            builder(context),
-        transitionDuration: Duration.zero,
-        reverseTransitionDuration: Duration.zero,
-      );
-}
-
-class _Servico {
-  const _Servico(
-    this.categoria,
-    this.nome,
-    this.descricao,
-    this.preco,
-    this.duracao,
-  );
-
-  final String categoria;
-  final String nome;
-  final String descricao;
-  final double preco;
-  final int duracao;
+      : super(
+          pageBuilder: (context, animation, secondaryAnimation) =>
+              builder(context),
+          transitionDuration: Duration.zero,
+          reverseTransitionDuration: Duration.zero,
+        );
 }

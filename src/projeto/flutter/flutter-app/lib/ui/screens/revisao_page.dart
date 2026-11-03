@@ -1,6 +1,8 @@
-import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:main/models/servico.dart';
+import 'package:main/data/agendamento_repository.dart';
+import 'package:main/data/api_service.dart';
 import 'package:main/ui/screens/status_page.dart';
 
 class RevisaoPage extends StatefulWidget {
@@ -9,19 +11,19 @@ class RevisaoPage extends StatefulWidget {
     required this.data,
     required this.horario,
     required this.servico,
-    required this.preco,
-    required this.duracao,
     required this.nome,
     required this.whatsApp,
+    required this.aceitaLembretes,
+    required this.consentimento,
   });
 
   final DateTime data;
   final String horario;
-  final String servico;
-  final double preco;
-  final int duracao;
+  final Servico servico;
   final String nome;
   final String whatsApp;
+  final bool aceitaLembretes;
+  final bool consentimento;
 
   @override
   State<RevisaoPage> createState() => _RevisaoPageState();
@@ -33,26 +35,69 @@ class _RevisaoPageState extends State<RevisaoPage> {
   static const _corTexto = Color(0xFF4A1026);
   static const _corBorda = Color(0xFFF1DDE5);
 
-  int _segundosRestantes = 2 * 60 + 25;
-  Timer? _cronometro;
+  final _repositorio = AgendamentoRepository();
 
-  @override
-  void initState() {
-    super.initState();
-    _cronometro = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (_segundosRestantes == 0) {
-        timer.cancel();
-        return;
-      }
+  bool _enviando = false;
 
-      setState(() => _segundosRestantes--);
-    });
+  String _formatarPreco(num valor) {
+    return 'R\$ ${valor.toStringAsFixed(2).replaceAll('.', ',')}';
   }
 
-  @override
-  void dispose() {
-    _cronometro?.cancel();
-    super.dispose();
+  Future<void> _confirmar() async {
+    if (_enviando) return;
+
+    setState(() {
+      _enviando = true;
+    });
+
+    try {
+      final criado = await _repositorio.criar(
+        servicoId: widget.servico.id,
+        data: widget.data,
+        hora: widget.horario,
+        nome: widget.nome,
+        whatsApp: widget.whatsApp,
+        aceitaLembretes: widget.aceitaLembretes,
+        consentimento: widget.consentimento,
+      );
+
+      if (!mounted) return;
+
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          builder: (_) => SolicitacaoConfirmadaPage(
+            agendamento: criado,
+            whatsApp: widget.whatsApp,
+          ),
+        ),
+      );
+    } on ApiException catch (e) {
+      if (!mounted) return;
+
+      setState(() {
+        _enviando = false;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.mensagem)),
+      );
+    } catch (e) {
+      if (!mounted) return;
+
+      setState(() {
+        _enviando = false;
+      });
+
+      debugPrint('Erro ao confirmar agendamento: $e');
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Não foi possível confirmar o agendamento. Tente novamente.',
+          ),
+        ),
+      );
+    }
   }
 
   @override
@@ -69,7 +114,7 @@ class _RevisaoPageState extends State<RevisaoPage> {
                 children: [
                   _titulo(),
                   const SizedBox(height: 14),
-                  _preReserva(),
+                  _aviso(),
                   const SizedBox(height: 12),
                   _servico(),
                   const SizedBox(height: 9),
@@ -97,18 +142,9 @@ class _RevisaoPageState extends State<RevisaoPage> {
           const Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                '1. Horário',
-                style: TextStyle(fontSize: 10, color: _corPrincipal),
-              ),
-              Text(
-                '2. Serviço',
-                style: TextStyle(fontSize: 10, color: _corPrincipal),
-              ),
-              Text(
-                '3. Seus dados',
-                style: TextStyle(fontSize: 10, color: _corPrincipal),
-              ),
+              Text('1. Horário', style: TextStyle(fontSize: 10, color: _corPrincipal)),
+              Text('2. Serviço', style: TextStyle(fontSize: 10, color: _corPrincipal)),
+              Text('3. Seus dados', style: TextStyle(fontSize: 10, color: _corPrincipal)),
               Text(
                 '4. Confirmar',
                 style: TextStyle(
@@ -117,18 +153,13 @@ class _RevisaoPageState extends State<RevisaoPage> {
                   color: _corPrincipal,
                 ),
               ),
-              Text(
-                '5. Status',
-                style: TextStyle(fontSize: 10, color: Colors.black45),
-              ),
+              Text('5. Status', style: TextStyle(fontSize: 10, color: Colors.black45)),
             ],
           ),
           const SizedBox(height: 7),
           Row(
             children: [
-              const Expanded(
-                child: Divider(color: _corPrincipal, thickness: 3),
-              ),
+              const Expanded(child: Divider(color: _corPrincipal, thickness: 3)),
               Expanded(child: Container(height: 3, color: _corPrincipal)),
               Expanded(child: Container(height: 3, color: _corPrincipal)),
               Expanded(child: Container(height: 3, color: _corPrincipal)),
@@ -144,7 +175,7 @@ class _RevisaoPageState extends State<RevisaoPage> {
     return Row(
       children: [
         IconButton(
-          onPressed: () => Navigator.pop(context),
+          onPressed: _enviando ? null : () => Navigator.pop(context),
           style: IconButton.styleFrom(
             backgroundColor: Colors.white,
             side: const BorderSide(color: _corBorda),
@@ -165,27 +196,27 @@ class _RevisaoPageState extends State<RevisaoPage> {
     );
   }
 
-  Widget _preReserva() {
+  Widget _aviso() {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: const Color(0xFFFFE6EE),
         borderRadius: BorderRadius.circular(12),
       ),
-      child: Row(
+      child: const Row(
         children: [
-          const CircleAvatar(
+          CircleAvatar(
             radius: 11,
             backgroundColor: _corPrincipal,
-            child: Icon(Icons.lock_outline, size: 13, color: Colors.white),
+            child: Icon(Icons.info_outline, size: 13, color: Colors.white),
           ),
-          const SizedBox(width: 8),
-          const Expanded(
+          SizedBox(width: 8),
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Horário pré-reservado!',
+                  'Confira os dados antes de confirmar',
                   style: TextStyle(
                     fontSize: 10,
                     fontWeight: FontWeight.bold,
@@ -193,25 +224,13 @@ class _RevisaoPageState extends State<RevisaoPage> {
                   ),
                 ),
                 Text(
-                  'Seu horário fica reservado por mais:',
-                  style: TextStyle(fontSize: 9, color: Color(0xFF9A6C7C)),
+                  'O studio aprova a solicitação e avisa você pelo WhatsApp.',
+                  style: TextStyle(
+                    fontSize: 9,
+                    color: Color(0xFF9A6C7C),
+                  ),
                 ),
               ],
-            ),
-          ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(9),
-            ),
-            child: Text(
-              _tempoRestanteFormatado(),
-              style: const TextStyle(
-                fontSize: 10,
-                fontWeight: FontWeight.bold,
-                color: _corPrincipal,
-              ),
             ),
           ),
         ],
@@ -220,6 +239,8 @@ class _RevisaoPageState extends State<RevisaoPage> {
   }
 
   Widget _servico() {
+    final descricao = widget.servico.descricao ?? '';
+
     return _cartao(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -236,15 +257,11 @@ class _RevisaoPageState extends State<RevisaoPage> {
               ),
               const Spacer(),
               TextButton(
-                onPressed: () {
-                  // A pilha de navegação é Horário > Serviço > Seus dados >
-                  // Revisão. Voltar duas telas retorna diretamente à seleção
-                  // do serviço e preserva o horário escolhido.
-                  final navigator = Navigator.of(context);
-                  navigator
-                    ..pop()
-                    ..pop();
-                },
+                onPressed: _enviando
+                    ? null
+                    : () => Navigator.of(context).popUntil(
+                          ModalRoute.withName('servicos'),
+                        ),
                 style: TextButton.styleFrom(
                   padding: EdgeInsets.zero,
                   foregroundColor: _corPrincipal,
@@ -257,7 +274,7 @@ class _RevisaoPageState extends State<RevisaoPage> {
             ],
           ),
           Text(
-            widget.servico,
+            widget.servico.nome,
             style: const TextStyle(
               fontSize: 15,
               fontWeight: FontWeight.bold,
@@ -265,9 +282,14 @@ class _RevisaoPageState extends State<RevisaoPage> {
             ),
           ),
           const SizedBox(height: 3),
-          const Text(
-            'Serviço selecionado para o seu horário.',
-            style: TextStyle(fontSize: 10, color: Color(0xFF976D7B)),
+          Text(
+            descricao.isEmpty
+                ? 'Serviço selecionado para o seu horário.'
+                : descricao,
+            style: const TextStyle(
+              fontSize: 10,
+              color: Color(0xFF976D7B),
+            ),
           ),
         ],
       ),
@@ -316,7 +338,7 @@ class _RevisaoPageState extends State<RevisaoPage> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  '${widget.duracao} min · R\$ ${widget.preco.toStringAsFixed(2).replaceAll('.', ',')}',
+                  '${widget.servico.duracaoMinutos} min · ${_formatarPreco(widget.servico.preco)}',
                   style: const TextStyle(
                     fontSize: 10,
                     fontWeight: FontWeight.bold,
@@ -388,14 +410,14 @@ class _RevisaoPageState extends State<RevisaoPage> {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  widget.whatsApp,
+                  _formatarTelefone(widget.whatsApp),
                   style: const TextStyle(fontSize: 9, color: Color(0xFF976D7B)),
                 ),
               ],
             ),
           ),
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: _enviando ? null : () => Navigator.pop(context),
             style: TextButton.styleFrom(
               padding: EdgeInsets.zero,
               foregroundColor: _corPrincipal,
@@ -433,22 +455,24 @@ class _RevisaoPageState extends State<RevisaoPage> {
           SizedBox(
             width: double.infinity,
             child: FilledButton.icon(
-              onPressed: () => Navigator.of(context).pushReplacement(
-                MaterialPageRoute(
-                  builder: (_) => SolicitacaoConfirmadaPage(
-                    data: widget.data,
-                    horario: widget.horario,
-                    servico: widget.servico,
-                    whatsApp: widget.whatsApp,
-                  ),
-                ),
-              ),
+              onPressed: _enviando ? null : _confirmar,
               style: FilledButton.styleFrom(
                 backgroundColor: _corPrincipal,
                 padding: const EdgeInsets.symmetric(vertical: 15),
               ),
-              icon: const Icon(Icons.check, size: 16),
-              label: const Text('Confirmar agendamento'),
+              icon: _enviando
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : const Icon(Icons.check, size: 16),
+              label: Text(
+                _enviando ? 'Confirmando...' : 'Confirmar agendamento',
+              ),
             ),
           ),
           const SizedBox(height: 5),
@@ -464,34 +488,35 @@ class _RevisaoPageState extends State<RevisaoPage> {
   String _dataFormatada() {
     const dias = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
     const meses = [
-      'jan',
-      'fev',
-      'mar',
-      'abr',
-      'mai',
-      'jun',
-      'jul',
-      'ago',
-      'set',
-      'out',
-      'nov',
-      'dez',
+      'jan', 'fev', 'mar', 'abr', 'mai', 'jun',
+      'jul', 'ago', 'set', 'out', 'nov', 'dez',
     ];
+
     return '${dias[widget.data.weekday - 1]} ${widget.data.day} de ${meses[widget.data.month - 1]} · ${widget.horario}';
   }
 
   String _fimPrevisto() {
     final partes = widget.horario.split(':');
-    final inicioEmMinutos = int.parse(partes[0]) * 60 + int.parse(partes[1]);
-    final fimEmMinutos = inicioEmMinutos + widget.duracao;
+
+    final inicioEmMinutos =
+        int.parse(partes[0]) * 60 + int.parse(partes[1]);
+
+    final fimEmMinutos =
+        inicioEmMinutos + widget.servico.duracaoMinutos;
+
     final horas = (fimEmMinutos ~/ 60) % 24;
     final minutos = fimEmMinutos % 60;
+
     return '${horas.toString().padLeft(2, '0')}:${minutos.toString().padLeft(2, '0')}';
   }
 
-  String _tempoRestanteFormatado() {
-    final minutos = _segundosRestantes ~/ 60;
-    final segundos = _segundosRestantes % 60;
-    return '${minutos.toString().padLeft(2, '0')}:${segundos.toString().padLeft(2, '0')}';
+  String _formatarTelefone(String telefone) {
+    final digitos = telefone.replaceAll(RegExp(r'\D'), '');
+
+    if (digitos.length != 11) return telefone;
+
+    return '(${digitos.substring(0, 2)}) '
+        '${digitos.substring(2, 7)}-'
+        '${digitos.substring(7)}';
   }
 }
