@@ -5,6 +5,7 @@ import 'package:main/screens/admin_login.dart';
 import 'package:main/screens/agendamento_page.dart';
 import 'package:main/screens/cliente_page.dart';
 import 'package:main/screens/disponibilidade_page.dart';
+import 'package:main/screens/lembrete_page.dart';
 import 'package:main/screens/usuario_page.dart';
 import 'package:main/services/api_client.dart';
 import 'package:main/screens/categoria_page.dart';
@@ -98,6 +99,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
 
       case 4:
         return const CategoriasPage();
+
+      case 5:
+        return const LembretePage();
 
       case 6:
         return const DisponibilidadePage();
