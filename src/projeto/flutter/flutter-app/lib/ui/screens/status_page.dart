@@ -50,7 +50,7 @@ class SolicitacaoConfirmadaPage extends StatelessWidget {
                         ),
                         const SizedBox(height: 5),
                         const Text(
-                          'Enviaremos a confirmação detalhada no seu WhatsApp',
+                          'Enviaremos a confirmação detalhada no seu E-mail',
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             fontSize: 10,

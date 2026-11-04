@@ -1,4 +1,3 @@
-
 import 'package:main/data/api_service.dart';
 
 import '../models/categoria.dart';
@@ -65,38 +64,13 @@ class AgendamentoRepository {
       throw FormatException('Horário inválido: $hora');
     }
 
-    // Cria a data e o horário no fuso local do dispositivo.
-    final inicio = DateTime(
-      data.year,
-      data.month,
-      data.day,
-      horaInteira,
-      minutoInteiro,
-    );
-
-    // Obtém o deslocamento do fuso horário.
-    final offset = inicio.timeZoneOffset;
-
-    final sinal = offset.isNegative ? '-' : '+';
-    final horasOffset = offset.inHours.abs().toString().padLeft(2, '0');
-    final minutosOffset =
-        (offset.inMinutes.abs() % 60).toString().padLeft(2, '0');
-
-    // Formato esperado pela API:
-    // 2026-11-03T14:30:00-03:00
-    final dtInicio =
-        '${inicio.year.toString().padLeft(4, '0')}-'
-        '${inicio.month.toString().padLeft(2, '0')}-'
-        '${inicio.day.toString().padLeft(2, '0')}T'
-        '${inicio.hour.toString().padLeft(2, '0')}:'
-        '${inicio.minute.toString().padLeft(2, '0')}:00'
-        '$sinal$horasOffset:$minutosOffset';
-
     final telefone = whatsApp.replaceAll(
       RegExp(r'\D'),
       '',
     );
 
+    // O backend espera "data" (AAAA-MM-DD) e "hora" (HH:MM) separados e
+    // monta o horário no fuso America/Sao_Paulo.
     final resposta = await _api.post('/agendamentos', {
       'cliente': {
         'nome': nome.trim(),
@@ -105,7 +79,9 @@ class AgendamentoRepository {
         'consentimento': consentimento,
       },
       'servico_id': servicoId,
-      'dt_inicio': dtInicio,
+      'data': _dia(data),
+      'hora': '${horaInteira.toString().padLeft(2, '0')}:'
+          '${minutoInteiro.toString().padLeft(2, '0')}',
     });
 
     return AgendamentoCriado.fromJson(

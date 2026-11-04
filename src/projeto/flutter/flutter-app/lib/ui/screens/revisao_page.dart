@@ -224,7 +224,7 @@ class _RevisaoPageState extends State<RevisaoPage> {
                   ),
                 ),
                 Text(
-                  'O studio aprova a solicitação e avisa você pelo WhatsApp.',
+                  'O studio aprova a solicitação e avisa você pelo E-mail.',
                   style: TextStyle(
                     fontSize: 9,
                     color: Color(0xFF9A6C7C),
