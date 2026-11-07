@@ -1,10 +1,13 @@
 """
-backend/api/MeusAgendamentos.py  (v3 - sessão persistente)
+backend/api/MeusAgendamentos.py  (v4 - sessão persistente + esqueci o telefone)
 
-  POST /agendamentos/acesso/codigo -> envia código de 6 dígitos por e-mail
-  POST /agendamentos/minhas        -> entra com (e-mail + telefone + código)
-                                      OU com (token de sessão)
-                                      Resposta: {"token": "...", "agendamentos": [...]}
+  POST  /agendamentos/acesso/codigo -> envia código de 6 dígitos por e-mail
+                                       (com telefone, ou só com e-mail se a
+                                       cliente esqueceu o telefone)
+  POST  /agendamentos/minhas        -> entra com (e-mail + código [+ telefone])
+                                       OU com (token de sessão)
+                                       Resposta: {"token": "...", "agendamentos": [...]}
+  PATCH /agendamentos/minhas/telefone -> troca o telefone da cliente (por token)
 
 O token é assinado (HMAC) e NÃO fica no banco. Vale VALIDADE_SESSAO_DIAS dias e
 deixa de valer sozinho se o e-mail ou o telefone da cliente mudarem, ou se
@@ -20,17 +23,19 @@ from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from pydantic import BaseModel, EmailStr, Field
-from sqlalchemy import Column, DateTime, Integer, String
+from sqlalchemy import Column, DateTime, Integer, String, func
 from sqlalchemy.orm import Session
 
 from core.database import Base, get_db
 
 from models.Agendamento import StatusAgendamento
+from models.Cliente import Cliente  # ajuste ao caminho real do seu model
 from repositories.AgendamentoRepository import AgendamentoRepository
 from repositories.ClienteRepository import ClienteRepository
 from repositories.DisponibilidadeRepository import DisponibilidadeRepository
 from repositories.LembreteRepository import LembreteRepository
 from repositories.ServicoRepository import ServicoRepository
+from schemas.ClienteSchema import ClienteAtualizarRequest
 from services.AgendamentoService import AgendamentoService
 from services.ClienteService import ClienteService
 from services.LembreteService import LembreteService
@@ -59,6 +64,7 @@ class CodigoAcesso(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     email = Column(String(255), nullable=False, index=True)
+    # Vazio ("") quando o código foi pedido pelo "esqueci meu telefone".
     telefone = Column(String(11), nullable=False)
     codigo_hash = Column(String(64), nullable=False)
     tentativas = Column(Integer, nullable=False, default=0)
@@ -68,15 +74,21 @@ class CodigoAcesso(Base):
 
 class SolicitarCodigoRequest(BaseModel):
     email: EmailStr
-    telefone: str
+    # Opcional: sem telefone = "esqueci meu telefone" (só e-mail + código).
+    telefone: str | None = None
 
 
 class CancelarRequest(BaseModel):
     token: str
 
 
+class AlterarTelefoneRequest(BaseModel):
+    token: str
+    telefone: str = Field(pattern=r"^[1-9]{2}9\d{8}$")
+
+
 class MeusAgendamentosRequest(BaseModel):
-    # Informe (email + telefone + codigo) OU (token)
+    # Informe (email + codigo, com telefone opcional) OU (token)
     email: EmailStr | None = None
     telefone: str | None = None
     codigo: str | None = Field(default=None, min_length=6, max_length=6)
@@ -105,8 +117,23 @@ def _hash_codigo(email: str, telefone: str, codigo: str) -> str:
     return _hmac(f"codigo:{email}:{telefone}:{codigo}")
 
 
+def _cliente_por_email(db: Session, email: str):
+    """Só vale se houver exatamente uma cliente com esse e-mail; com mais de
+    uma não dá para saber de quem é a lista, e ela precisa usar o telefone."""
+    achadas = (
+        db.query(Cliente)
+        .filter(func.lower(func.trim(Cliente.email)) == email)
+        .all()
+    )
+    return achadas[0] if len(achadas) == 1 else None
+
+
 def _cliente_valido(db: Session, email: str, telefone: str):
-    """Reaproveita ClienteRepository; exige que o e-mail também confira."""
+    """Com telefone: e-mail e telefone precisam bater.
+    Sem telefone ("esqueci meu telefone"): vale só pelo e-mail."""
+    if not telefone:
+        return _cliente_por_email(db, email)
+
     cliente = ClienteRepository(db).buscar_por_telefone(telefone)
     if cliente is None or not cliente.email:
         return None
@@ -227,10 +254,13 @@ def solicitar_codigo(
 ):
     """Resposta sempre igual, exista a cliente ou não."""
     email = dados.email.lower().strip()
-    telefone = _digitos(dados.telefone)
+    telefone = _digitos(dados.telefone or "")   # "" = esqueci meu telefone
     resposta = {"mensagem": "Se os dados estiverem corretos, enviamos um código por e-mail."}
 
-    if not re.fullmatch(r"[1-9]{2}9\d{8}", telefone) or _cliente_valido(db, email, telefone) is None:
+    if telefone and not re.fullmatch(r"[1-9]{2}9\d{8}", telefone):
+        return resposta
+
+    if _cliente_valido(db, email, telefone) is None:
         return resposta
 
     ultimo = (
@@ -274,12 +304,12 @@ def meus_agendamentos(dados: MeusAgendamentosRequest, db: Session = Depends(get_
             "agendamentos": _listar(db, cliente),
         }
 
-    # --- entrada por e-mail + telefone + código ---
-    if not (dados.email and dados.telefone and dados.codigo):
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Informe e-mail, telefone e código.")
+    # --- entrada por e-mail + código (+ telefone, se ela lembrar) ---
+    if not (dados.email and dados.codigo):
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Informe e-mail e código.")
 
     email = dados.email.lower().strip()
-    telefone = _digitos(dados.telefone)
+    telefone = _digitos(dados.telefone or "")   # "" = esqueci meu telefone
     erro = HTTPException(status.HTTP_403_FORBIDDEN, "Código inválido ou expirado.")
 
     registro = (
@@ -357,3 +387,30 @@ def cancelar_meu_agendamento(
     # Cancela e apaga os lembretes ainda não enviados (regra já existente).
     atualizado = service.alterar_status(agendamento_id, StatusAgendamento.CANCELADO)
     return _item(atualizado)
+
+
+@router.patch("/minhas/telefone")
+def atualizar_meu_telefone(dados: AlterarTelefoneRequest, db: Session = Depends(get_db)):
+    """A cliente (identificada pelo token) troca o telefone cadastrado."""
+    cliente = _cliente_do_token(db, dados.token)
+    if cliente is None:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Sessão expirada. Entre novamente.")
+
+    novo = _digitos(dados.telefone)
+    if novo == _digitos(cliente.telefone):
+        return {"token": dados.token, "telefone": novo}
+
+    repo = ClienteRepository(db)
+    existente = repo.buscar_por_telefone(novo)
+    if existente is not None and existente.id != cliente.id:
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            "Não foi possível usar este telefone.",
+        )
+
+    # reaproveita o PATCH que já existe no service (nome, e-mail etc. ficam intactos)
+    ClienteService(repo).atualizar(cliente.id, ClienteAtualizarRequest(telefone=novo))
+    db.refresh(cliente)
+
+    # a impressão do token inclui o telefone: gera um token novo
+    return {"token": _criar_token(cliente), "telefone": novo}

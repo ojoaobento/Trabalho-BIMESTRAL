@@ -11,10 +11,15 @@ class AcessoCliente {
     required this.token,
     required this.agendamentos,
     this.nome,
+    this.telefone,
   });
 
   final String token;
   final String? nome;
+
+  /// Telefone cadastrado da cliente (só dígitos). Necessário quando ela
+  /// entra pelo "Esqueci meu telefone", já que o app não o conhecia.
+  final String? telefone;
   final List<AgendamentoCriado> agendamentos;
 }
 
@@ -99,25 +104,29 @@ class AgendamentoRepository {
 
   /// Pede o envio do código de acesso por e-mail. A resposta é sempre a
   /// mesma, existindo ou não cadastro com esses dados.
+  ///
+  /// Sem [telefone] (cliente que esqueceu o telefone), o código vai para o
+  /// e-mail informado se houver uma única cliente com ele.
   Future<void> solicitarCodigo({
     required String email,
-    required String telefone,
+    String? telefone,
   }) async {
     await _api.post('/agendamentos/acesso/codigo', {
       'email': email.trim(),
-      'telefone': telefone.replaceAll(RegExp(r'\D'), ''),
+      if (_temTelefone(telefone)) 'telefone': _digitos(telefone!),
     });
   }
 
-  /// Entra com e-mail + telefone + código. Devolve também o token de sessão.
+  /// Entra com e-mail + código (+ telefone, se a cliente lembrar dele).
+  /// Devolve também o token de sessão.
   Future<AcessoCliente> meusAgendamentos({
     required String email,
-    required String telefone,
+    String? telefone,
     required String codigo,
   }) async {
     final dados = await _api.post('/agendamentos/minhas', {
       'email': email.trim(),
-      'telefone': telefone.replaceAll(RegExp(r'\D'), ''),
+      if (_temTelefone(telefone)) 'telefone': _digitos(telefone!),
       'codigo': codigo.trim(),
     }) as Map<String, dynamic>;
 
@@ -148,6 +157,23 @@ class AgendamentoRepository {
     return AgendamentoCriado.fromJson(dados);
   }
 
+  /// Troca o telefone da cliente logada. O token muda junto, então devolve
+  /// o novo.
+  Future<({String token, String telefone})> atualizarTelefone({
+    required String token,
+    required String telefone,
+  }) async {
+    final resp = await _api.patch('/agendamentos/minhas/telefone', {
+      'token': token,
+      'telefone': _digitos(telefone),
+    }) as Map<String, dynamic>;
+
+    return (
+      token: resp['token'] as String,
+      telefone: resp['telefone'] as String,
+    );
+  }
+
   AcessoCliente _acesso(Map<String, dynamic> dados) {
     final lista = (dados['agendamentos'] as List)
         .map((e) => AgendamentoCriado.fromJson(e as Map<String, dynamic>))
@@ -158,9 +184,15 @@ class AgendamentoRepository {
     return AcessoCliente(
       token: dados['token'] as String,
       nome: cliente is Map ? cliente['nome'] as String? : null,
+      telefone: cliente is Map ? cliente['telefone'] as String? : null,
       agendamentos: lista,
     );
   }
+
+  bool _temTelefone(String? telefone) =>
+      telefone != null && _digitos(telefone).isNotEmpty;
+
+  String _digitos(String valor) => valor.replaceAll(RegExp(r'\D'), '');
 
   String _dia(DateTime data) {
     return '${data.year.toString().padLeft(4, '0')}-'

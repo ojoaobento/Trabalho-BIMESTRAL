@@ -1,10 +1,11 @@
-
 import 'package:flutter/material.dart';
 import 'package:main/data/agendamento_repository.dart';
 import 'package:main/data/api_service.dart';
+import 'package:main/data/sessao_cliente.dart';
 import 'package:main/models/servico.dart';
 import 'package:main/models/categoria.dart';
 import 'package:main/ui/screens/identificacao_page.dart';
+import 'package:main/ui/screens/revisao_page.dart';
 
 class ServicosPage extends StatefulWidget {
   const ServicosPage({
@@ -37,6 +38,7 @@ class _ServicosPageState extends State<ServicosPage> {
   Servico? _servicoSelecionado;
 
   bool _carregando = true;
+  bool _abrindo = false;
   String? _erro;
 
   String _formatarPreco(num valor) {
@@ -91,6 +93,54 @@ class _ServicosPageState extends State<ServicosPage> {
   bool _cabe(Servico servico) {
     return servico.duracaoMinutos <= widget.minutosLivres;
   }
+
+  /// Logada (sessão com nome guardada no aparelho): vai direto para a
+  /// revisão (etapa 4). Senão, segue para "Seus dados" (etapa 3).
+Future<void> _continuar(Servico servico) async {
+  if (_abrindo) return;
+
+  setState(() => _abrindo = true);
+
+  SessaoCliente? sessao;
+
+  try {
+    sessao = await SessaoCliente.carregar();
+  } catch (e) {
+    debugPrint('Erro ao ler sessão: $e');
+  }
+
+  if (!mounted) return;
+
+  setState(() => _abrindo = false);
+
+  final nome = (sessao?.nome ?? '').trim();
+
+  final Widget destino;
+
+  if (sessao != null && nome.isNotEmpty) {
+    destino = RevisaoPage(
+      data: widget.data,
+      horario: widget.horario,
+      servico: servico,
+      nome: nome,
+      whatsApp: sessao.telefone,
+      email: sessao.email,
+      aceitaLembretes: true,
+      consentimento: true,
+    );
+  } else {
+    destino = IdentificacaoPage(
+      data: widget.data,
+      horario: widget.horario,
+      servico: servico,
+    );
+  }
+
+  Navigator.push(
+    context,
+    _InstantPageRoute(builder: (_) => destino),
+  );
+}
 
   @override
   Widget build(BuildContext context) {
@@ -478,18 +528,9 @@ class _ServicosPageState extends State<ServicosPage> {
             ),
           ),
           FilledButton.icon(
-            onPressed: servico == null
+            onPressed: (servico == null || _abrindo)
                 ? null
-                : () => Navigator.push(
-                      context,
-                      _InstantPageRoute(
-                        builder: (_) => IdentificacaoPage(
-                          data: widget.data,
-                          horario: widget.horario,
-                          servico: servico,
-                        ),
-                      ),
-                    ),
+                : () => _continuar(servico),
             style: FilledButton.styleFrom(
               backgroundColor: _corPrincipal,
               padding: const EdgeInsets.symmetric(

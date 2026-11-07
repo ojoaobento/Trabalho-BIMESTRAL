@@ -39,3 +39,5 @@ class ClienteResponse(BaseModel):
     consentimento_em: datetime | None
     dt_cadastro: datetime
 
+class ClienteTelefoneRequest(BaseModel):
+    telefone: str = Field(pattern=r"^[1-9]{2}9\d{8}$")

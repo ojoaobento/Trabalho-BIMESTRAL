@@ -9,7 +9,10 @@ enum _Etapa { iniciando, dados, codigo, lista }
 
 /// Acesso da cliente:
 /// - Primeira vez (ou sessão expirada): e-mail + telefone -> código -> lista.
+/// - "Esqueci meu telefone": só e-mail -> código -> lista.
 /// - Depois: o token guardado no aparelho abre a lista direto.
+///
+/// Na lista, a cliente pode alterar o telefone cadastrado.
 ///
 /// [email] e [telefone] são opcionais e só pré-preenchem o formulário
 /// (por exemplo, logo após concluir um agendamento).
@@ -38,8 +41,15 @@ class _MeusAgendamentosPageState extends State<MeusAgendamentosPage> {
   _Etapa _etapa = _Etapa.iniciando;
   List<AgendamentoCriado> _agendamentos = const [];
   String? _token;
+  String? _nome;
   int? _cancelandoId;
   bool _carregando = false;
+  bool _salvandoTelefone = false;
+
+  /// true quando a cliente tocou em "Esqueci meu telefone": o acesso é
+  /// feito só com e-mail + código.
+  bool _semTelefone = false;
+
   String? _erro;
 
   @override
@@ -120,6 +130,7 @@ class _MeusAgendamentosPageState extends State<MeusAgendamentosPage> {
 
       setState(() {
         _token = acesso.token;
+        _nome = acesso.nome ?? sessao.nome;
         _agendamentos = acesso.agendamentos;
         _etapa = _Etapa.lista;
       });
@@ -151,13 +162,21 @@ class _MeusAgendamentosPageState extends State<MeusAgendamentosPage> {
 
   // ---------- ações ----------
 
+  /// Alterna entre "e-mail + telefone" e "só e-mail" (esqueci o telefone).
+  void _alternarSemTelefone() {
+    setState(() {
+      _semTelefone = !_semTelefone;
+      _erro = null;
+    });
+  }
+
   Future<void> _solicitarCodigo() async {
     if (!_emailValido) {
       setState(() => _erro = 'Informe um e-mail válido.');
       return;
     }
 
-    if (!_telefoneValido) {
+    if (!_semTelefone && !_telefoneValido) {
       setState(() => _erro =
           'Informe um telefone válido com DDD (ex.: 44 9XXXX-XXXX).');
       return;
@@ -169,7 +188,10 @@ class _MeusAgendamentosPageState extends State<MeusAgendamentosPage> {
     });
 
     try {
-      await _repositorio.solicitarCodigo(email: _email, telefone: _telefone);
+      await _repositorio.solicitarCodigo(
+        email: _email,
+        telefone: _semTelefone ? null : _telefone,
+      );
 
       if (!mounted) return;
 
@@ -215,14 +237,19 @@ class _MeusAgendamentosPageState extends State<MeusAgendamentosPage> {
     try {
       final acesso = await _repositorio.meusAgendamentos(
         email: _email,
-        telefone: _telefone,
+        telefone: _semTelefone ? null : _telefone,
         codigo: codigo,
       );
+
+      // Quem entrou sem informar o telefone recebe o cadastrado da API.
+      final telefoneDaConta = (acesso.telefone ?? '').isNotEmpty
+          ? acesso.telefone!
+          : _telefone;
 
       await SessaoCliente(
         token: acesso.token,
         email: _email,
-        telefone: _telefone,
+        telefone: telefoneDaConta,
         nome: acesso.nome,
       ).salvar();
 
@@ -230,7 +257,10 @@ class _MeusAgendamentosPageState extends State<MeusAgendamentosPage> {
 
       setState(() {
         _token = acesso.token;
+        _nome = acesso.nome;
+        _telefoneController.text = telefoneDaConta;
         _agendamentos = acesso.agendamentos;
+        _semTelefone = false;
         _etapa = _Etapa.lista;
         _carregando = false;
       });
@@ -298,8 +328,10 @@ class _MeusAgendamentosPageState extends State<MeusAgendamentosPage> {
     setState(() {
       _etapa = _Etapa.dados;
       _token = null;
+      _nome = null;
       _agendamentos = const [];
       _codigoController.clear();
+      _semTelefone = false;
       _erro = null;
       _carregando = false;
     });
@@ -317,6 +349,75 @@ class _MeusAgendamentosPageState extends State<MeusAgendamentosPage> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(mensagem)),
     );
+  }
+
+  /// Abre o diálogo, valida o telefone novo e grava no banco pela API.
+  Future<void> _alterarTelefone() async {
+    final token = _token;
+
+    if (token == null) {
+      await _sair();
+      return;
+    }
+
+    final novo = await showDialog<String>(
+      context: context,
+      builder: (_) => _DialogTelefone(
+        inicial: _telefone,
+        corPrincipal: _corPrincipal,
+      ),
+    );
+
+    if (novo == null || novo == _telefone || !mounted) return;
+
+    setState(() => _salvandoTelefone = true);
+
+    try {
+      final r = await _repositorio.atualizarTelefone(
+        token: token,
+        telefone: novo,
+      );
+
+      // O token muda junto com o telefone: grava o novo no aparelho.
+      await SessaoCliente(
+        token: r.token,
+        email: _email,
+        telefone: r.telefone,
+        nome: _nome,
+      ).salvar();
+
+      if (!mounted) return;
+
+      setState(() {
+        _token = r.token;
+        _telefoneController.text = r.telefone;
+        _salvandoTelefone = false;
+      });
+
+      _avisar('Telefone atualizado.');
+    } on ApiException catch (e) {
+      if (!mounted) return;
+
+      setState(() => _salvandoTelefone = false);
+
+      if (e.statusCode == 403) {
+        await _sair();
+
+        if (!mounted) return;
+
+        _avisar('Sua sessão expirou. Entre novamente.');
+      } else {
+        _avisar(e.mensagem);
+      }
+    } catch (e) {
+      if (!mounted) return;
+
+      debugPrint('Erro ao atualizar telefone: $e');
+
+      setState(() => _salvandoTelefone = false);
+
+      _avisar('Não foi possível atualizar agora.');
+    }
   }
 
   /// Pede confirmação e cancela o horário escolhido.
@@ -469,10 +570,14 @@ class _MeusAgendamentosPageState extends State<MeusAgendamentosPage> {
           ),
         ),
         const SizedBox(height: 6),
-        const Text(
-          'Informe o e-mail e o telefone usados no agendamento. '
-          'Enviaremos um código de acesso para o seu e-mail.',
-          style: TextStyle(fontSize: 13, color: _corSuave),
+        Text(
+          _semTelefone
+              ? 'Informe o e-mail usado no agendamento. Enviaremos um código '
+                  'de acesso para ele. Depois de entrar, você poderá '
+                  'conferir e alterar o telefone.'
+              : 'Informe o e-mail e o telefone usados no agendamento. '
+                  'Enviaremos um código de acesso para o seu e-mail.',
+          style: const TextStyle(fontSize: 13, color: _corSuave),
         ),
         const SizedBox(height: 20),
         _campo(
@@ -481,20 +586,32 @@ class _MeusAgendamentosPageState extends State<MeusAgendamentosPage> {
           teclado: TextInputType.emailAddress,
           dica: 'voce@email.com',
         ),
-        const SizedBox(height: 14),
-        _campo(
-          'Telefone',
-          _telefoneController,
-          teclado: TextInputType.phone,
-          formatadores: [
-            FilteringTextInputFormatter.digitsOnly,
-            LengthLimitingTextInputFormatter(11),
-          ],
-          dica: 'DDD + número, só dígitos',
-        ),
+        if (!_semTelefone) ...[
+          const SizedBox(height: 14),
+          _campo(
+            'Telefone',
+            _telefoneController,
+            teclado: TextInputType.phone,
+            formatadores: [
+              FilteringTextInputFormatter.digitsOnly,
+              LengthLimitingTextInputFormatter(11),
+            ],
+            dica: 'DDD + número, só dígitos',
+          ),
+        ],
         _mensagemErro(),
         const SizedBox(height: 20),
         _botao('Enviar código', _solicitarCodigo),
+        const SizedBox(height: 8),
+        Center(
+          child: TextButton(
+            onPressed: _carregando ? null : _alternarSemTelefone,
+            style: TextButton.styleFrom(foregroundColor: _corPrincipal),
+            child: Text(
+              _semTelefone ? 'Lembrei do meu telefone' : 'Esqueci meu telefone',
+            ),
+          ),
+        ),
       ],
     );
   }
@@ -546,7 +663,9 @@ class _MeusAgendamentosPageState extends State<MeusAgendamentosPage> {
           child: TextButton(
             onPressed: _carregando ? null : _voltarParaDados,
             style: TextButton.styleFrom(foregroundColor: _corSuave),
-            child: const Text('Alterar e-mail ou telefone'),
+            child: Text(
+              _semTelefone ? 'Alterar e-mail' : 'Alterar e-mail ou telefone',
+            ),
           ),
         ),
       ],
@@ -672,6 +791,8 @@ class _MeusAgendamentosPageState extends State<MeusAgendamentosPage> {
               color: _corTexto,
             ),
           ),
+          const SizedBox(height: 12),
+          _cartaoTelefone(),
           const SizedBox(height: 16),
           if (_agendamentos.isEmpty)
             _mensagem('Você ainda não tem agendamentos.'),
@@ -687,6 +808,53 @@ class _MeusAgendamentosPageState extends State<MeusAgendamentosPage> {
         ],
       ),
     );
+  }
+
+  /// Mostra o telefone cadastrado e permite alterá-lo.
+  Widget _cartaoTelefone() {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(14, 4, 6, 4),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: _corBorda),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.phone_outlined, size: 16, color: _corPrincipal),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              _formatarTelefone(_telefone),
+              style: const TextStyle(fontSize: 13, color: _corTexto),
+            ),
+          ),
+          if (_salvandoTelefone)
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 14),
+              child: SizedBox(
+                width: 14,
+                height: 14,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: _corPrincipal,
+                ),
+              ),
+            )
+          else
+            TextButton(
+              onPressed: _alterarTelefone,
+              style: TextButton.styleFrom(foregroundColor: _corPrincipal),
+              child: const Text('Alterar'),
+            ),
+        ],
+      ),
+    );
+  }
+
+  String _formatarTelefone(String t) {
+    if (t.length != 11) return t;
+    return '(${t.substring(0, 2)}) ${t.substring(2, 7)}-${t.substring(7)}';
   }
 
   Widget _titulo(String texto) {
@@ -863,5 +1031,82 @@ class _MeusAgendamentosPageState extends State<MeusAgendamentosPage> {
     final d = a.inicio;
     return '${dias[d.weekday - 1]} ${d.day} de ${meses[d.month - 1]} · '
         '${hm(d)} às ${hm(a.fim)}';
+  }
+}
+
+/// Diálogo para digitar o novo telefone. Tem o próprio controller, que é
+/// descartado junto com o diálogo. Devolve só os dígitos, já validados.
+class _DialogTelefone extends StatefulWidget {
+  const _DialogTelefone({
+    required this.inicial,
+    required this.corPrincipal,
+  });
+
+  final String inicial;
+  final Color corPrincipal;
+
+  @override
+  State<_DialogTelefone> createState() => _DialogTelefoneState();
+}
+
+class _DialogTelefoneState extends State<_DialogTelefone> {
+  late final TextEditingController _controller;
+  String? _erro;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.inicial);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _salvar() {
+    final t = _controller.text.replaceAll(RegExp(r'\D'), '');
+
+    if (!RegExp(r'^[1-9]{2}9\d{8}$').hasMatch(t)) {
+      setState(() => _erro =
+          'Informe um telefone válido com DDD (ex.: 44 9XXXX-XXXX).');
+      return;
+    }
+
+    Navigator.pop(context, t);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Alterar telefone'),
+      content: TextField(
+        controller: _controller,
+        keyboardType: TextInputType.phone,
+        autofocus: true,
+        inputFormatters: [
+          FilteringTextInputFormatter.digitsOnly,
+          LengthLimitingTextInputFormatter(11),
+        ],
+        decoration: InputDecoration(
+          hintText: 'DDD + número, só dígitos',
+          errorText: _erro,
+          errorMaxLines: 2,
+        ),
+        onSubmitted: (_) => _salvar(),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancelar'),
+        ),
+        FilledButton(
+          onPressed: _salvar,
+          style: FilledButton.styleFrom(backgroundColor: widget.corPrincipal),
+          child: const Text('Salvar'),
+        ),
+      ],
+    );
   }
 }

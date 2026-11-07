@@ -26,5 +26,5 @@ class AgendamentoCriado {
       servicoNome: json['servico']?['nome'] ?? '',
       podeCancelar: json['pode_cancelar'] == true,
     );
-  }
+  } 
 }
