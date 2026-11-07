@@ -5,6 +5,19 @@ import '../models/servico.dart';
 import '../models/horario_livre.dart';
 import '../models/agendamento_criado.dart';
 
+/// Resultado do acesso da cliente: token de sessão + lista de agendamentos.
+class AcessoCliente {
+  const AcessoCliente({
+    required this.token,
+    required this.agendamentos,
+    this.nome,
+  });
+
+  final String token;
+  final String? nome;
+  final List<AgendamentoCriado> agendamentos;
+}
+
 class AgendamentoRepository {
   final ApiClient _api = ApiClient.instancia;
 
@@ -43,6 +56,7 @@ class AgendamentoRepository {
     required String hora,
     required String nome,
     required String whatsApp,
+    required String email,
     required bool aceitaLembretes,
     required bool consentimento,
   }) async {
@@ -64,17 +78,11 @@ class AgendamentoRepository {
       throw FormatException('Horário inválido: $hora');
     }
 
-    final telefone = whatsApp.replaceAll(
-      RegExp(r'\D'),
-      '',
-    );
-
-    // O backend espera "data" (AAAA-MM-DD) e "hora" (HH:MM) separados e
-    // monta o horário no fuso America/Sao_Paulo.
     final resposta = await _api.post('/agendamentos', {
       'cliente': {
         'nome': nome.trim(),
-        'telefone': telefone,
+        'telefone': whatsApp.replaceAll(RegExp(r'\D'), ''),
+        'email': email.trim(),
         'aceita_lembretes': aceitaLembretes,
         'consentimento': consentimento,
       },
@@ -86,6 +94,71 @@ class AgendamentoRepository {
 
     return AgendamentoCriado.fromJson(
       resposta as Map<String, dynamic>,
+    );
+  }
+
+  /// Pede o envio do código de acesso por e-mail. A resposta é sempre a
+  /// mesma, existindo ou não cadastro com esses dados.
+  Future<void> solicitarCodigo({
+    required String email,
+    required String telefone,
+  }) async {
+    await _api.post('/agendamentos/acesso/codigo', {
+      'email': email.trim(),
+      'telefone': telefone.replaceAll(RegExp(r'\D'), ''),
+    });
+  }
+
+  /// Entra com e-mail + telefone + código. Devolve também o token de sessão.
+  Future<AcessoCliente> meusAgendamentos({
+    required String email,
+    required String telefone,
+    required String codigo,
+  }) async {
+    final dados = await _api.post('/agendamentos/minhas', {
+      'email': email.trim(),
+      'telefone': telefone.replaceAll(RegExp(r'\D'), ''),
+      'codigo': codigo.trim(),
+    }) as Map<String, dynamic>;
+
+    return _acesso(dados);
+  }
+
+  /// Entra com o token de sessão guardado no aparelho (sem pedir código).
+  /// Lança [ApiException] com statusCode 403 se o token expirou.
+  Future<AcessoCliente> meusAgendamentosComToken(String token) async {
+    final dados = await _api.post('/agendamentos/minhas', {
+      'token': token,
+    }) as Map<String, dynamic>;
+
+    return _acesso(dados);
+  }
+
+  /// Cancela um horário da cliente logada (identificada pelo token).
+  /// Devolve o agendamento já atualizado.
+  Future<AgendamentoCriado> cancelarMeuAgendamento({
+    required String token,
+    required int agendamentoId,
+  }) async {
+    final dados = await _api.post(
+      '/agendamentos/minhas/$agendamentoId/cancelar',
+      {'token': token},
+    ) as Map<String, dynamic>;
+
+    return AgendamentoCriado.fromJson(dados);
+  }
+
+  AcessoCliente _acesso(Map<String, dynamic> dados) {
+    final lista = (dados['agendamentos'] as List)
+        .map((e) => AgendamentoCriado.fromJson(e as Map<String, dynamic>))
+        .toList();
+
+    final cliente = dados['cliente'];
+
+    return AcessoCliente(
+      token: dados['token'] as String,
+      nome: cliente is Map ? cliente['nome'] as String? : null,
+      agendamentos: lista,
     );
   }
 

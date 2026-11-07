@@ -5,12 +5,16 @@ class AgendamentoCriado {
   final String status;
   final String servicoNome;
 
+  /// Calculado pelo servidor (status e antecedência mínima).
+  final bool podeCancelar;
+
   AgendamentoCriado({
     required this.id,
     required this.inicio,
     required this.fim,
     required this.status,
     required this.servicoNome,
+    this.podeCancelar = false,
   });
 
   factory AgendamentoCriado.fromJson(Map<String, dynamic> json) {
@@ -20,6 +24,7 @@ class AgendamentoCriado {
       fim: DateTime.parse(json['dt_fim']),
       status: json['status'],
       servicoNome: json['servico']?['nome'] ?? '',
+      podeCancelar: json['pode_cancelar'] == true,
     );
   }
 }

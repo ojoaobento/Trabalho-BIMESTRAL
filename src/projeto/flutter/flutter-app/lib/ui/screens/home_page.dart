@@ -1,8 +1,8 @@
-
 import 'package:flutter/material.dart';
 import 'package:main/data/agendamento_repository.dart';
 import 'package:main/data/api_service.dart';
 import 'package:main/models/horario_livre.dart';
+import 'meus_agendamentos.dart';
 import 'package:main/ui/screens/servicos_page.dart';
 
 class HomePage extends StatefulWidget {
@@ -19,7 +19,14 @@ class _HomePageState extends State<HomePage> {
   static const corSuave = Color(0xFFFFEEF3);
   static const corBorda = Color(0xFFF1DDE5);
 
+  // Contatos exibidos no menu. Preencha os que o studio quiser divulgar;
+  // os que ficarem vazios não aparecem.
+  static const _enderecoStudio = 'Av. Brasil, 1420 – Sala 4 · Maringá, PR';
+  static const _telefoneStudio = '';
+  static const _emailStudio = '';
+
   final _repositorio = AgendamentoRepository();
+  final _scaffoldKey = GlobalKey<ScaffoldState>();
 
   late DateTime dataSelecionada;
 
@@ -125,8 +132,7 @@ class _HomePageState extends State<HomePage> {
   int _minutos(String horario) {
     final partes = horario.split(':');
 
-    return int.parse(partes[0]) * 60 +
-        int.parse(partes[1]);
+    return int.parse(partes[0]) * 60 + int.parse(partes[1]);
   }
 
   void _selecionarData(DateTime data) {
@@ -144,12 +150,13 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      key: _scaffoldKey,
       backgroundColor: corFundo,
+      endDrawer: _menuLateral(),
       body: SafeArea(
         child: Column(
           children: [
             _cabecalho(),
-
             Expanded(
               child: ListView(
                 padding: const EdgeInsets.all(20),
@@ -162,9 +169,7 @@ class _HomePageState extends State<HomePage> {
                       letterSpacing: 1.2,
                     ),
                   ),
-
                   const SizedBox(height: 8),
-
                   const Text(
                     'Escolha o melhor\nhorário para você',
                     style: TextStyle(
@@ -174,17 +179,11 @@ class _HomePageState extends State<HomePage> {
                       color: corTexto,
                     ),
                   ),
-
                   const SizedBox(height: 20),
-
                   _cardDestaque(),
-
                   const SizedBox(height: 28),
-
                   _calendario(),
-
                   const SizedBox(height: 28),
-
                   Text(
                     'Horários livres para ${_formatarData(dataSelecionada)}',
                     style: const TextStyle(
@@ -193,24 +192,17 @@ class _HomePageState extends State<HomePage> {
                       color: corTexto,
                     ),
                   ),
-
                   const SizedBox(height: 4),
-
-                  if (!_carregando &&
-                      _erro == null &&
-                      _horarios.isNotEmpty)
+                  if (!_carregando && _erro == null && _horarios.isNotEmpty)
                     Text(
                       '●  ${_horarios.length == 1 ? '1 horário livre' : '${_horarios.length} horários livres'}',
                       style: const TextStyle(color: corPrincipal),
                     ),
-
                   const SizedBox(height: 20),
-
                   _conteudoHorarios(),
                 ],
               ),
             ),
-
             _rodape(),
           ],
         ),
@@ -218,49 +210,196 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  // ---------- cabeçalho e menu ----------
+
+  Widget _marca() {
+    return const Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        CircleAvatar(
+          backgroundColor: corSuave,
+          foregroundColor: corPrincipal,
+          child: Icon(Icons.spa_outlined),
+        ),
+        SizedBox(width: 10),
+        Flexible(
+          child: Text(
+            'Studio Cleusa',
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: 23,
+              fontWeight: FontWeight.bold,
+              color: corTexto,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _cabecalho() {
     return Container(
       color: Colors.white,
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 14),
-      child: Column(
+      padding: const EdgeInsets.fromLTRB(8, 10, 8, 10),
+      child: Row(
         children: [
-          Row(
-            children: [
-              const CircleAvatar(
-                backgroundColor: corSuave,
-                foregroundColor: corPrincipal,
-                child: Icon(Icons.spa_outlined),
-              ),
-
-              const SizedBox(width: 10),
-
-              const Expanded(
-                child: Text(
-                  'Studio Cleusa',
-                  style: TextStyle(
-                    fontSize: 23,
-                    fontWeight: FontWeight.bold,
-                    color: corTexto,
-                  ),
-                ),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 14),
-
-          const Text(
-            '1. Horário  •  2. Serviço  •  3. Seus dados  •  4. Confirmar  •  5. Status',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 9,
-              color: corPrincipal,
-            ),
+          // Espaço do mesmo tamanho do botão do menu, para manter a marca
+          // centralizada.
+          const SizedBox(width: 48),
+          Expanded(child: Center(child: _marca())),
+          IconButton(
+            tooltip: 'Menu',
+            onPressed: () => _scaffoldKey.currentState?.openEndDrawer(),
+            icon: const Icon(Icons.menu_rounded, size: 28),
+            color: corTexto,
           ),
         ],
       ),
     );
   }
+
+  Widget _menuLateral() {
+    return Drawer(
+      backgroundColor: corFundo,
+      child: SafeArea(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Padding(
+              padding: EdgeInsets.fromLTRB(20, 20, 20, 14),
+              child: Text(
+                'MENU',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 1.2,
+                  color: corPrincipal,
+                ),
+              ),
+            ),
+            const Divider(height: 1, color: corBorda),
+            ListTile(
+              leading: const Icon(
+                Icons.event_note_outlined,
+                color: corPrincipal,
+              ),
+              title: const Text(
+                'MEUS AGENDAMENTOS',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                  color: corTexto,
+                ),
+              ),
+              onTap: _abrirMeusAgendamentos,
+            ),
+            ListTile(
+              leading: const Icon(
+                Icons.call_outlined,
+                color: corPrincipal,
+              ),
+              title: const Text(
+                'CONTATOS',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                  color: corTexto,
+                ),
+              ),
+              onTap: _abrirContatos,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _abrirMeusAgendamentos() {
+    Navigator.of(context).pop(); // fecha o menu
+
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const MeusAgendamentosPage()),
+    );
+  }
+
+  void _abrirContatos() {
+    Navigator.of(context).pop(); // fecha o menu
+
+    final contatos = <(IconData, String, String)>[
+      if (_enderecoStudio.isNotEmpty)
+        (Icons.location_on_outlined, 'Endereço', _enderecoStudio),
+      if (_telefoneStudio.isNotEmpty)
+        (Icons.phone_outlined, 'Telefone', _telefoneStudio),
+      if (_emailStudio.isNotEmpty)
+        (Icons.mail_outline, 'E-mail', _emailStudio),
+    ];
+
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+      ),
+      builder: (_) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'CONTATOS',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 1.2,
+                  color: corPrincipal,
+                ),
+              ),
+              const SizedBox(height: 16),
+              ...contatos.map(
+                (c) => Padding(
+                  padding: const EdgeInsets.only(bottom: 14),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(c.$1, color: corPrincipal, size: 20),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              c.$2,
+                              style: const TextStyle(
+                                fontSize: 11,
+                                color: Color(0xFF976D7B),
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            SelectableText(
+                              c.$3,
+                              style: const TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: corTexto,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ---------- conteúdo ----------
 
   Widget _cardDestaque() {
     final proximo = _proximoHoje;
@@ -303,16 +442,11 @@ class _HomePageState extends State<HomePage> {
               letterSpacing: 1,
             ),
           ),
-
           const SizedBox(height: 16),
-
           const Text(
             'Próximo horário livre:',
-            style: TextStyle(
-              color: Color(0xFFFFD9E5),
-            ),
+            style: TextStyle(color: Color(0xFFFFD9E5)),
           ),
-
           Text(
             titulo,
             style: const TextStyle(
@@ -321,19 +455,14 @@ class _HomePageState extends State<HomePage> {
               fontWeight: FontWeight.bold,
             ),
           ),
-
           if (janela != null)
             Text(
               janela,
               style: const TextStyle(color: Colors.white70),
             ),
-
           const SizedBox(height: 16),
-
           FilledButton.icon(
-            onPressed: proximo == null
-                ? null
-                : _escolherProximoHorario,
+            onPressed: proximo == null ? null : _escolherProximoHorario,
             style: FilledButton.styleFrom(
               backgroundColor: Colors.white,
               foregroundColor: corPrincipal,
@@ -409,7 +538,6 @@ class _HomePageState extends State<HomePage> {
                 letterSpacing: .3,
               ),
             ),
-
             TextButton.icon(
               onPressed: _abrirCalendarioCompleto,
               style: TextButton.styleFrom(
@@ -430,9 +558,7 @@ class _HomePageState extends State<HomePage> {
             ),
           ],
         ),
-
         const SizedBox(height: 8),
-
         Row(
           children: diasDaSemana.map((dia) {
             final selecionado = DateUtils.isSameDay(
@@ -454,20 +580,14 @@ class _HomePageState extends State<HomePage> {
                   opacity: passado ? .4 : 1,
                   child: InkWell(
                     borderRadius: BorderRadius.circular(14),
-                    onTap: passado
-                        ? null
-                        : () => _selecionarData(dia),
+                    onTap: passado ? null : () => _selecionarData(dia),
                     child: Ink(
                       height: 70,
                       decoration: BoxDecoration(
-                        color: selecionado
-                            ? corPrincipal
-                            : Colors.white,
+                        color: selecionado ? corPrincipal : Colors.white,
                         borderRadius: BorderRadius.circular(14),
                         border: Border.all(
-                          color: selecionado
-                              ? corPrincipal
-                              : corBorda,
+                          color: selecionado ? corPrincipal : corBorda,
                           width: selecionado ? 2 : 1,
                         ),
                       ),
@@ -484,22 +604,16 @@ class _HomePageState extends State<HomePage> {
                                   : const Color(0xFF9A8A90),
                             ),
                           ),
-
                           const SizedBox(height: 2),
-
                           Text(
                             '${dia.day}',
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
-                              color: selecionado
-                                  ? Colors.white
-                                  : corTexto,
+                              color: selecionado ? Colors.white : corTexto,
                             ),
                           ),
-
                           const SizedBox(height: 2),
-
                           Text(
                             ehHoje ? 'Hoje' : '',
                             style: TextStyle(
@@ -525,9 +639,8 @@ class _HomePageState extends State<HomePage> {
   Future<void> _abrirCalendarioCompleto() async {
     final hoje = DateUtils.dateOnly(DateTime.now());
 
-    final dataInicial = dataSelecionada.isBefore(hoje)
-        ? hoje
-        : dataSelecionada;
+    final dataInicial =
+        dataSelecionada.isBefore(hoje) ? hoje : dataSelecionada;
 
     final dataEscolhida = await showDatePicker(
       context: context,
@@ -560,9 +673,7 @@ class _HomePageState extends State<HomePage> {
       return const Padding(
         padding: EdgeInsets.symmetric(vertical: 32),
         child: Center(
-          child: CircularProgressIndicator(
-            color: corPrincipal,
-          ),
+          child: CircularProgressIndicator(color: corPrincipal),
         ),
       );
     }
@@ -572,9 +683,7 @@ class _HomePageState extends State<HomePage> {
         _erro!,
         acao: TextButton(
           onPressed: _carregarHorarios,
-          style: TextButton.styleFrom(
-            foregroundColor: corPrincipal,
-          ),
+          style: TextButton.styleFrom(foregroundColor: corPrincipal),
           child: const Text('Tentar de novo'),
         ),
       );
@@ -586,21 +695,16 @@ class _HomePageState extends State<HomePage> {
       );
     }
 
-    final manha = _horarios
-        .where((h) => _minutos(h.horario) < 12 * 60)
-        .toList();
+    final manha =
+        _horarios.where((h) => _minutos(h.horario) < 12 * 60).toList();
 
-    final tarde = _horarios
-        .where((h) => _minutos(h.horario) >= 12 * 60)
-        .toList();
+    final tarde =
+        _horarios.where((h) => _minutos(h.horario) >= 12 * 60).toList();
 
     return Column(
       children: [
-        if (manha.isNotEmpty)
-          _secaoDeHorarios('Manhã', manha),
-
-        if (tarde.isNotEmpty)
-          _secaoDeHorarios('Tarde', tarde),
+        if (manha.isNotEmpty) _secaoDeHorarios('Manhã', manha),
+        if (tarde.isNotEmpty) _secaoDeHorarios('Tarde', tarde),
       ],
     );
   }
@@ -624,7 +728,6 @@ class _HomePageState extends State<HomePage> {
             textAlign: TextAlign.center,
             style: const TextStyle(color: corTexto),
           ),
-
           if (acao != null) acao,
         ],
       ),
@@ -655,9 +758,7 @@ class _HomePageState extends State<HomePage> {
                     : Icons.wb_twilight_outlined,
                 color: corPrincipal,
               ),
-
               const SizedBox(width: 8),
-
               Text(
                 titulo,
                 style: const TextStyle(
@@ -667,15 +768,12 @@ class _HomePageState extends State<HomePage> {
               ),
             ],
           ),
-
           const SizedBox(height: 10),
-
           Wrap(
             spacing: 10,
             runSpacing: 10,
             children: lista.map((h) {
-              final selecionado =
-                  h.horario == horarioSelecionado?.horario;
+              final selecionado = h.horario == horarioSelecionado?.horario;
 
               return ChoiceChip(
                 label: Text(h.horario),
@@ -683,9 +781,7 @@ class _HomePageState extends State<HomePage> {
                 showCheckmark: false,
                 selectedColor: corSuave,
                 side: BorderSide(
-                  color: selecionado
-                      ? corPrincipal
-                      : corBorda,
+                  color: selecionado ? corPrincipal : corBorda,
                 ),
                 onSelected: (_) {
                   setState(() {
@@ -780,9 +876,7 @@ class _HomePageState extends State<HomePage> {
               color: Colors.black54,
             ),
           ),
-
           const SizedBox(height: 8),
-
           SizedBox(
             width: double.infinity,
             child: FilledButton(

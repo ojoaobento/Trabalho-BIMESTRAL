@@ -1,17 +1,18 @@
-
 import 'package:flutter/material.dart';
 import 'package:main/models/agendamento_criado.dart';
 import 'package:main/ui/screens/home_page.dart';
-
+import 'meus_agendamentos.dart';
 class SolicitacaoConfirmadaPage extends StatelessWidget {
   const SolicitacaoConfirmadaPage({
     super.key,
     required this.agendamento,
     required this.whatsApp,
+    required this.email,
   });
 
   final AgendamentoCriado agendamento;
   final String whatsApp;
+  final String email;
 
   static const _corPrincipal = Color(0xFF8E2348);
   static const _corFundo = Color(0xFFFFF8FA);
@@ -50,7 +51,7 @@ class SolicitacaoConfirmadaPage extends StatelessWidget {
                         ),
                         const SizedBox(height: 5),
                         const Text(
-                          'Enviaremos a confirmação detalhada no seu E-mail',
+                          'Enviaremos a confirmação detalhada para o e-mail',
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             fontSize: 10,
@@ -59,7 +60,7 @@ class SolicitacaoConfirmadaPage extends StatelessWidget {
                           ),
                         ),
                         Text(
-                          '$whatsApp e também lembrete automático 24 horas\nantes do atendimento.',
+                          '$email e também lembrete automático 24 horas\nantes do atendimento.',
                           textAlign: TextAlign.center,
                           style: const TextStyle(
                             fontSize: 10,
@@ -73,10 +74,14 @@ class SolicitacaoConfirmadaPage extends StatelessWidget {
                         SizedBox(
                           width: double.infinity,
                           child: FilledButton.icon(
-                            onPressed: () {
-                              // A tela de "Meus agendamentos" será ligada aqui
-                              // quando o login do cliente existir.
-                            },
+                            onPressed: () => Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => MeusAgendamentosPage(
+                                  email: email,
+                                  telefone: whatsApp,
+                                ),
+                              ),
+                            ),
                             style: FilledButton.styleFrom(
                               backgroundColor: _corPrincipal,
                               padding: const EdgeInsets.symmetric(vertical: 14),
@@ -273,29 +278,26 @@ class SolicitacaoConfirmadaPage extends StatelessWidget {
       );
 
   ({String rotulo, Color fundo, Color texto}) _statusVisual() {
-    final s = agendamento.status.toLowerCase();
-
-    if (s.contains('confirm')) {
-      return (
-        rotulo: 'Confirmado',
-        fundo: const Color(0xFFE7F8F1),
-        texto: const Color(0xFF16866C),
-      );
+    switch (agendamento.status.toLowerCase()) {
+      case 'confirmado':
+        return (
+          rotulo: 'Confirmado',
+          fundo: const Color(0xFFE7F8F1),
+          texto: const Color(0xFF16866C),
+        );
+      case 'cancelado':
+        return (
+          rotulo: 'Cancelado',
+          fundo: const Color(0xFFFDE7E9),
+          texto: const Color(0xFFB3261E),
+        );
+      default:
+        return (
+          rotulo: 'Pendente de aprovação',
+          fundo: const Color(0xFFFFF1D9),
+          texto: const Color(0xFF9B661E),
+        );
     }
-
-    if (s.contains('cancel')) {
-      return (
-        rotulo: 'Cancelado',
-        fundo: const Color(0xFFFDE7E9),
-        texto: const Color(0xFFB3261E),
-      );
-    }
-
-    return (
-      rotulo: 'Pendente de aprovação',
-      fundo: const Color(0xFFFFF1D9),
-      texto: const Color(0xFF9B661E),
-    );
   }
 
   Widget _linhaStatus() {

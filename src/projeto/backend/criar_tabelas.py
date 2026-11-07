@@ -6,6 +6,7 @@ from models.Usuario import Usuario
 from models.Agendamento import Agendamento
 from models.Lembrete import Lembrete
 from models.Disponibilidade import Disponibilidade
+from api.MeusAgendamentos import CodigoAcesso 
 
 Base.metadata.create_all(bind=engine)
 print("Tabela criada")

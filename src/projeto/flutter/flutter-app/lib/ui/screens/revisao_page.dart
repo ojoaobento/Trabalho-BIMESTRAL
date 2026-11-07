@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import 'package:main/models/servico.dart';
 import 'package:main/data/agendamento_repository.dart';
@@ -13,6 +12,7 @@ class RevisaoPage extends StatefulWidget {
     required this.servico,
     required this.nome,
     required this.whatsApp,
+    required this.email,
     required this.aceitaLembretes,
     required this.consentimento,
   });
@@ -22,6 +22,7 @@ class RevisaoPage extends StatefulWidget {
   final Servico servico;
   final String nome;
   final String whatsApp;
+  final String email;
   final bool aceitaLembretes;
   final bool consentimento;
 
@@ -57,6 +58,7 @@ class _RevisaoPageState extends State<RevisaoPage> {
         hora: widget.horario,
         nome: widget.nome,
         whatsApp: widget.whatsApp,
+        email: widget.email,
         aceitaLembretes: widget.aceitaLembretes,
         consentimento: widget.consentimento,
       );
@@ -68,6 +70,7 @@ class _RevisaoPageState extends State<RevisaoPage> {
           builder: (_) => SolicitacaoConfirmadaPage(
             agendamento: criado,
             whatsApp: widget.whatsApp,
+            email: widget.email,
           ),
         ),
       );
@@ -224,7 +227,7 @@ class _RevisaoPageState extends State<RevisaoPage> {
                   ),
                 ),
                 Text(
-                  'O studio aprova a solicitação e avisa você pelo E-mail.',
+                  'O studio aprova a solicitação e avisa você por e-mail.',
                   style: TextStyle(
                     fontSize: 9,
                     color: Color(0xFF9A6C7C),
@@ -411,6 +414,11 @@ class _RevisaoPageState extends State<RevisaoPage> {
                 const SizedBox(height: 2),
                 Text(
                   _formatarTelefone(widget.whatsApp),
+                  style: const TextStyle(fontSize: 9, color: Color(0xFF976D7B)),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  widget.email,
                   style: const TextStyle(fontSize: 9, color: Color(0xFF976D7B)),
                 ),
               ],

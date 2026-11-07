@@ -1,7 +1,7 @@
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:main/data/sessao_cliente.dart';
 import 'package:main/models/servico.dart';
 import 'package:main/ui/screens/revisao_page.dart';
 
@@ -29,15 +29,75 @@ class _IdentificacaoPageState extends State<IdentificacaoPage> {
 
   final _formKey = GlobalKey<FormState>();
   final _nomeController = TextEditingController();
-  final _whatsAppController = TextEditingController();
+  final _telefoneController = TextEditingController();
+  final _emailController = TextEditingController();
 
   bool _autorizouDados = false;
-  bool _autorizouWhatsApp = false;
+  bool _autorizouEmail = false;
+  bool _dadosDaConta = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _preencherComSessao();
+  }
+
+  /// Se a cliente já entrou em "Meus agendamentos" neste aparelho, usa os
+  /// dados guardados para preencher o formulário.
+  Future<void> _preencherComSessao() async {
+    final sessao = await SessaoCliente.carregar();
+
+    if (!mounted || sessao == null) return;
+
+    // Não sobrescreve o que ela já tenha começado a digitar.
+    if (_nomeController.text.isNotEmpty ||
+        _telefoneController.text.isNotEmpty ||
+        _emailController.text.isNotEmpty) {
+      return;
+    }
+
+    setState(() {
+      _nomeController.text = sessao.nome ?? '';
+      _telefoneController.text = _formatarTelefone(sessao.telefone);
+      _emailController.text = sessao.email;
+      _dadosDaConta = true;
+    });
+  }
+
+  void _usarOutrosDados() {
+    setState(() {
+      _nomeController.clear();
+      _telefoneController.clear();
+      _emailController.clear();
+      _dadosDaConta = false;
+    });
+
+    _formKey.currentState?.reset();
+  }
+
+  String _formatarTelefone(String valor) {
+    var digitos = valor.replaceAll(RegExp(r'\D'), '');
+
+    if (digitos.length > 11) digitos = digitos.substring(0, 11);
+
+    final buffer = StringBuffer();
+
+    for (var i = 0; i < digitos.length; i++) {
+      if (i == 0) buffer.write('(');
+      if (i == 2) buffer.write(') ');
+      if (i == 7) buffer.write('-');
+
+      buffer.write(digitos[i]);
+    }
+
+    return buffer.toString();
+  }
 
   @override
   void dispose() {
     _nomeController.dispose();
-    _whatsAppController.dispose();
+    _telefoneController.dispose();
+    _emailController.dispose();
     super.dispose();
   }
 
@@ -56,8 +116,9 @@ class _IdentificacaoPageState extends State<IdentificacaoPage> {
     }
 
     final nome = _nomeController.text.trim();
+    final email = _emailController.text.trim();
 
-    final whatsApp = _whatsAppController.text.replaceAll(
+    final telefone = _telefoneController.text.replaceAll(
       RegExp(r'\D'),
       '',
     );
@@ -70,8 +131,9 @@ class _IdentificacaoPageState extends State<IdentificacaoPage> {
           horario: widget.horario,
           servico: widget.servico,
           nome: nome,
-          whatsApp: whatsApp,
-          aceitaLembretes: _autorizouWhatsApp,
+          whatsApp: telefone,
+          email: email,
+          aceitaLembretes: _autorizouEmail,
           consentimento: _autorizouDados,
         ),
       ),
@@ -104,6 +166,10 @@ class _IdentificacaoPageState extends State<IdentificacaoPage> {
                   children: [
                     _titulo(),
                     const SizedBox(height: 15),
+                    if (_dadosDaConta) ...[
+                      _avisoDadosDaConta(),
+                      const SizedBox(height: 12),
+                    ],
                     _clienteAgendado(),
                     const SizedBox(height: 18),
                     const Text(
@@ -159,8 +225,8 @@ class _IdentificacaoPageState extends State<IdentificacaoPage> {
                     ),
                     const SizedBox(height: 11),
                     _campo(
-                      'WhatsApp para confirmação *',
-                      _whatsAppController,
+                      'Telefone com DDD *',
+                      _telefoneController,
                       prefixo: 'BR',
                       teclado: TextInputType.phone,
                       formatadores: [_TelefoneFormatter()],
@@ -170,11 +236,26 @@ class _IdentificacaoPageState extends State<IdentificacaoPage> {
                           '',
                         );
 
-                        if (digitos.length != 11) {
-                          return 'Informe o WhatsApp com DDD e 9 dígitos';
+                        // DDD válido (sem zero) + celular começando com 9.
+                        if (!RegExp(r'^[1-9]{2}9\d{8}$').hasMatch(digitos)) {
+                          return 'Informe um telefone válido com DDD (ex.: 44 9XXXX-XXXX)';
                         }
 
                         return null;
+                      },
+                    ),
+                    const SizedBox(height: 11),
+                    _campo(
+                      'E-mail para confirmação *',
+                      _emailController,
+                      teclado: TextInputType.emailAddress,
+                      validador: (valor) {
+                        final email = (valor ?? '').trim();
+
+                        final valido = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$')
+                            .hasMatch(email);
+
+                        return valido ? null : 'Informe um e-mail válido';
                       },
                     ),
                     const SizedBox(height: 5),
@@ -188,7 +269,7 @@ class _IdentificacaoPageState extends State<IdentificacaoPage> {
                         SizedBox(width: 5),
                         Expanded(
                           child: Text(
-                            'Enviaremos a confirmação e o lembrete 24h antes por mensagem, caso você autorize.',
+                            'Enviaremos a confirmação e o lembrete 24h antes por e-mail, caso você autorize.',
                             style: TextStyle(
                               fontSize: 9,
                               color: Color(0xFF976D7B),
@@ -217,17 +298,17 @@ class _IdentificacaoPageState extends State<IdentificacaoPage> {
                       ),
                     ),
                     CheckboxListTile(
-                      value: _autorizouWhatsApp,
+                      value: _autorizouEmail,
                       onChanged: (valor) {
                         setState(() {
-                          _autorizouWhatsApp = valor ?? false;
+                          _autorizouEmail = valor ?? false;
                         });
                       },
                       contentPadding: EdgeInsets.zero,
                       controlAffinity: ListTileControlAffinity.leading,
                       activeColor: _corPrincipal,
                       title: const Text(
-                        'Autorizo o envio de confirmações e lembretes pelo WhatsApp.',
+                        'Autorizo o envio de confirmações e lembretes por e-mail.',
                         style: TextStyle(
                           fontSize: 9,
                           color: Color(0xFF6F5360),
@@ -242,6 +323,33 @@ class _IdentificacaoPageState extends State<IdentificacaoPage> {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _avisoDadosDaConta() {
+    return Row(
+      children: [
+        const Icon(Icons.check_circle_outline, size: 14, color: _corPrincipal),
+        const SizedBox(width: 6),
+        const Expanded(
+          child: Text(
+            'Dados preenchidos da sua conta.',
+            style: TextStyle(fontSize: 10, color: Color(0xFF976D7B)),
+          ),
+        ),
+        TextButton(
+          onPressed: _usarOutrosDados,
+          style: TextButton.styleFrom(
+            foregroundColor: _corPrincipal,
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            minimumSize: const Size(0, 28),
+          ),
+          child: const Text(
+            'Usar outros dados',
+            style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
+          ),
+        ),
+      ],
     );
   }
 
@@ -335,7 +443,7 @@ class _IdentificacaoPageState extends State<IdentificacaoPage> {
       valueListenable: _nomeController,
       builder: (context, nome, _) {
         return ValueListenableBuilder<TextEditingValue>(
-          valueListenable: _whatsAppController,
+          valueListenable: _telefoneController,
           builder: (context, telefone, _) {
             return _clienteAgendadoConteudo();
           },
@@ -403,10 +511,10 @@ class _IdentificacaoPageState extends State<IdentificacaoPage> {
                     color: _corTexto,
                   ),
                 ),
-                if (_whatsAppController.text.isNotEmpty) ...[
+                if (_telefoneController.text.isNotEmpty) ...[
                   const SizedBox(height: 4),
                   Text(
-                    _whatsAppController.text,
+                    _telefoneController.text,
                     style: const TextStyle(
                       fontSize: 9,
                       color: Color(0xFF976D7B),
