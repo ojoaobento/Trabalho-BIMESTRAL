@@ -127,7 +127,7 @@ Detalhes do atendimento:
 - Data: {data_formatada}
 - Horário: {hora_inicio} às {hora_fim}
 - Valor: R$ {valor_formatado}
-- Local: Studio Cleusa
+- Local: Bairro Santa Luzia, 313
 
 Caso precise remarcar ou cancelar, pedimos que nos avise com antecedência.
 

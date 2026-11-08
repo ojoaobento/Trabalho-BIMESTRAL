@@ -187,17 +187,7 @@ def obter_resumo_dashboard(
     )
 
     # --------------------------------------------------
-    # 5. FATURAMENTO DO MÊS
-    # --------------------------------------------------
-
-    faturamento_mes = sum(
-        float(agendamento.valor_cobrado or 0)
-        for agendamento in agendamentos_mes
-        if obter_status(agendamento) == "CONCLUIDO"
-    )
-
-    # --------------------------------------------------
-    # 6. INDICADORES DO MÊS
+    # 5. INDICADORES DO MÊS
     # --------------------------------------------------
 
     agendamentos_pendentes = contar_status(
@@ -226,7 +216,7 @@ def obter_resumo_dashboard(
     )
 
     # --------------------------------------------------
-    # 7. TOTAL DE CLIENTES
+    # 6. TOTAL DE CLIENTES
     # --------------------------------------------------
 
     total_clientes = (
@@ -235,7 +225,7 @@ def obter_resumo_dashboard(
     )
 
     # --------------------------------------------------
-    # 8. TOTAL DE SERVIÇOS ATIVOS
+    # 7. TOTAL DE SERVIÇOS ATIVOS
     # --------------------------------------------------
 
     total_servicos_ativos = (
@@ -245,7 +235,7 @@ def obter_resumo_dashboard(
     )
 
     # --------------------------------------------------
-    # 9. DESEMPENHO SEMANAL
+    # 8. DESEMPENHO SEMANAL
     # --------------------------------------------------
 
     # Índices:
@@ -273,7 +263,7 @@ def obter_resumo_dashboard(
         desempenho_semanal[indice_dia] += 1
 
     # --------------------------------------------------
-    # 10. DISTRIBUIÇÃO POR STATUS
+    # 9. DISTRIBUIÇÃO POR STATUS
     # --------------------------------------------------
 
     distribuicao_status = {
@@ -285,13 +275,11 @@ def obter_resumo_dashboard(
     }
 
     # --------------------------------------------------
-    # 11. RESPOSTA
+    # 10. RESPOSTA
     # --------------------------------------------------
 
     return {
         "agendamentos_hoje": total_agendamentos_hoje,
-
-        "faturamento_mes": round(faturamento_mes, 2),
 
         "desempenho_semanal": desempenho_semanal,
 

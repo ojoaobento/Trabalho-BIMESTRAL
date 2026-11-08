@@ -117,9 +117,6 @@ class _VisaoGeralPageState extends State<VisaoGeralPage> {
         final agendamentosHoje =
             _obterInteiro(dados['agendamentos_hoje']);
 
-        final faturamentoMes =
-            _obterDouble(dados['faturamento_mes']);
-
         final totalClientes =
             _obterInteiro(dados['total_clientes']);
 
@@ -181,11 +178,10 @@ class _VisaoGeralPageState extends State<VisaoGeralPage> {
           child: ListView(
             padding: const EdgeInsets.all(16),
             children: [
-              
+
               // --------------------------------------------------
               // TÍTULO
               // --------------------------------------------------
-
 
               Text(
                 'Acompanhe os indicadores do seu negócio.',
@@ -203,7 +199,7 @@ class _VisaoGeralPageState extends State<VisaoGeralPage> {
 
               LayoutBuilder(
                 builder: (context, constraints) {
-                  final largura =
+                  final larguraMetade =
                       (constraints.maxWidth - 12) / 2;
 
                   return Wrap(
@@ -211,7 +207,7 @@ class _VisaoGeralPageState extends State<VisaoGeralPage> {
                     runSpacing: 12,
                     children: [
                       SizedBox(
-                        width: largura,
+                        width: constraints.maxWidth,
                         child: _buildCardResumo(
                           titulo: 'Agendamentos Hoje',
                           valor: '$agendamentosHoje',
@@ -220,17 +216,7 @@ class _VisaoGeralPageState extends State<VisaoGeralPage> {
                         ),
                       ),
                       SizedBox(
-                        width: largura,
-                        child: _buildCardResumo(
-                          titulo: 'Faturamento do Mês',
-                          valor:
-                              'R\$ ${faturamentoMes.toStringAsFixed(2)}',
-                          icone: Icons.attach_money,
-                          cor: Colors.green,
-                        ),
-                      ),
-                      SizedBox(
-                        width: largura,
+                        width: larguraMetade,
                         child: _buildCardResumo(
                           titulo: 'Clientes',
                           valor: '$totalClientes',
@@ -239,7 +225,7 @@ class _VisaoGeralPageState extends State<VisaoGeralPage> {
                         ),
                       ),
                       SizedBox(
-                        width: largura,
+                        width: larguraMetade,
                         child: _buildCardResumo(
                           titulo: 'Serviços Ativos',
                           valor: '$totalServicos',
