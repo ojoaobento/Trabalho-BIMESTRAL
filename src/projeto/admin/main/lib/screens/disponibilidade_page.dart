@@ -76,7 +76,7 @@ Widget _temaSeletor(BuildContext context, Widget? child) {
         entryModeIconColor: vinho,
         hourMinuteColor: WidgetStateColor.resolveWith(
           (estados) => estados.contains(WidgetState.selected)
-              ? vinho.withOpacity(0.12)
+              ? vinho.withValues(alpha: 0.12)
               : Colors.grey.shade100,
         ),
         hourMinuteTextColor: WidgetStateColor.resolveWith(
@@ -86,7 +86,7 @@ Widget _temaSeletor(BuildContext context, Widget? child) {
         ),
         dayPeriodColor: WidgetStateColor.resolveWith(
           (estados) => estados.contains(WidgetState.selected)
-              ? vinho.withOpacity(0.12)
+              ? vinho.withValues(alpha: 0.12)
               : Colors.transparent,
         ),
         dayPeriodTextColor: WidgetStateColor.resolveWith(
@@ -129,7 +129,7 @@ InputDecoration _decoracaoForm({String? dica, IconData? icone}) {
     filled: true,
     fillColor: _corFundo,
     hintText: dica,
-    hintStyle: TextStyle(color: _corSuave.withOpacity(.6), fontSize: 14),
+    hintStyle: TextStyle(color: _corSuave.withValues(alpha: .6), fontSize: 14),
     prefixIcon:
         icone == null ? null : Icon(icone, size: 18, color: PainelCores.vinho),
     errorMaxLines: 2,
@@ -173,7 +173,7 @@ Widget _chipOpcao({
     showCheckmark: false,
     selected: selecionado,
     onSelected: onTap == null ? null : (_) => onTap(),
-    selectedColor: PainelCores.vinho.withOpacity(0.12),
+    selectedColor: PainelCores.vinho.withValues(alpha: 0.12),
     backgroundColor: Colors.white,
     surfaceTintColor: Colors.transparent,
     side: BorderSide(
@@ -283,7 +283,7 @@ class _BlocoSwitch extends StatelessWidget {
           ),
           Switch(
             value: valor,
-            activeColor: Colors.white,
+            activeThumbColor: Colors.white,
             activeTrackColor: PainelCores.vinho,
             inactiveThumbColor: Colors.white,
             inactiveTrackColor: _corBorda,
@@ -404,7 +404,7 @@ class _RodapeDialogo extends StatelessWidget {
               style: FilledButton.styleFrom(
                 backgroundColor: PainelCores.vinho,
                 foregroundColor: Colors.white,
-                disabledBackgroundColor: PainelCores.vinho.withOpacity(.4),
+                disabledBackgroundColor: PainelCores.vinho.withValues(alpha: .4),
                 disabledForegroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 shape: RoundedRectangleBorder(
@@ -454,7 +454,7 @@ class _DialogoPadrao extends StatelessWidget {
           ),
       textSelectionTheme: TextSelectionThemeData(
         cursorColor: PainelCores.vinho,
-        selectionColor: PainelCores.vinho.withOpacity(.2),
+        selectionColor: PainelCores.vinho.withValues(alpha: .2),
         selectionHandleColor: PainelCores.vinho,
       ),
     );
@@ -527,8 +527,8 @@ class _DisponibilidadePageState extends State<DisponibilidadePage>
     }
     try {
       final resultados = await Future.wait([
-        ApiClient.instancia.get('/disponibilidades') as Future<dynamic>,
-        ApiClient.instancia.get('/bloqueios') as Future<dynamic>,
+        ApiClient.instancia.get('/disponibilidades'),
+        ApiClient.instancia.get('/bloqueios'),
       ]);
 
       final dadosDisponibilidade = resultados[0] as List;
@@ -1031,7 +1031,8 @@ class _DisponibilidadePageState extends State<DisponibilidadePage>
                   children: [
                     Switch(
                       value: b.ativo,
-                      activeColor: PainelCores.vinho,
+                      activeThumbColor: Colors.white,
+                      activeTrackColor: PainelCores.vinho,
                       onChanged: (valor) => _alternarAtivo(b, valor),
                     ),
                     StatusChip(ativo: b.ativo),
@@ -1064,7 +1065,7 @@ class _DisponibilidadePageState extends State<DisponibilidadePage>
   Widget _listaCards() {
     return ListView.separated(
       itemCount: _blocos.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 12),
+      separatorBuilder: (_, _) => const SizedBox(height: 12),
       itemBuilder: (_, i) => _cartaoBloco(_blocos[i]),
     );
   }
@@ -1132,7 +1133,7 @@ class _DisponibilidadePageState extends State<DisponibilidadePage>
   Widget _listaCardsBloqueios() {
     return ListView.separated(
       itemCount: _bloqueios.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 12),
+      separatorBuilder: (_, _) => const SizedBox(height: 12),
       itemBuilder: (_, i) => _cartaoBloqueio(_bloqueios[i]),
     );
   }

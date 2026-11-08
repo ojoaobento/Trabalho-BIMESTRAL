@@ -308,7 +308,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
       ),
 
       selected: isSelected,
-      selectedTileColor: vinho.withOpacity(0.12),
+      selectedTileColor: vinho.withValues(alpha: 0.12),
 
       onTap: () {
         setState(() {

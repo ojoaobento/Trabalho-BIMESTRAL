@@ -172,12 +172,6 @@ class _VisaoGeralPageState extends State<VisaoGeralPage> {
         // DISTRIBUIÇÃO POR STATUS
         // --------------------------------------------------
 
-        final distribuicao = dados['distribuicao_status'] is Map
-            ? Map<String, dynamic>.from(
-                dados['distribuicao_status'],
-              )
-            : <String, dynamic>{};
-
         return RefreshIndicator(
           color: vinho,
           onRefresh: () async {
@@ -364,7 +358,7 @@ class _VisaoGeralPageState extends State<VisaoGeralPage> {
                       drawVerticalLine: false,
                       getDrawingHorizontalLine: (value) {
                         return FlLine(
-                          color: Colors.grey.withOpacity(0.15),
+                          color: Colors.grey.withValues(alpha: 0.15),
                           strokeWidth: 1,
                         );
                       },
@@ -490,7 +484,7 @@ class _VisaoGeralPageState extends State<VisaoGeralPage> {
         children: [
           CircleAvatar(
             radius: 20,
-            backgroundColor: cor.withOpacity(0.15),
+            backgroundColor: cor.withValues(alpha: 0.15),
             child: Icon(
               icone,
               color: cor,
@@ -610,7 +604,7 @@ class _VisaoGeralPageState extends State<VisaoGeralPage> {
       borderRadius: BorderRadius.circular(12),
       boxShadow: [
         BoxShadow(
-          color: Colors.grey.withOpacity(0.1),
+          color: Colors.grey.withValues(alpha: 0.1),
           spreadRadius: 2,
           blurRadius: 5,
           offset: const Offset(0, 3),

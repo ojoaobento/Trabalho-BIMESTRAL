@@ -206,7 +206,7 @@ class _ClientePageState extends State<ClientePage> {
                 DataCell(Text(c.email ?? '-')),
                 DataCell(Switch(
                   value: c.aceitaLembretes,
-                  activeColor: PainelCores.vinho,
+                  activeThumbColor: PainelCores.vinho,
                   onChanged: (valor) => _alternarLembretes(c, valor),
                 )),
                 DataCell(Text(_formatarData(c.dtCadastro))),
@@ -237,7 +237,7 @@ class _ClientePageState extends State<ClientePage> {
   Widget _listaCards(List<ClienteModel> lista) {
     return ListView.separated(
       itemCount: lista.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 12),
+      separatorBuilder: (_, _) => const SizedBox(height: 12),
       itemBuilder: (_, i) => _cartaoCliente(lista[i]),
     );
   }
@@ -307,7 +307,7 @@ class _ClientePageState extends State<ClientePage> {
               children: [
                 Switch(
                   value: c.aceitaLembretes,
-                  activeColor: PainelCores.vinho,
+                  activeThumbColor: PainelCores.vinho,
                   onChanged: (valor) => _alternarLembretes(c, valor),
                 ),
                 const Flexible(
@@ -483,7 +483,7 @@ class _FormularioClienteState extends State<_FormularioCliente> {
       filled: true,
       fillColor: _corFundo,
       hintText: dica,
-      hintStyle: TextStyle(color: _corSuave.withOpacity(.6), fontSize: 14),
+      hintStyle: TextStyle(color: _corSuave.withValues(alpha: .6), fontSize: 14),
       prefixIcon: icone == null
           ? null
           : Icon(icone, size: 18, color: PainelCores.vinho),
@@ -603,7 +603,7 @@ class _FormularioClienteState extends State<_FormularioCliente> {
                 ),
                 Switch(
                   value: _aceitaLembretes,
-                  activeColor: Colors.white,
+                  activeThumbColor: Colors.white,
                   activeTrackColor: PainelCores.vinho,
                   inactiveThumbColor: Colors.white,
                   inactiveTrackColor: _corBorda,
@@ -670,7 +670,7 @@ class _FormularioClienteState extends State<_FormularioCliente> {
               style: FilledButton.styleFrom(
                 backgroundColor: PainelCores.vinho,
                 foregroundColor: Colors.white,
-                disabledBackgroundColor: PainelCores.vinho.withOpacity(.4),
+                disabledBackgroundColor: PainelCores.vinho.withValues(alpha: .4),
                 disabledForegroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 shape: RoundedRectangleBorder(
@@ -708,7 +708,7 @@ class _FormularioClienteState extends State<_FormularioCliente> {
           ),
       textSelectionTheme: TextSelectionThemeData(
         cursorColor: PainelCores.vinho,
-        selectionColor: PainelCores.vinho.withOpacity(.2),
+        selectionColor: PainelCores.vinho.withValues(alpha: .2),
         selectionHandleColor: PainelCores.vinho,
       ),
     );

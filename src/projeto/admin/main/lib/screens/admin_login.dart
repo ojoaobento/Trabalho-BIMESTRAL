@@ -133,12 +133,12 @@ class _AdminloginState extends State<Adminlogin> {
       width: tamanho,
       height: tamanho,
       decoration: BoxDecoration(
-        color: claro ? Colors.white.withOpacity(.12) : rosaClaro,
+        color: claro ? Colors.white.withValues(alpha: .12) : rosaClaro,
         shape: BoxShape.circle,
         border: Border.all(color: cor, width: 2),
         boxShadow: [
           BoxShadow(
-            color: (claro ? Colors.black : vinho).withOpacity(0.15),
+            color: (claro ? Colors.black : vinho).withValues(alpha: 0.15),
             blurRadius: 15,
             offset: const Offset(0, 5),
           ),
@@ -224,7 +224,7 @@ class _AdminloginState extends State<Adminlogin> {
                         fontSize: 12,
                         letterSpacing: 3,
                         fontWeight: FontWeight.w600,
-                        color: Colors.white.withOpacity(.75),
+                        color: Colors.white.withValues(alpha: .75),
                       ),
                     ),
                     const SizedBox(height: 24),
@@ -234,7 +234,7 @@ class _AdminloginState extends State<Adminlogin> {
                       style: TextStyle(
                         fontSize: 15,
                         height: 1.45,
-                        color: Colors.white.withOpacity(.85),
+                        color: Colors.white.withValues(alpha: .85),
                       ),
                     ),
                   ],
@@ -253,7 +253,7 @@ class _AdminloginState extends State<Adminlogin> {
       height: tamanho,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        color: Colors.white.withOpacity(opacidade),
+        color: Colors.white.withValues(alpha: opacidade),
       ),
     );
   }
@@ -277,7 +277,7 @@ class _AdminloginState extends State<Adminlogin> {
         border: Border.all(color: bordaRosa),
         boxShadow: [
           BoxShadow(
-            color: vinho.withOpacity(.08),
+            color: vinho.withValues(alpha: .08),
             blurRadius: 30,
             offset: const Offset(0, 12),
           ),
@@ -354,7 +354,7 @@ class _AdminloginState extends State<Adminlogin> {
                 style: FilledButton.styleFrom(
                   backgroundColor: vinho,
                   foregroundColor: Colors.white,
-                  disabledBackgroundColor: vinho.withOpacity(.55),
+                  disabledBackgroundColor: vinho.withValues(alpha: .55),
                   disabledForegroundColor: Colors.white,
                   elevation: 0,
                   shape: RoundedRectangleBorder(
@@ -440,7 +440,7 @@ class _AdminloginState extends State<Adminlogin> {
           ),
       textSelectionTheme: TextSelectionThemeData(
         cursorColor: vinho,
-        selectionColor: vinho.withOpacity(.2),
+        selectionColor: vinho.withValues(alpha: .2),
         selectionHandleColor: vinho,
       ),
     );

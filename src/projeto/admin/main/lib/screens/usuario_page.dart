@@ -303,13 +303,13 @@ class _UsuarioPageState extends State<UsuarioPage> {
                   children: [
                     Switch(
                       value: u.ativo,
-                      activeColor: PainelCores.vinho,
+                      activeThumbColor: PainelCores.vinho,
                       onChanged: (valor) => _alternarAtivo(u, valor),
                     ),
                     StatusChip(ativo: u.ativo),
                   ],
                 )),
-                DataCell(Text(_formatarData(u.dt_cadastro))),
+                DataCell(Text(_formatarData(u.dtCadastro))),
                 DataCell(Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -337,7 +337,7 @@ class _UsuarioPageState extends State<UsuarioPage> {
   Widget _listaCards(List<UsuarioModel> lista) {
     return ListView.separated(
       itemCount: lista.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 12),
+      separatorBuilder: (_, _) => const SizedBox(height: 12),
       itemBuilder: (_, i) => _cartaoUsuario(lista[i]),
     );
   }
@@ -383,7 +383,7 @@ class _UsuarioPageState extends State<UsuarioPage> {
             ),
             const SizedBox(height: 2),
             Text(
-              'Cadastro: ${_formatarData(u.dt_cadastro)}',
+              'Cadastro: ${_formatarData(u.dtCadastro)}',
               style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
             ),
             const SizedBox(height: 4),
@@ -391,7 +391,7 @@ class _UsuarioPageState extends State<UsuarioPage> {
               children: [
                 Switch(
                   value: u.ativo,
-                  activeColor: PainelCores.vinho,
+                  activeThumbColor: PainelCores.vinho,
                   onChanged: (valor) => _alternarAtivo(u, valor),
                 ),
                 const Text('Ativo'),
@@ -512,7 +512,7 @@ class _FormularioUsuarioState extends State<_FormularioUsuario> {
       filled: true,
       fillColor: _corFundo,
       hintText: dica,
-      hintStyle: TextStyle(color: _corSuave.withOpacity(.6), fontSize: 14),
+      hintStyle: TextStyle(color: _corSuave.withValues(alpha: .6), fontSize: 14),
       prefixIcon: icone == null
           ? null
           : Icon(icone, size: 18, color: PainelCores.vinho),
@@ -629,7 +629,7 @@ class _FormularioUsuarioState extends State<_FormularioUsuario> {
               style: FilledButton.styleFrom(
                 backgroundColor: PainelCores.vinho,
                 foregroundColor: Colors.white,
-                disabledBackgroundColor: PainelCores.vinho.withOpacity(.4),
+                disabledBackgroundColor: PainelCores.vinho.withValues(alpha: .4),
                 disabledForegroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 shape: RoundedRectangleBorder(
@@ -668,7 +668,7 @@ class _FormularioUsuarioState extends State<_FormularioUsuario> {
           ),
       textSelectionTheme: TextSelectionThemeData(
         cursorColor: PainelCores.vinho,
-        selectionColor: PainelCores.vinho.withOpacity(.2),
+        selectionColor: PainelCores.vinho.withValues(alpha: .2),
         selectionHandleColor: PainelCores.vinho,
       ),
     );
@@ -834,7 +834,7 @@ class _FormularioUsuarioState extends State<_FormularioUsuario> {
                               ),
                               Switch(
                                 value: _ativo,
-                                activeColor: Colors.white,
+                                activeThumbColor: Colors.white,
                                 activeTrackColor: PainelCores.vinho,
                                 inactiveThumbColor: Colors.white,
                                 inactiveTrackColor: _corBorda,

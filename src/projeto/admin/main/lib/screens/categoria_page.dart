@@ -346,7 +346,7 @@ Future<void> _excluir(CategoriaModel categoria) async {
                   children: [
                     Switch(
                       value: c.ativo,
-                      activeColor: PainelCores.vinho,
+                      activeThumbColor: PainelCores.vinho,
                       onChanged: (valor) => _alternarAtivo(c, valor),
                     ),
                     StatusChip(ativo: c.ativo),
@@ -379,7 +379,7 @@ Future<void> _excluir(CategoriaModel categoria) async {
   Widget _listaCards(List<CategoriaModel> lista) {
     return ListView.separated(
       itemCount: lista.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 12),
+      separatorBuilder: (_, _) => const SizedBox(height: 12),
       itemBuilder: (_, i) => _cartaoCategoria(lista[i]),
     );
   }
@@ -421,7 +421,7 @@ Future<void> _excluir(CategoriaModel categoria) async {
               children: [
                 Switch(
                   value: c.ativo,
-                  activeColor: PainelCores.vinho,
+                  activeThumbColor: PainelCores.vinho,
                   onChanged: (valor) => _alternarAtivo(c, valor),
                 ),
                 const Text('Ativa'),
@@ -532,7 +532,7 @@ class _FormularioCategoriaState extends State<_FormularioCategoria> {
       filled: true,
       fillColor: _corFundo,
       hintText: dica,
-      hintStyle: TextStyle(color: _corSuave.withOpacity(.6), fontSize: 14),
+      hintStyle: TextStyle(color: _corSuave.withValues(alpha: .6), fontSize: 14),
       prefixIcon: icone == null
           ? null
           : Icon(icone, size: 18, color: PainelCores.vinho),
@@ -649,7 +649,7 @@ class _FormularioCategoriaState extends State<_FormularioCategoria> {
               style: FilledButton.styleFrom(
                 backgroundColor: PainelCores.vinho,
                 foregroundColor: Colors.white,
-                disabledBackgroundColor: PainelCores.vinho.withOpacity(.4),
+                disabledBackgroundColor: PainelCores.vinho.withValues(alpha: .4),
                 disabledForegroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 shape: RoundedRectangleBorder(
@@ -687,7 +687,7 @@ class _FormularioCategoriaState extends State<_FormularioCategoria> {
           ),
       textSelectionTheme: TextSelectionThemeData(
         cursorColor: PainelCores.vinho,
-        selectionColor: PainelCores.vinho.withOpacity(.2),
+        selectionColor: PainelCores.vinho.withValues(alpha: .2),
         selectionHandleColor: PainelCores.vinho,
       ),
     );
@@ -779,7 +779,7 @@ class _FormularioCategoriaState extends State<_FormularioCategoria> {
                                 ),
                                 Switch(
                                   value: _ativo,
-                                  activeColor: Colors.white,
+                                  activeThumbColor: Colors.white,
                                   activeTrackColor: PainelCores.vinho,
                                   inactiveThumbColor: Colors.white,
                                   inactiveTrackColor: _corBorda,

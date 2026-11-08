@@ -335,7 +335,7 @@ class _ServicosPageState extends State<ServicosPage> {
                   children: [
                     Switch(
                       value: s.ativo,
-                      activeColor: PainelCores.vinho,
+                      activeThumbColor: PainelCores.vinho,
                       onChanged: (valor) => _alternarAtivo(s, valor),
                     ),
                     StatusChip(ativo: s.ativo),
@@ -368,7 +368,7 @@ class _ServicosPageState extends State<ServicosPage> {
   Widget _listaCards(List<ServicoModel> lista, Map<int, String> nomes) {
     return ListView.separated(
       itemCount: lista.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 12),
+      separatorBuilder: (_, _) => const SizedBox(height: 12),
       itemBuilder: (_, i) => _cartaoServico(lista[i], nomes),
     );
   }
@@ -443,7 +443,7 @@ class _ServicosPageState extends State<ServicosPage> {
               children: [
                 Switch(
                   value: s.ativo,
-                  activeColor: PainelCores.vinho,
+                  activeThumbColor: PainelCores.vinho,
                   onChanged: (valor) => _alternarAtivo(s, valor),
                 ),
                 const Text('Ativo'),
@@ -581,7 +581,7 @@ class _FormularioServicoState extends State<_FormularioServico> {
       filled: true,
       fillColor: _corFundo,
       hintText: dica,
-      hintStyle: TextStyle(color: _corSuave.withOpacity(.6), fontSize: 14),
+      hintStyle: TextStyle(color: _corSuave.withValues(alpha: .6), fontSize: 14),
       prefixText: prefixo,
       prefixStyle: const TextStyle(
         color: _corTexto,
@@ -755,7 +755,7 @@ class _FormularioServicoState extends State<_FormularioServico> {
               style: FilledButton.styleFrom(
                 backgroundColor: PainelCores.vinho,
                 foregroundColor: Colors.white,
-                disabledBackgroundColor: PainelCores.vinho.withOpacity(.4),
+                disabledBackgroundColor: PainelCores.vinho.withValues(alpha: .4),
                 disabledForegroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 shape: RoundedRectangleBorder(
@@ -799,7 +799,7 @@ class _FormularioServicoState extends State<_FormularioServico> {
           ),
       textSelectionTheme: TextSelectionThemeData(
         cursorColor: PainelCores.vinho,
-        selectionColor: PainelCores.vinho.withOpacity(.2),
+        selectionColor: PainelCores.vinho.withValues(alpha: .2),
         selectionHandleColor: PainelCores.vinho,
       ),
     );
@@ -843,7 +843,7 @@ class _FormularioServicoState extends State<_FormularioServico> {
                         _rotulado(
                           'Categoria',
                           DropdownButtonFormField<int>(
-                            value: _categoriaId,
+                            initialValue: _categoriaId,
                             isExpanded: true,
                             borderRadius: BorderRadius.circular(12),
                             dropdownColor: Colors.white,
@@ -969,7 +969,7 @@ class _FormularioServicoState extends State<_FormularioServico> {
                                 ),
                                 Switch(
                                   value: _ativo,
-                                  activeColor: Colors.white,
+                                  activeThumbColor: Colors.white,
                                   activeTrackColor: PainelCores.vinho,
                                   inactiveThumbColor: Colors.white,
                                   inactiveTrackColor: _corBorda,

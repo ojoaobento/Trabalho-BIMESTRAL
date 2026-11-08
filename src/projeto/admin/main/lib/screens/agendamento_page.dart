@@ -37,7 +37,7 @@ ThemeData _temaPainel(BuildContext context) {
     ),
     textSelectionTheme: TextSelectionThemeData(
       cursorColor: vinho,
-      selectionColor: vinho.withOpacity(.2),
+      selectionColor: vinho.withValues(alpha: .2),
       selectionHandleColor: vinho,
     ),
     datePickerTheme: DatePickerThemeData(
@@ -73,7 +73,7 @@ ThemeData _temaPainel(BuildContext context) {
       rangePickerSurfaceTintColor: Colors.transparent,
       rangePickerHeaderBackgroundColor: vinho,
       rangePickerHeaderForegroundColor: Colors.white,
-      rangeSelectionBackgroundColor: vinho.withOpacity(.12),
+      rangeSelectionBackgroundColor: vinho.withValues(alpha: .12),
       dividerColor: _corBorda,
       cancelButtonStyle: TextButton.styleFrom(foregroundColor: _corSuave),
       confirmButtonStyle: TextButton.styleFrom(foregroundColor: vinho),
@@ -86,7 +86,7 @@ ThemeData _temaPainel(BuildContext context) {
       ),
       hourMinuteColor: WidgetStateColor.resolveWith(
         (s) => s.contains(WidgetState.selected)
-            ? vinho.withOpacity(.12)
+            ? vinho.withValues(alpha: .12)
             : _corFundoSuave,
       ),
       hourMinuteTextColor: WidgetStateColor.resolveWith(
@@ -100,7 +100,7 @@ ThemeData _temaPainel(BuildContext context) {
       entryModeIconColor: vinho,
       dayPeriodColor: WidgetStateColor.resolveWith(
         (s) => s.contains(WidgetState.selected)
-            ? vinho.withOpacity(.12)
+            ? vinho.withValues(alpha: .12)
             : Colors.transparent,
       ),
       dayPeriodTextColor: WidgetStateColor.resolveWith(
@@ -133,7 +133,7 @@ class _ChipStatus extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: cor.withOpacity(0.12),
+        color: cor.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Text(
@@ -516,7 +516,7 @@ class _AgendamentoPageState extends State<AgendamentoPage> {
   Widget _listaCards(List<AgendamentoModel> lista) {
     return ListView.separated(
       itemCount: lista.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 12),
+      separatorBuilder: (_, _) => const SizedBox(height: 12),
       itemBuilder: (_, i) => _cartaoAgendamento(lista[i]),
     );
   }

@@ -60,7 +60,7 @@ Widget _temaSeletor(BuildContext context, Widget? child) {
         entryModeIconColor: vinho,
         hourMinuteColor: WidgetStateColor.resolveWith(
           (estados) => estados.contains(WidgetState.selected)
-              ? vinho.withOpacity(0.12)
+              ? vinho.withValues(alpha: 0.12)
               : Colors.grey.shade100,
         ),
         hourMinuteTextColor: WidgetStateColor.resolveWith(
@@ -70,7 +70,7 @@ Widget _temaSeletor(BuildContext context, Widget? child) {
         ),
         dayPeriodColor: WidgetStateColor.resolveWith(
           (estados) => estados.contains(WidgetState.selected)
-              ? vinho.withOpacity(0.12)
+              ? vinho.withValues(alpha: 0.12)
               : Colors.transparent,
         ),
         dayPeriodTextColor: WidgetStateColor.resolveWith(
@@ -87,11 +87,6 @@ Widget _temaSeletor(BuildContext context, Widget? child) {
 const Map<TipoLembrete, String> _rotulosTipo = {
   TipoLembrete.confirmacao: 'Confirmação',
   TipoLembrete.lembrete24h: 'Lembrete 24h',
-};
-
-const Map<TipoLembrete, IconData> _iconesTipo = {
-  TipoLembrete.confirmacao: Icons.check_circle_outline,
-  TipoLembrete.lembrete24h: Icons.alarm,
 };
 
 enum _Situacao {
@@ -126,7 +121,7 @@ class _ChipSituacao extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: cor.withOpacity(0.12),
+        color: cor.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Text(
@@ -480,7 +475,7 @@ class _LembretePageState extends State<LembretePage> {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 12),
           decoration: BoxDecoration(
-            color: ativo ? PainelCores.vinho.withOpacity(0.06) : Colors.white,
+            color: ativo ? PainelCores.vinho.withValues(alpha: 0.06) : Colors.white,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
               color: ativo ? PainelCores.vinho : Colors.grey.shade300,
@@ -675,7 +670,7 @@ class _LembretePageState extends State<LembretePage> {
   Widget _listaCards(List<LembreteModel> lista) {
     return ListView.separated(
       itemCount: lista.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 12),
+      separatorBuilder: (_, _) => const SizedBox(height: 12),
       itemBuilder: (_, i) => _cartaoLembrete(lista[i]),
     );
   }
@@ -882,7 +877,7 @@ class _FormularioEditarLembreteState extends State<_FormularioEditarLembrete> {
                 ),
                 const SizedBox(height: 16),
                 DropdownButtonFormField<TipoLembrete>(
-                  value: _tipo,
+                  initialValue: _tipo,
                   isExpanded: true,
                   decoration: decoracaoFormulario('Tipo'),
                   items: TipoLembrete.values

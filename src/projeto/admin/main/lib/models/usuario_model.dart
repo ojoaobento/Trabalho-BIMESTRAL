@@ -3,14 +3,14 @@ class UsuarioModel{
   final String nome;
   final String email;
   final bool ativo;
-  final DateTime? dt_cadastro;
+  final DateTime? dtCadastro;
 
   UsuarioModel({
     required this.id,
     required this.nome,
     required this.email, 
     required this.ativo,
-    this.dt_cadastro
+    this.dtCadastro
   });
 
   
@@ -20,7 +20,7 @@ class UsuarioModel{
       nome: json['nome'],
       email: json['email'],
       ativo: json['ativo'] ?? true,
-      dt_cadastro: json['dt_cadastro'] != null 
+      dtCadastro: json['dt_cadastro'] != null 
           ? DateTime.parse(json['dt_cadastro']) 
           : null,
     );
