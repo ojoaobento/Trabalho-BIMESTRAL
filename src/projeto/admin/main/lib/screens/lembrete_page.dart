@@ -17,9 +17,83 @@ String _formatarDataHora(DateTime d) {
   return '${_formatarData(l)} às ${_dois(l.hour)}:${_dois(l.minute)}';
 }
 
+/// Tema vinho para o calendário (showDatePicker) e o relógio (showTimePicker),
+/// que por padrão usam o roxo do Material.
+Widget _temaSeletor(BuildContext context, Widget? child) {
+  final base = Theme.of(context);
+  const vinho = PainelCores.vinho;
+
+  return Theme(
+    data: base.copyWith(
+      colorScheme: base.colorScheme.copyWith(
+        primary: vinho,
+        onPrimary: Colors.white,
+        surface: Colors.white,
+        surfaceTint: Colors.transparent,
+      ),
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(foregroundColor: vinho),
+      ),
+      datePickerTheme: DatePickerThemeData(
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        headerBackgroundColor: vinho,
+        headerForegroundColor: Colors.white,
+        todayBorder: const BorderSide(color: vinho),
+        todayForegroundColor: WidgetStateProperty.resolveWith(
+          (estados) =>
+              estados.contains(WidgetState.selected) ? Colors.white : vinho,
+        ),
+        dayBackgroundColor: WidgetStateProperty.resolveWith(
+          (estados) =>
+              estados.contains(WidgetState.selected) ? vinho : Colors.transparent,
+        ),
+        yearBackgroundColor: WidgetStateProperty.resolveWith(
+          (estados) =>
+              estados.contains(WidgetState.selected) ? vinho : Colors.transparent,
+        ),
+      ),
+      timePickerTheme: TimePickerThemeData(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        dialHandColor: vinho,
+        dialBackgroundColor: const Color(0xFFFFF0F4),
+        entryModeIconColor: vinho,
+        hourMinuteColor: WidgetStateColor.resolveWith(
+          (estados) => estados.contains(WidgetState.selected)
+              ? vinho.withOpacity(0.12)
+              : Colors.grey.shade100,
+        ),
+        hourMinuteTextColor: WidgetStateColor.resolveWith(
+          (estados) => estados.contains(WidgetState.selected)
+              ? vinho
+              : Colors.grey.shade800,
+        ),
+        dayPeriodColor: WidgetStateColor.resolveWith(
+          (estados) => estados.contains(WidgetState.selected)
+              ? vinho.withOpacity(0.12)
+              : Colors.transparent,
+        ),
+        dayPeriodTextColor: WidgetStateColor.resolveWith(
+          (estados) => estados.contains(WidgetState.selected)
+              ? vinho
+              : Colors.grey.shade700,
+        ),
+      ),
+    ),
+    child: child ?? const SizedBox.shrink(),
+  );
+}
+
 const Map<TipoLembrete, String> _rotulosTipo = {
   TipoLembrete.confirmacao: 'Confirmação',
   TipoLembrete.lembrete24h: 'Lembrete 24h',
+};
+
+const Map<TipoLembrete, IconData> _iconesTipo = {
+  TipoLembrete.confirmacao: Icons.check_circle_outline,
+  TipoLembrete.lembrete24h: Icons.alarm,
 };
 
 enum _Situacao {
@@ -69,6 +143,22 @@ class _ChipSituacao extends StatelessWidget {
   }
 }
 
+/// Uma opção dos filtros em lista suspensa (valor, texto, cor opcional e
+/// quantidade de lembretes que ela mostraria).
+class _OpcaoFiltro<T> {
+  final T valor;
+  final String rotulo;
+  final Color? cor;
+  final int quantidade;
+
+  const _OpcaoFiltro({
+    required this.valor,
+    required this.rotulo,
+    required this.quantidade,
+    this.cor,
+  });
+}
+
 class LembretePage extends StatefulWidget {
   const LembretePage({super.key});
 
@@ -89,6 +179,8 @@ class _LembretePageState extends State<LembretePage> {
     _carregar();
   }
 
+  bool get _temFiltro => _situacaoFiltro != null || _tipoFiltro != null;
+
   List<LembreteModel> get _filtrados {
     return _lembretes.where((l) {
       if (_situacaoFiltro != null && _situacaoDe(l) != _situacaoFiltro) {
@@ -97,6 +189,31 @@ class _LembretePageState extends State<LembretePage> {
       if (_tipoFiltro != null && l.tipo != _tipoFiltro) return false;
       return true;
     }).toList();
+  }
+
+  /// Quantos lembretes existem em cada situação, respeitando o filtro de tipo.
+  int _contarSituacao(_Situacao? situacao) {
+    return _lembretes.where((l) {
+      if (_tipoFiltro != null && l.tipo != _tipoFiltro) return false;
+      return situacao == null || _situacaoDe(l) == situacao;
+    }).length;
+  }
+
+  /// Quantos lembretes existem de cada tipo, respeitando o filtro de situação.
+  int _contarTipo(TipoLembrete? tipo) {
+    return _lembretes.where((l) {
+      if (_situacaoFiltro != null && _situacaoDe(l) != _situacaoFiltro) {
+        return false;
+      }
+      return tipo == null || l.tipo == tipo;
+    }).length;
+  }
+
+  void _limparFiltros() {
+    setState(() {
+      _situacaoFiltro = null;
+      _tipoFiltro = null;
+    });
   }
 
   Future<void> _carregar({bool silencioso = false}) async {
@@ -216,50 +333,247 @@ class _LembretePageState extends State<LembretePage> {
     );
   }
 
+  // ---------- cabeçalho e filtros ----------
+
   Widget _cabecalho() {
-    return Wrap(
-      spacing: 12,
-      runSpacing: 8,
-      crossAxisAlignment: WrapCrossAlignment.center,
+    final resumo = _temFiltro
+        ? '${_filtrados.length} de ${_lembretes.length} lembrete(s)'
+        : '${_lembretes.length} lembrete(s)';
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          '${_filtrados.length} lembrete(s)',
-          style: const TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-            color: PainelCores.vinho,
-          ),
-        ),
-        DropdownButton<_Situacao?>(
-          value: _situacaoFiltro,
-          isDense: true,
-          items: [
-            const DropdownMenuItem(value: null, child: Text('Todas as situações')),
-            ..._Situacao.values.map(
-              (s) => DropdownMenuItem(value: s, child: Text(s.rotulo)),
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                resumo,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: PainelCores.vinho,
+                ),
+              ),
             ),
+            IconButton(
+              onPressed: () => _carregar(),
+              icon: const Icon(Icons.refresh_rounded),
+              color: PainelCores.vinho,
+              tooltip: 'Atualizar',
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        _painelFiltros(),
+      ],
+    );
+  }
+
+  Widget _painelFiltros() {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final estreito = constraints.maxWidth < 520;
+
+        final situacao = _campoFiltro<_Situacao?>(
+          rotulo: 'Situação',
+          icone: Icons.flag_outlined,
+          valor: _situacaoFiltro,
+          opcoes: [
+            _OpcaoFiltro<_Situacao?>(
+              valor: null,
+              rotulo: 'Todas as situações',
+              quantidade: _contarSituacao(null),
+            ),
+            for (final s in _Situacao.values)
+              _OpcaoFiltro<_Situacao?>(
+                valor: s,
+                rotulo: s.rotulo,
+                cor: _coresSituacao[s],
+                quantidade: _contarSituacao(s),
+              ),
           ],
           onChanged: (v) => setState(() => _situacaoFiltro = v),
-        ),
-        DropdownButton<TipoLembrete?>(
-          value: _tipoFiltro,
-          isDense: true,
-          items: [
-            const DropdownMenuItem(value: null, child: Text('Todos os tipos')),
-            ...TipoLembrete.values.map(
-              (t) => DropdownMenuItem(value: t, child: Text(_rotulosTipo[t]!)),
+        );
+
+        final tipo = _campoFiltro<TipoLembrete?>(
+          rotulo: 'Tipo',
+          icone: Icons.notifications_none_rounded,
+          valor: _tipoFiltro,
+          opcoes: [
+            _OpcaoFiltro<TipoLembrete?>(
+              valor: null,
+              rotulo: 'Todos os tipos',
+              quantidade: _contarTipo(null),
             ),
+            for (final t in TipoLembrete.values)
+              _OpcaoFiltro<TipoLembrete?>(
+                valor: t,
+                rotulo: _rotulosTipo[t]!,
+                quantidade: _contarTipo(t),
+              ),
           ],
           onChanged: (v) => setState(() => _tipoFiltro = v),
+        );
+
+        final limpar = TextButton.icon(
+          onPressed: _limparFiltros,
+          icon: const Icon(Icons.filter_alt_off_outlined, size: 18),
+          label: const Text('Limpar filtros'),
+          style: TextButton.styleFrom(foregroundColor: PainelCores.vinho),
+        );
+
+        if (estreito) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              situacao,
+              const SizedBox(height: 12),
+              tipo,
+              if (_temFiltro)
+                Align(alignment: Alignment.centerRight, child: limpar),
+            ],
+          );
+        }
+
+        return Wrap(
+          spacing: 12,
+          runSpacing: 12,
+          crossAxisAlignment: WrapCrossAlignment.end,
+          children: [
+            SizedBox(width: 240, child: situacao),
+            SizedBox(width: 240, child: tipo),
+            if (_temFiltro) limpar,
+          ],
+        );
+      },
+    );
+  }
+
+  /// Lista suspensa com rótulo, ícone e contagem por opção. Quando algo
+  /// diferente de "Todos" está escolhido, o campo ganha destaque vinho.
+  Widget _campoFiltro<T>({
+    required String rotulo,
+    required IconData icone,
+    required T valor,
+    required List<_OpcaoFiltro<T>> opcoes,
+    required ValueChanged<T?> onChanged,
+  }) {
+    final ativo = valor != opcoes.first.valor;
+
+    Widget marcador(_OpcaoFiltro<T> o) {
+      if (o.cor != null) {
+        return Padding(
+          padding: const EdgeInsets.only(left: 3, right: 3),
+          child: Icon(Icons.circle, size: 10, color: o.cor),
+        );
+      }
+      return Icon(icone, size: 18, color: PainelCores.vinho);
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(left: 2, bottom: 6),
+          child: Text(
+            rotulo,
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+              color: PainelCores.vinho,
+            ),
+          ),
         ),
-        IconButton(
-          onPressed: () => _carregar(),
-          icon: const Icon(Icons.refresh),
-          tooltip: 'Atualizar',
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          decoration: BoxDecoration(
+            color: ativo ? PainelCores.vinho.withOpacity(0.06) : Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: ativo ? PainelCores.vinho : Colors.grey.shade300,
+              width: ativo ? 1.4 : 1,
+            ),
+          ),
+          child: DropdownButtonHideUnderline(
+            child: DropdownButton<T>(
+              value: valor,
+              isExpanded: true,
+              borderRadius: BorderRadius.circular(12),
+              dropdownColor: Colors.white,
+              icon: const Icon(
+                Icons.keyboard_arrow_down_rounded,
+                color: PainelCores.vinho,
+              ),
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.grey.shade900,
+              ),
+              selectedItemBuilder: (_) => [
+                for (final o in opcoes)
+                  Row(
+                    children: [
+                      marcador(o),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          o.rotulo,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontWeight:
+                                ativo ? FontWeight.w600 : FontWeight.normal,
+                            color: ativo
+                                ? PainelCores.vinho
+                                : Colors.grey.shade900,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+              ],
+              items: [
+                for (final o in opcoes)
+                  DropdownMenuItem<T>(
+                    value: o.valor,
+                    child: Row(
+                      children: [
+                        marcador(o),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            o.rotulo,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 7, vertical: 1),
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade100,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Text(
+                            '${o.quantidade}',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.grey.shade600,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+              ],
+              onChanged: onChanged,
+            ),
+          ),
         ),
       ],
     );
   }
+
+  // ---------- conteúdo ----------
 
   Widget _conteudo() {
     if (_carregando) {
@@ -276,7 +590,22 @@ class _LembretePageState extends State<LembretePage> {
 
     final lista = _filtrados;
     if (lista.isEmpty) {
-      return const Center(child: Text('Nenhum lembrete com esse filtro.'));
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.filter_alt_off_outlined,
+                size: 40, color: Colors.grey.shade400),
+            const SizedBox(height: 8),
+            const Text('Nenhum lembrete com esse filtro.'),
+            TextButton(
+              onPressed: _limparFiltros,
+              style: TextButton.styleFrom(foregroundColor: PainelCores.vinho),
+              child: const Text('Limpar filtros'),
+            ),
+          ],
+        ),
+      );
     }
 
     return LayoutBuilder(
@@ -373,6 +702,8 @@ class _LembretePageState extends State<LembretePage> {
   Widget _cartaoLembrete(LembreteModel l) {
     return Card(
       elevation: 0,
+      color: Colors.white,
+      surfaceTintColor: Colors.transparent,
       margin: EdgeInsets.zero,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
@@ -476,6 +807,7 @@ class _FormularioEditarLembreteState extends State<_FormularioEditarLembrete> {
       initialDate: _data,
       firstDate: DateTime(2024),
       lastDate: DateTime(2100),
+      builder: _temaSeletor,
     );
     if (escolhida == null) return;
     setState(() {
@@ -488,9 +820,12 @@ class _FormularioEditarLembreteState extends State<_FormularioEditarLembrete> {
     final escolhida = await showTimePicker(
       context: context,
       initialTime: _hora,
-      builder: (ctx, child) => MediaQuery(
-        data: MediaQuery.of(ctx).copyWith(alwaysUse24HourFormat: true),
-        child: child!,
+      builder: (ctx, child) => _temaSeletor(
+        ctx,
+        MediaQuery(
+          data: MediaQuery.of(ctx).copyWith(alwaysUse24HourFormat: true),
+          child: child!,
+        ),
       ),
     );
     if (escolhida == null) return;

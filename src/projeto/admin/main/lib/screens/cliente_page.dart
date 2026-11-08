@@ -333,6 +333,32 @@ class _ClientePageState extends State<ClientePage> {
   }
 }
 
+// ---------------------------------------------------------------------------
+// Formulário de cliente (criar / editar)
+// ---------------------------------------------------------------------------
+
+/// Aplica a máscara (44) 98813-6876 enquanto o usuário digita.
+class _TelefoneFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+      TextEditingValue antigo, TextEditingValue novo) {
+    final digitos = novo.text.replaceAll(RegExp(r'\D'), '');
+    final d = digitos.length > 11 ? digitos.substring(0, 11) : digitos;
+    final b = StringBuffer();
+    for (var i = 0; i < d.length; i++) {
+      if (i == 0) b.write('(');
+      if (i == 2) b.write(') ');
+      if (i == 7) b.write('-');
+      b.write(d[i]);
+    }
+    final texto = b.toString();
+    return TextEditingValue(
+      text: texto,
+      selection: TextSelection.collapsed(offset: texto.length),
+    );
+  }
+}
+
 class _FormularioCliente extends StatefulWidget {
   final ClienteModel? cliente;
 
@@ -343,10 +369,20 @@ class _FormularioCliente extends StatefulWidget {
 }
 
 class _FormularioClienteState extends State<_FormularioCliente> {
+  static const _corFundo = Color(0xFFFFF8FA);
+  static const _corTexto = Color(0xFF4A1026);
+  static const _corSuave = Color(0xFF976D7B);
+  static const _corBorda = Color(0xFFF1DDE5);
+  static const _corErro = Color(0xFFB3261E);
+  static const _corErroFundo = Color(0xFFFDE7E9);
+
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _nomeController;
   late final TextEditingController _telefoneController;
   late final TextEditingController _emailController;
+  final _telefoneFocus = FocusNode();
+  final _emailFocus = FocusNode();
+
   bool _aceitaLembretes = true;
   bool _consentimento = false;
   bool _salvando = false;
@@ -354,14 +390,28 @@ class _FormularioClienteState extends State<_FormularioCliente> {
 
   bool get _editando => widget.cliente != null;
 
+  static String _mascarar(String digitos) {
+    if (digitos.isEmpty) return '';
+    return _TelefoneFormatter()
+        .formatEditUpdate(
+          TextEditingValue.empty,
+          TextEditingValue(text: digitos),
+        )
+        .text;
+  }
+
+  String get _telefoneDigitos =>
+      _telefoneController.text.replaceAll(RegExp(r'\D'), '');
+
   @override
   void initState() {
     super.initState();
-    _nomeController = TextEditingController(text: widget.cliente?.nome ?? '');
+    final c = widget.cliente;
+    _nomeController = TextEditingController(text: c?.nome ?? '');
     _telefoneController =
-        TextEditingController(text: widget.cliente?.telefone ?? '');
-    _emailController = TextEditingController(text: widget.cliente?.email ?? '');
-    _aceitaLembretes = widget.cliente?.aceitaLembretes ?? true;
+        TextEditingController(text: _mascarar(c?.telefone ?? ''));
+    _emailController = TextEditingController(text: c?.email ?? '');
+    _aceitaLembretes = c?.aceitaLembretes ?? true;
   }
 
   @override
@@ -369,14 +419,18 @@ class _FormularioClienteState extends State<_FormularioCliente> {
     _nomeController.dispose();
     _telefoneController.dispose();
     _emailController.dispose();
+    _telefoneFocus.dispose();
+    _emailFocus.dispose();
     super.dispose();
   }
 
   Future<void> _salvar() async {
+    if (_salvando) return;
     if (!_formKey.currentState!.validate()) return;
 
     if (!_editando && !_consentimento) {
-      setState(() => _erro = 'É necessário confirmar o consentimento do cliente.');
+      setState(
+          () => _erro = 'Confirme o consentimento do cliente para continuar.');
       return;
     }
 
@@ -385,17 +439,18 @@ class _FormularioClienteState extends State<_FormularioCliente> {
       _erro = null;
     });
 
-    final email = _emailController.text.trim();
+    final email = _emailController.text.trim().toLowerCase();
     final corpo = <String, dynamic>{
       'nome': _nomeController.text.trim(),
-      'telefone': _telefoneController.text.trim(),
+      'telefone': _telefoneDigitos,
       'email': email.isEmpty ? null : email,
       'aceita_lembretes': _aceitaLembretes,
     };
 
     try {
       if (_editando) {
-        await ApiClient.instancia.patch('/clientes/${widget.cliente!.id}', corpo);
+        await ApiClient.instancia
+            .patch('/clientes/${widget.cliente!.id}', corpo);
       } else {
         corpo['consentimento'] = true;
         await ApiClient.instancia.post('/clientes', corpo);
@@ -411,131 +466,415 @@ class _FormularioClienteState extends State<_FormularioCliente> {
     }
   }
 
+  // ---------- visual ----------
+
+  OutlineInputBorder _borda(Color cor, {double largura = 1}) {
+    return OutlineInputBorder(
+      borderRadius: BorderRadius.circular(12),
+      borderSide: BorderSide(color: cor, width: largura),
+    );
+  }
+
+  InputDecoration _decoracao({String? dica, IconData? icone}) {
+    return InputDecoration(
+      isDense: true,
+      filled: true,
+      fillColor: _corFundo,
+      hintText: dica,
+      hintStyle: TextStyle(color: _corSuave.withOpacity(.6), fontSize: 14),
+      prefixIcon: icone == null
+          ? null
+          : Icon(icone, size: 18, color: PainelCores.vinho),
+      errorMaxLines: 2,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+      border: _borda(_corBorda),
+      enabledBorder: _borda(_corBorda),
+      disabledBorder: _borda(_corBorda),
+      focusedBorder: _borda(PainelCores.vinho, largura: 1.6),
+      errorBorder: _borda(_corErro),
+      focusedErrorBorder: _borda(_corErro, largura: 1.6),
+    );
+  }
+
+  Widget _rotulado(String titulo, Widget campo) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(bottom: 6, left: 2),
+          child: Text(
+            titulo,
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+              color: _corTexto,
+            ),
+          ),
+        ),
+        campo,
+      ],
+    );
+  }
+
+  Widget _cabecalho() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 20, 8, 16),
+      child: Row(
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: const BoxDecoration(
+              color: Color(0xFFFFEEF3),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              _editando ? Icons.edit_outlined : Icons.person_add_alt_1,
+              color: PainelCores.vinho,
+              size: 22,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  _editando ? 'Editar cliente' : 'Novo cliente',
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: _corTexto,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  _editando
+                      ? 'Atualize os dados do cliente.'
+                      : 'Preencha os dados para cadastrar.',
+                  style: const TextStyle(fontSize: 12, color: _corSuave),
+                ),
+              ],
+            ),
+          ),
+          IconButton(
+            tooltip: 'Fechar',
+            onPressed: _salvando ? null : () => Navigator.pop(context, false),
+            icon: const Icon(Icons.close_rounded, color: _corSuave),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _blocoOpcoes() {
+    return Container(
+      decoration: BoxDecoration(
+        color: _corFundo,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: _corBorda),
+      ),
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(14, 4, 6, 4),
+            child: Row(
+              children: [
+                const Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Aceita lembretes',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: _corTexto,
+                        ),
+                      ),
+                      Text(
+                        'Receber avisos de agendamento.',
+                        style: TextStyle(fontSize: 12, color: _corSuave),
+                      ),
+                    ],
+                  ),
+                ),
+                Switch(
+                  value: _aceitaLembretes,
+                  activeColor: Colors.white,
+                  activeTrackColor: PainelCores.vinho,
+                  inactiveThumbColor: Colors.white,
+                  inactiveTrackColor: _corBorda,
+                  trackOutlineColor:
+                      WidgetStateProperty.all(Colors.transparent),
+                  onChanged: _salvando
+                      ? null
+                      : (v) => setState(() => _aceitaLembretes = v),
+                ),
+              ],
+            ),
+          ),
+          if (!_editando) ...[
+            const Divider(height: 1, color: _corBorda),
+            CheckboxListTile(
+              dense: true,
+              controlAffinity: ListTileControlAffinity.leading,
+              activeColor: PainelCores.vinho,
+              title: const Text(
+                'O cliente consentiu com o tratamento dos seus dados.',
+                style: TextStyle(fontSize: 13, color: _corTexto),
+              ),
+              value: _consentimento,
+              onChanged: _salvando
+                  ? null
+                  : (v) => setState(() {
+                        _consentimento = v ?? false;
+                        if (_consentimento) _erro = null;
+                      }),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _rodape() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
+      child: Row(
+        children: [
+          Expanded(
+            child: OutlinedButton(
+              onPressed: _salvando ? null : () => Navigator.pop(context, false),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: PainelCores.vinho,
+                side: const BorderSide(color: _corBorda),
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child: const Text(
+                'Cancelar',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            flex: 2,
+            child: FilledButton(
+              onPressed: _salvando ? null : _salvar,
+              style: FilledButton.styleFrom(
+                backgroundColor: PainelCores.vinho,
+                foregroundColor: Colors.white,
+                disabledBackgroundColor: PainelCores.vinho.withOpacity(.4),
+                disabledForegroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child: _salvando
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : Text(
+                      _editando ? 'Salvar alterações' : 'Criar cliente',
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-      title: Text(_editando ? 'Editar cliente' : 'Novo cliente'),
-      content: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 400),
-        child: SizedBox(
-          width: double.maxFinite,
-          child: Form(
-            key: _formKey,
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextFormField(
-                    controller: _nomeController,
-                    autofocus: true,
-                    enabled: !_salvando,
-                    textInputAction: TextInputAction.next,
-                    decoration: decoracaoFormulario('Nome'),
-                    validator: (valor) {
-                      final texto = (valor ?? '').trim();
-                      if (texto.isEmpty) return 'Informe o nome';
-                      if (texto.length < 2) return 'Mínimo de 2 caracteres';
-                      if (texto.length > 100) return 'No máximo 100 caracteres';
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 12),
-                  TextFormField(
-                    controller: _telefoneController,
-                    enabled: !_salvando,
-                    keyboardType: TextInputType.phone,
-                    textInputAction: TextInputAction.next,
-                    inputFormatters: [
-                      FilteringTextInputFormatter.digitsOnly,
-                      LengthLimitingTextInputFormatter(11),
-                    ],
-                    decoration: decoracaoFormulario('Telefone (DDD + número)'),
-                    validator: (valor) {
-                      final texto = (valor ?? '').trim();
-                      if (texto.isEmpty) return 'Informe o telefone';
-                      if (texto.length != 11) {
-                        return 'Use 11 dígitos, ex.: 44988136876';
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 12),
-                  TextFormField(
-                    controller: _emailController,
-                    enabled: !_salvando,
-                    keyboardType: TextInputType.emailAddress,
-                    textInputAction: TextInputAction.done,
-                    onFieldSubmitted: (_) => _salvar(),
-                    decoration: decoracaoFormulario('E-mail (opcional)'),
-                    validator: (valor) {
-                      final texto = (valor ?? '').trim();
-                      if (texto.isEmpty) return null;
-                      final valido = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
-                      if (!valido.hasMatch(texto)) return 'E-mail inválido';
-                      return null;
-                    },
-                  ),
-                  SwitchListTile(
-                    contentPadding: EdgeInsets.zero,
-                    title: const Text('Aceita lembretes'),
-                    value: _aceitaLembretes,
-                    activeColor: PainelCores.vinho,
-                    onChanged: _salvando
-                        ? null
-                        : (v) => setState(() => _aceitaLembretes = v),
-                  ),
-                  if (!_editando)
-                    CheckboxListTile(
-                      contentPadding: EdgeInsets.zero,
-                      controlAffinity: ListTileControlAffinity.leading,
-                      activeColor: PainelCores.vinho,
-                      title: const Text(
-                        'O cliente consentiu com o tratamento dos seus dados.',
-                        style: TextStyle(fontSize: 13),
-                      ),
-                      value: _consentimento,
-                      onChanged: _salvando
-                          ? null
-                          : (v) => setState(() => _consentimento = v ?? false),
+    // Troca o roxo padrão do Material pela cor do painel dentro do diálogo
+    // (cursor, seleção de texto, checkbox, switch).
+    final tema = Theme.of(context).copyWith(
+      colorScheme: Theme.of(context).colorScheme.copyWith(
+            primary: PainelCores.vinho,
+            onPrimary: Colors.white,
+            surface: Colors.white,
+            surfaceTint: Colors.transparent,
+          ),
+      textSelectionTheme: TextSelectionThemeData(
+        cursorColor: PainelCores.vinho,
+        selectionColor: PainelCores.vinho.withOpacity(.2),
+        selectionHandleColor: PainelCores.vinho,
+      ),
+    );
+
+    return Theme(
+      data: tema,
+      child: Dialog(
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.transparent,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 480),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _cabecalho(),
+                const Divider(height: 1, color: _corBorda),
+                Form(
+                  key: _formKey,
+                  autovalidateMode: AutovalidateMode.onUserInteraction,
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 18, 20, 4),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _rotulado(
+                          'Nome',
+                          TextFormField(
+                            controller: _nomeController,
+                            autofocus: true,
+                            enabled: !_salvando,
+                            textCapitalization: TextCapitalization.words,
+                            textInputAction: TextInputAction.next,
+                            onFieldSubmitted: (_) =>
+                                _telefoneFocus.requestFocus(),
+                            style: const TextStyle(
+                              fontSize: 14,
+                              color: _corTexto,
+                            ),
+                            decoration: _decoracao(
+                              dica: 'Ex.: Maria Silva',
+                              icone: Icons.person_outline,
+                            ),
+                            validator: (valor) {
+                              final texto = (valor ?? '').trim();
+                              if (texto.isEmpty) return 'Informe o nome';
+                              if (texto.length < 2) {
+                                return 'Mínimo de 2 caracteres';
+                              }
+                              if (texto.length > 100) {
+                                return 'No máximo 100 caracteres';
+                              }
+                              return null;
+                            },
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        _rotulado(
+                          'Telefone / WhatsApp',
+                          TextFormField(
+                            controller: _telefoneController,
+                            focusNode: _telefoneFocus,
+                            enabled: !_salvando,
+                            keyboardType: TextInputType.phone,
+                            textInputAction: TextInputAction.next,
+                            onFieldSubmitted: (_) => _emailFocus.requestFocus(),
+                            inputFormatters: [
+                              FilteringTextInputFormatter.digitsOnly,
+                              _TelefoneFormatter(),
+                            ],
+                            style: const TextStyle(
+                              fontSize: 14,
+                              color: _corTexto,
+                            ),
+                            decoration: _decoracao(
+                              dica: '(44) 90000-0000',
+                              icone: Icons.phone_outlined,
+                            ),
+                            validator: (_) {
+                              final d = _telefoneDigitos;
+                              if (d.isEmpty) return 'Informe o telefone';
+                              if (d.length != 11) return 'Use DDD + 9 dígitos';
+                              final ddd = int.parse(d.substring(0, 2));
+                              if (ddd < 11) return 'DDD inválido';
+                              if (d[2] != '9') {
+                                return 'O número deve começar com 9';
+                              }
+                              return null;
+                            },
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        _rotulado(
+                          'E-mail (opcional)',
+                          TextFormField(
+                            controller: _emailController,
+                            focusNode: _emailFocus,
+                            enabled: !_salvando,
+                            keyboardType: TextInputType.emailAddress,
+                            textInputAction: TextInputAction.done,
+                            autocorrect: false,
+                            onFieldSubmitted: (_) => _salvar(),
+                            style: const TextStyle(
+                              fontSize: 14,
+                              color: _corTexto,
+                            ),
+                            decoration: _decoracao(
+                              dica: 'cliente@email.com',
+                              icone: Icons.mail_outline,
+                            ),
+                            validator: (valor) {
+                              final texto = (valor ?? '').trim();
+                              if (texto.isEmpty) return null;
+                              final valido =
+                                  RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
+                              if (!valido.hasMatch(texto)) {
+                                return 'E-mail inválido';
+                              }
+                              return null;
+                            },
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        _blocoOpcoes(),
+                        if (_erro != null)
+                          Container(
+                            width: double.infinity,
+                            margin: const EdgeInsets.only(top: 14),
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: _corErroFundo,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Icon(
+                                  Icons.error_outline,
+                                  size: 18,
+                                  color: _corErro,
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    _erro!,
+                                    style: const TextStyle(
+                                      fontSize: 13,
+                                      color: _corErro,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                      ],
                     ),
-                  if (_erro != null)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 12),
-                      child: Text(
-                        _erro!,
-                        style: TextStyle(color: Colors.red.shade700),
-                      ),
-                    ),
-                ],
-              ),
+                  ),
+                ),
+                _rodape(),
+              ],
             ),
           ),
         ),
       ),
-      actions: [
-        TextButton(
-          onPressed: _salvando ? null : () => Navigator.pop(context, false),
-          child: const Text('Cancelar'),
-        ),
-        ElevatedButton(
-          onPressed: _salvando ? null : _salvar,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: PainelCores.vinho,
-            foregroundColor: Colors.white,
-          ),
-          child: _salvando
-              ? const SizedBox(
-                  width: 18,
-                  height: 18,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: Colors.white,
-                  ),
-                )
-              : const Text('Salvar'),
-        ),
-      ],
     );
   }
 }

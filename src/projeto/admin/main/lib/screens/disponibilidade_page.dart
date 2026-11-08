@@ -17,6 +17,8 @@ const _nomesDias = [
   'Domingo',
 ];
 
+const _diasCurtos = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
+
 String _formatarHora(TimeOfDay t) =>
     '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
 
@@ -26,6 +28,474 @@ TimeOfDay _lerHora(String texto) => TimeOfDay(
     );
 
 int _minutos(TimeOfDay t) => t.hour * 60 + t.minute;
+
+String _formatarDataCampo(DateTime d) =>
+    '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
+
+/// Tema vinho para o calendário (showDatePicker) e o relógio (showTimePicker),
+/// que por padrão usam o roxo do Material.
+Widget _temaSeletor(BuildContext context, Widget? child) {
+  final base = Theme.of(context);
+  const vinho = PainelCores.vinho;
+
+  return Theme(
+    data: base.copyWith(
+      colorScheme: base.colorScheme.copyWith(
+        primary: vinho,
+        onPrimary: Colors.white,
+        surface: Colors.white,
+        surfaceTint: Colors.transparent,
+      ),
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(foregroundColor: vinho),
+      ),
+      datePickerTheme: DatePickerThemeData(
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        headerBackgroundColor: vinho,
+        headerForegroundColor: Colors.white,
+        todayBorder: const BorderSide(color: vinho),
+        todayForegroundColor: WidgetStateProperty.resolveWith(
+          (estados) =>
+              estados.contains(WidgetState.selected) ? Colors.white : vinho,
+        ),
+        dayBackgroundColor: WidgetStateProperty.resolveWith(
+          (estados) =>
+              estados.contains(WidgetState.selected) ? vinho : Colors.transparent,
+        ),
+        yearBackgroundColor: WidgetStateProperty.resolveWith(
+          (estados) =>
+              estados.contains(WidgetState.selected) ? vinho : Colors.transparent,
+        ),
+      ),
+      timePickerTheme: TimePickerThemeData(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        dialHandColor: vinho,
+        dialBackgroundColor: const Color(0xFFFFF0F4),
+        entryModeIconColor: vinho,
+        hourMinuteColor: WidgetStateColor.resolveWith(
+          (estados) => estados.contains(WidgetState.selected)
+              ? vinho.withOpacity(0.12)
+              : Colors.grey.shade100,
+        ),
+        hourMinuteTextColor: WidgetStateColor.resolveWith(
+          (estados) => estados.contains(WidgetState.selected)
+              ? vinho
+              : Colors.grey.shade800,
+        ),
+        dayPeriodColor: WidgetStateColor.resolveWith(
+          (estados) => estados.contains(WidgetState.selected)
+              ? vinho.withOpacity(0.12)
+              : Colors.transparent,
+        ),
+        dayPeriodTextColor: WidgetStateColor.resolveWith(
+          (estados) => estados.contains(WidgetState.selected)
+              ? vinho
+              : Colors.grey.shade700,
+        ),
+      ),
+    ),
+    child: child ?? const SizedBox.shrink(),
+  );
+}
+
+String _duracaoTexto(int minutos) {
+  final h = minutos ~/ 60;
+  final m = minutos % 60;
+  if (h == 0) return '${m}min';
+  if (m == 0) return '${h}h';
+  return '${h}h${m.toString().padLeft(2, '0')}min';
+}
+
+// ---------------------------------------------------------------------------
+// Peças visuais compartilhadas pelos formulários
+// ---------------------------------------------------------------------------
+
+const _corFundo = Color(0xFFFFF8FA);
+const _corTexto = Color(0xFF4A1026);
+const _corSuave = Color(0xFF976D7B);
+const _corBorda = Color(0xFFF1DDE5);
+const _corErro = Color(0xFFB3261E);
+const _corErroFundo = Color(0xFFFDE7E9);
+
+OutlineInputBorder _borda(Color cor, {double largura = 1}) {
+  return OutlineInputBorder(
+    borderRadius: BorderRadius.circular(12),
+    borderSide: BorderSide(color: cor, width: largura),
+  );
+}
+
+InputDecoration _decoracaoForm({String? dica, IconData? icone}) {
+  return InputDecoration(
+    isDense: true,
+    filled: true,
+    fillColor: _corFundo,
+    hintText: dica,
+    hintStyle: TextStyle(color: _corSuave.withOpacity(.6), fontSize: 14),
+    prefixIcon:
+        icone == null ? null : Icon(icone, size: 18, color: PainelCores.vinho),
+    errorMaxLines: 2,
+    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+    border: _borda(_corBorda),
+    enabledBorder: _borda(_corBorda),
+    disabledBorder: _borda(_corBorda),
+    focusedBorder: _borda(PainelCores.vinho, largura: 1.6),
+    errorBorder: _borda(_corErro),
+    focusedErrorBorder: _borda(_corErro, largura: 1.6),
+  );
+}
+
+Widget _rotulado(String titulo, Widget campo) {
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Padding(
+        padding: const EdgeInsets.only(bottom: 6, left: 2),
+        child: Text(
+          titulo,
+          style: const TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.bold,
+            color: _corTexto,
+          ),
+        ),
+      ),
+      campo,
+    ],
+  );
+}
+
+Widget _chipOpcao({
+  required String rotulo,
+  required bool selecionado,
+  required VoidCallback? onTap,
+  IconData? icone,
+}) {
+  return ChoiceChip(
+    showCheckmark: false,
+    selected: selecionado,
+    onSelected: onTap == null ? null : (_) => onTap(),
+    selectedColor: PainelCores.vinho.withOpacity(0.12),
+    backgroundColor: Colors.white,
+    surfaceTintColor: Colors.transparent,
+    side: BorderSide(
+      color: selecionado ? PainelCores.vinho : _corBorda,
+      width: selecionado ? 1.4 : 1,
+    ),
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+    visualDensity: VisualDensity.compact,
+    label: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (icone != null) ...[
+          Icon(
+            icone,
+            size: 15,
+            color: selecionado ? PainelCores.vinho : _corSuave,
+          ),
+          const SizedBox(width: 5),
+        ],
+        Text(
+          rotulo,
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: selecionado ? FontWeight.w600 : FontWeight.normal,
+            color: selecionado ? PainelCores.vinho : _corTexto,
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+class _BannerErro extends StatelessWidget {
+  final String mensagem;
+
+  const _BannerErro(this.mensagem);
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(top: 14),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: _corErroFundo,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.error_outline, size: 18, color: _corErro),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              mensagem,
+              style: const TextStyle(fontSize: 13, color: _corErro),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _BlocoSwitch extends StatelessWidget {
+  final String titulo;
+  final String subtitulo;
+  final bool valor;
+  final ValueChanged<bool>? onChanged;
+
+  const _BlocoSwitch({
+    required this.titulo,
+    required this.subtitulo,
+    required this.valor,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(14, 4, 6, 4),
+      decoration: BoxDecoration(
+        color: _corFundo,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: _corBorda),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  titulo,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: _corTexto,
+                  ),
+                ),
+                Text(
+                  subtitulo,
+                  style: const TextStyle(fontSize: 12, color: _corSuave),
+                ),
+              ],
+            ),
+          ),
+          Switch(
+            value: valor,
+            activeColor: Colors.white,
+            activeTrackColor: PainelCores.vinho,
+            inactiveThumbColor: Colors.white,
+            inactiveTrackColor: _corBorda,
+            trackOutlineColor: WidgetStateProperty.all(Colors.transparent),
+            onChanged: onChanged,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CabecalhoDialogo extends StatelessWidget {
+  final IconData icone;
+  final Color corIcone;
+  final Color corFundoIcone;
+  final String titulo;
+  final String subtitulo;
+  final VoidCallback? onFechar;
+
+  const _CabecalhoDialogo({
+    required this.icone,
+    required this.titulo,
+    required this.subtitulo,
+    required this.onFechar,
+    this.corIcone = PainelCores.vinho,
+    this.corFundoIcone = const Color(0xFFFFEEF3),
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 20, 8, 16),
+      child: Row(
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: corFundoIcone,
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icone, color: corIcone, size: 22),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  titulo,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: _corTexto,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  subtitulo,
+                  style: const TextStyle(fontSize: 12, color: _corSuave),
+                ),
+              ],
+            ),
+          ),
+          IconButton(
+            tooltip: 'Fechar',
+            onPressed: onFechar,
+            icon: const Icon(Icons.close_rounded, color: _corSuave),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _RodapeDialogo extends StatelessWidget {
+  final bool salvando;
+  final String rotuloSalvar;
+  final VoidCallback onSalvar;
+  final VoidCallback onCancelar;
+
+  const _RodapeDialogo({
+    required this.salvando,
+    required this.rotuloSalvar,
+    required this.onSalvar,
+    required this.onCancelar,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
+      child: Row(
+        children: [
+          Expanded(
+            child: OutlinedButton(
+              onPressed: salvando ? null : onCancelar,
+              style: OutlinedButton.styleFrom(
+                foregroundColor: PainelCores.vinho,
+                side: const BorderSide(color: _corBorda),
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child: const Text(
+                'Cancelar',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            flex: 2,
+            child: FilledButton(
+              onPressed: salvando ? null : onSalvar,
+              style: FilledButton.styleFrom(
+                backgroundColor: PainelCores.vinho,
+                foregroundColor: Colors.white,
+                disabledBackgroundColor: PainelCores.vinho.withOpacity(.4),
+                disabledForegroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child: salvando
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : Text(
+                      rotuloSalvar,
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Moldura comum: tema local (troca o roxo do Material pelo vinho) + Dialog.
+class _DialogoPadrao extends StatelessWidget {
+  final Widget cabecalho;
+  final Widget corpo;
+  final Widget rodape;
+
+  const _DialogoPadrao({
+    required this.cabecalho,
+    required this.corpo,
+    required this.rodape,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final tema = Theme.of(context).copyWith(
+      colorScheme: Theme.of(context).colorScheme.copyWith(
+            primary: PainelCores.vinho,
+            onPrimary: Colors.white,
+            surface: Colors.white,
+            surfaceTint: Colors.transparent,
+          ),
+      textSelectionTheme: TextSelectionThemeData(
+        cursorColor: PainelCores.vinho,
+        selectionColor: PainelCores.vinho.withOpacity(.2),
+        selectionHandleColor: PainelCores.vinho,
+      ),
+    );
+
+    return Theme(
+      data: tema,
+      child: Dialog(
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.transparent,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 480),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                cabecalho,
+                const Divider(height: 1, color: _corBorda),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 18, 20, 4),
+                  child: corpo,
+                ),
+                rodape,
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Página
+// ---------------------------------------------------------------------------
 
 class DisponibilidadePage extends StatefulWidget {
   const DisponibilidadePage({super.key});
@@ -451,6 +921,8 @@ class _DisponibilidadePageState extends State<DisponibilidadePage>
   Widget _cartaoBloco(DisponibilidadeModel b) {
     return Card(
       elevation: 0,
+      color: Colors.white,
+      surfaceTintColor: Colors.transparent,
       margin: EdgeInsets.zero,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
@@ -517,6 +989,8 @@ class _DisponibilidadePageState extends State<DisponibilidadePage>
   Widget _cartaoBloqueio(BloqueioModel b) {
     return Card(
       elevation: 0,
+      color: Colors.white,
+      surfaceTintColor: Colors.transparent,
       margin: EdgeInsets.zero,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
@@ -560,6 +1034,10 @@ class _DisponibilidadePageState extends State<DisponibilidadePage>
   }
 }
 
+// ---------------------------------------------------------------------------
+// Formulário de bloqueio pontual
+// ---------------------------------------------------------------------------
+
 class _FormularioBloqueio extends StatefulWidget {
   const _FormularioBloqueio();
 
@@ -568,6 +1046,13 @@ class _FormularioBloqueio extends StatefulWidget {
 }
 
 class _FormularioBloqueioState extends State<_FormularioBloqueio> {
+  static const _motivosRapidos = [
+    'Almoço',
+    'Folga',
+    'Compromisso',
+    'Indisponibilidade / Pausa',
+  ];
+
   final _formKey = GlobalKey<FormState>();
   final _dataController = TextEditingController();
   final _inicioController = TextEditingController();
@@ -575,7 +1060,7 @@ class _FormularioBloqueioState extends State<_FormularioBloqueio> {
   final _motivoController =
       TextEditingController(text: 'Indisponibilidade / Pausa');
 
-  DateTime _data = DateTime.now();
+  late DateTime _data;
   TimeOfDay _inicio = const TimeOfDay(hour: 14, minute: 0);
   TimeOfDay _fim = const TimeOfDay(hour: 15, minute: 0);
   bool _salvando = false;
@@ -584,8 +1069,9 @@ class _FormularioBloqueioState extends State<_FormularioBloqueio> {
   @override
   void initState() {
     super.initState();
-    _dataController.text =
-        '${_data.day.toString().padLeft(2, '0')}/${_data.month.toString().padLeft(2, '0')}/${_data.year}';
+    final agora = DateTime.now();
+    _data = DateTime(agora.year, agora.month, agora.day);
+    _dataController.text = _formatarDataCampo(_data);
     _inicioController.text = _formatarHora(_inicio);
     _fimController.text = _formatarHora(_fim);
   }
@@ -599,18 +1085,21 @@ class _FormularioBloqueioState extends State<_FormularioBloqueio> {
     super.dispose();
   }
 
+  bool get _intervaloValido => _minutos(_fim) > _minutos(_inicio);
+
   Future<void> _escolherData() async {
+    final hoje = DateTime.now();
     final escolhida = await showDatePicker(
       context: context,
       initialDate: _data,
-      firstDate: DateTime.now().subtract(const Duration(days: 1)),
-      lastDate: DateTime.now().add(const Duration(days: 365)),
+      firstDate: DateTime(hoje.year, hoje.month, hoje.day),
+      lastDate: hoje.add(const Duration(days: 365)),
+      builder: _temaSeletor,
     );
     if (escolhida != null) {
       setState(() {
         _data = escolhida;
-        _dataController.text =
-            '${_data.day.toString().padLeft(2, '0')}/${_data.month.toString().padLeft(2, '0')}/${_data.year}';
+        _dataController.text = _formatarDataCampo(_data);
       });
     }
   }
@@ -620,24 +1109,32 @@ class _FormularioBloqueioState extends State<_FormularioBloqueio> {
     final escolhido = await showTimePicker(
       context: context,
       initialTime: atual,
+      builder: (ctx, child) => _temaSeletor(
+        ctx,
+        MediaQuery(
+          data: MediaQuery.of(ctx).copyWith(alwaysUse24HourFormat: true),
+          child: child!,
+        ),
+      ),
     );
-    if (escolhido != null) {
-      setState(() {
-        if (inicio) {
-          _inicio = escolhido;
-          _inicioController.text = _formatarHora(escolhido);
-        } else {
-          _fim = escolhido;
-          _fimController.text = _formatarHora(escolhido);
-        }
-      });
-    }
+    if (escolhido == null) return;
+    setState(() {
+      _erro = null;
+      if (inicio) {
+        _inicio = escolhido;
+        _inicioController.text = _formatarHora(escolhido);
+      } else {
+        _fim = escolhido;
+        _fimController.text = _formatarHora(escolhido);
+      }
+    });
   }
 
   Future<void> _salvar() async {
+    if (_salvando) return;
     if (!_formKey.currentState!.validate()) return;
 
-    if (_minutos(_fim) <= _minutos(_inicio)) {
+    if (!_intervaloValido) {
       setState(() => _erro = 'O horário de fim deve ser posterior ao início.');
       return;
     }
@@ -676,98 +1173,129 @@ class _FormularioBloqueioState extends State<_FormularioBloqueio> {
     }
   }
 
+  Widget _campoData() {
+    return _rotulado(
+      'Data',
+      TextFormField(
+        controller: _dataController,
+        readOnly: true,
+        enabled: !_salvando,
+        onTap: _escolherData,
+        style: const TextStyle(fontSize: 14, color: _corTexto),
+        decoration: _decoracaoForm(icone: Icons.calendar_today_outlined),
+      ),
+    );
+  }
+
+  Widget _campoHora(String rotulo, TextEditingController c, bool inicio) {
+    return _rotulado(
+      rotulo,
+      TextFormField(
+        controller: c,
+        readOnly: true,
+        enabled: !_salvando,
+        onTap: () => _escolherHorario(inicio: inicio),
+        style: const TextStyle(fontSize: 14, color: _corTexto),
+        decoration: _decoracaoForm(icone: Icons.access_time),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-      title: const Text('Bloquear Horário / Intervalo'),
-      content: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 400),
-        child: SingleChildScrollView(
-          child: Form(
-            key: _formKey,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Text(
-                  'Bloqueie um horário específico do dia para que clientes não possam agendar nele.',
-                  style: TextStyle(fontSize: 12, color: Colors.grey),
-                ),
-                const SizedBox(height: 14),
-                TextFormField(
-                  controller: _dataController,
-                  readOnly: true,
-                  onTap: _escolherData,
-                  decoration: decoracaoFormulario('Data').copyWith(
-                    suffixIcon: const Icon(Icons.calendar_today),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Row(
+    final telaEstreita = MediaQuery.of(context).size.width < 400;
+    final motivoAtual = _motivoController.text.trim();
+
+    return _DialogoPadrao(
+      cabecalho: _CabecalhoDialogo(
+        icone: Icons.block,
+        corIcone: _corErro,
+        corFundoIcone: _corErroFundo,
+        titulo: 'Bloquear horário',
+        subtitulo: 'Clientes não poderão agendar nesse intervalo.',
+        onFechar: _salvando ? null : () => Navigator.pop(context, false),
+      ),
+      corpo: Form(
+        key: _formKey,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _campoData(),
+            const SizedBox(height: 16),
+            if (telaEstreita) ...[
+              _campoHora('Início', _inicioController, true),
+              const SizedBox(height: 16),
+              _campoHora('Fim', _fimController, false),
+            ] else
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(child: _campoHora('Início', _inicioController, true)),
+                  const SizedBox(width: 12),
+                  Expanded(child: _campoHora('Fim', _fimController, false)),
+                ],
+              ),
+            if (_intervaloValido)
+              Padding(
+                padding: const EdgeInsets.only(top: 8, left: 2),
+                child: Row(
                   children: [
-                    Expanded(
-                      child: TextFormField(
-                        controller: _inicioController,
-                        readOnly: true,
-                        onTap: () => _escolherHorario(inicio: true),
-                        decoration: decoracaoFormulario('Início').copyWith(
-                          suffixIcon: const Icon(Icons.access_time),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: TextFormField(
-                        controller: _fimController,
-                        readOnly: true,
-                        onTap: () => _escolherHorario(inicio: false),
-                        decoration: decoracaoFormulario('Fim').copyWith(
-                          suffixIcon: const Icon(Icons.access_time),
-                        ),
-                      ),
+                    const Icon(Icons.timelapse, size: 14, color: _corSuave),
+                    const SizedBox(width: 6),
+                    Text(
+                      'Duração: ${_duracaoTexto(_minutos(_fim) - _minutos(_inicio))}',
+                      style: const TextStyle(fontSize: 12, color: _corSuave),
                     ),
                   ],
                 ),
-                const SizedBox(height: 12),
-                TextFormField(
-                  controller: _motivoController,
-                  decoration: decoracaoFormulario('Motivo / Observação'),
+              ),
+            const SizedBox(height: 16),
+            _rotulado(
+              'Motivo / Observação',
+              TextFormField(
+                controller: _motivoController,
+                enabled: !_salvando,
+                textCapitalization: TextCapitalization.sentences,
+                onChanged: (_) => setState(() {}),
+                style: const TextStyle(fontSize: 14, color: _corTexto),
+                decoration: _decoracaoForm(
+                  dica: 'Ex.: Consulta médica',
+                  icone: Icons.edit_note_rounded,
                 ),
-                if (_erro != null)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 10),
-                    child: Text(_erro!,
-                        style: TextStyle(color: Colors.red.shade700)),
+              ),
+            ),
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final m in _motivosRapidos)
+                  _chipOpcao(
+                    rotulo: m,
+                    selecionado: motivoAtual == m,
+                    onTap: _salvando
+                        ? null
+                        : () => setState(() => _motivoController.text = m),
                   ),
               ],
             ),
-          ),
+            if (_erro != null) _BannerErro(_erro!),
+          ],
         ),
       ),
-      actions: [
-        TextButton(
-          onPressed: _salvando ? null : () => Navigator.pop(context, false),
-          child: const Text('Cancelar'),
-        ),
-        ElevatedButton(
-          onPressed: _salvando ? null : _salvar,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: PainelCores.vinho,
-            foregroundColor: Colors.white,
-          ),
-          child: _salvando
-              ? const SizedBox(
-                  width: 18,
-                  height: 18,
-                  child: CircularProgressIndicator(
-                      strokeWidth: 2, color: Colors.white),
-                )
-              : const Text('Confirmar Bloqueio'),
-        ),
-      ],
+      rodape: _RodapeDialogo(
+        salvando: _salvando,
+        rotuloSalvar: 'Confirmar bloqueio',
+        onSalvar: _salvar,
+        onCancelar: () => Navigator.pop(context, false),
+      ),
     );
   }
 }
+
+// ---------------------------------------------------------------------------
+// Formulário de horário semanal
+// ---------------------------------------------------------------------------
 
 class _FormularioDisponibilidade extends StatefulWidget {
   final DisponibilidadeModel? bloco;
@@ -781,10 +1309,19 @@ class _FormularioDisponibilidade extends StatefulWidget {
 
 class _FormularioDisponibilidadeState
     extends State<_FormularioDisponibilidade> {
+  static const _atalhos = [
+    _Atalho('Manhã', Icons.wb_sunny_outlined, TimeOfDay(hour: 8, minute: 0),
+        TimeOfDay(hour: 12, minute: 0)),
+    _Atalho('Tarde', Icons.wb_twilight, TimeOfDay(hour: 13, minute: 0),
+        TimeOfDay(hour: 18, minute: 0)),
+    _Atalho('Dia todo', Icons.schedule, TimeOfDay(hour: 8, minute: 0),
+        TimeOfDay(hour: 18, minute: 0)),
+  ];
+
   final _formKey = GlobalKey<FormState>();
-  late int? _dia;
-  TimeOfDay? _inicio;
-  TimeOfDay? _fim;
+  late int _dia;
+  late TimeOfDay _inicio;
+  late TimeOfDay _fim;
   bool _ativo = true;
   bool _salvando = false;
   String? _erro;
@@ -793,6 +1330,8 @@ class _FormularioDisponibilidadeState
   final _fimController = TextEditingController();
 
   bool get _editando => widget.bloco != null;
+
+  bool get _intervaloValido => _minutos(_fim) > _minutos(_inicio);
 
   @override
   void initState() {
@@ -803,15 +1342,13 @@ class _FormularioDisponibilidadeState
       _inicio = _lerHora(b.horaInicio);
       _fim = _lerHora(b.horaFim);
       _ativo = b.ativo;
-      _inicioController.text = _formatarHora(_inicio!);
-      _fimController.text = _formatarHora(_fim!);
     } else {
       _dia = 0;
       _inicio = const TimeOfDay(hour: 8, minute: 0);
       _fim = const TimeOfDay(hour: 18, minute: 0);
-      _inicioController.text = _formatarHora(_inicio!);
-      _fimController.text = _formatarHora(_fim!);
     }
+    _inicioController.text = _formatarHora(_inicio);
+    _fimController.text = _formatarHora(_fim);
   }
 
   @override
@@ -821,29 +1358,39 @@ class _FormularioDisponibilidadeState
     super.dispose();
   }
 
+  void _aplicar(TimeOfDay inicio, TimeOfDay fim) {
+    setState(() {
+      _inicio = inicio;
+      _fim = fim;
+      _inicioController.text = _formatarHora(inicio);
+      _fimController.text = _formatarHora(fim);
+      _erro = null;
+    });
+    _formKey.currentState?.validate();
+  }
+
   Future<void> _escolherHorario({required bool inicio}) async {
-    final atual = inicio ? _inicio : _fim;
     final escolhido = await showTimePicker(
       context: context,
-      initialTime: atual ?? const TimeOfDay(hour: 8, minute: 0),
-      builder: (ctx, child) => MediaQuery(
-        data: MediaQuery.of(ctx).copyWith(alwaysUse24HourFormat: true),
-        child: child!,
+      initialTime: inicio ? _inicio : _fim,
+      builder: (ctx, child) => _temaSeletor(
+        ctx,
+        MediaQuery(
+          data: MediaQuery.of(ctx).copyWith(alwaysUse24HourFormat: true),
+          child: child!,
+        ),
       ),
     );
     if (escolhido == null) return;
-    setState(() {
-      if (inicio) {
-        _inicio = escolhido;
-        _inicioController.text = _formatarHora(escolhido);
-      } else {
-        _fim = escolhido;
-        _fimController.text = _formatarHora(escolhido);
-      }
-    });
+    if (inicio) {
+      _aplicar(escolhido, _fim);
+    } else {
+      _aplicar(_inicio, escolhido);
+    }
   }
 
   Future<void> _salvar() async {
+    if (_salvando) return;
     if (!_formKey.currentState!.validate()) return;
 
     setState(() {
@@ -853,8 +1400,8 @@ class _FormularioDisponibilidadeState
 
     final corpo = <String, dynamic>{
       'dia_semana': _dia,
-      'hora_inicio': '${_formatarHora(_inicio!)}:00',
-      'hora_fim': '${_formatarHora(_fim!)}:00',
+      'hora_inicio': '${_formatarHora(_inicio)}:00',
+      'hora_fim': '${_formatarHora(_fim)}:00',
       'ativo': _ativo,
     };
 
@@ -876,115 +1423,142 @@ class _FormularioDisponibilidadeState
     }
   }
 
+  Widget _campoHora(String rotulo, TextEditingController c, bool inicio) {
+    return _rotulado(
+      rotulo,
+      TextFormField(
+        controller: c,
+        readOnly: true,
+        enabled: !_salvando,
+        onTap: () => _escolherHorario(inicio: inicio),
+        style: const TextStyle(fontSize: 14, color: _corTexto),
+        decoration: _decoracaoForm(icone: Icons.access_time),
+        validator: (valor) {
+          if ((valor ?? '').isEmpty) {
+            return inicio
+                ? 'Informe o horário de início'
+                : 'Informe o horário de fim';
+          }
+          if (!inicio && !_intervaloValido) {
+            return 'O fim deve ser depois do início';
+          }
+          return null;
+        },
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-      title: Text(_editando ? 'Editar horário' : 'Novo horário'),
-      content: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 400),
-        child: SizedBox(
-          width: double.maxFinite,
-          child: Form(
-            key: _formKey,
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
+    final telaEstreita = MediaQuery.of(context).size.width < 400;
+
+    return _DialogoPadrao(
+      cabecalho: _CabecalhoDialogo(
+        icone: _editando ? Icons.edit_calendar_outlined : Icons.event_available,
+        titulo: _editando ? 'Editar horário' : 'Novo horário',
+        subtitulo: _editando
+            ? 'Atualize o bloco de atendimento semanal.'
+            : 'Defina um bloco de atendimento semanal.',
+        onFechar: _salvando ? null : () => Navigator.pop(context, false),
+      ),
+      corpo: Form(
+        key: _formKey,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _rotulado(
+              'Dia da semana',
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
                 children: [
-                  DropdownButtonFormField<int>(
-                    value: _dia,
-                    isExpanded: true,
-                    decoration: decoracaoFormulario('Dia da semana'),
-                    items: List.generate(
-                      7,
-                      (i) => DropdownMenuItem(
-                        value: i,
-                        child: Text(_nomesDias[i]),
-                      ),
-                    ),
-                    onChanged:
-                        _salvando ? null : (v) => setState(() => _dia = v),
-                    validator: (v) => v == null ? 'Escolha o dia' : null,
-                  ),
-                  const SizedBox(height: 12),
-                  TextFormField(
-                    controller: _inicioController,
-                    readOnly: true,
-                    enabled: !_salvando,
-                    onTap: () => _escolherHorario(inicio: true),
-                    decoration: decoracaoFormulario('Início').copyWith(
-                      suffixIcon: const Icon(Icons.access_time),
-                    ),
-                    validator: (valor) => (valor ?? '').isEmpty
-                        ? 'Informe o horário de início'
-                        : null,
-                  ),
-                  const SizedBox(height: 12),
-                  TextFormField(
-                    controller: _fimController,
-                    readOnly: true,
-                    enabled: !_salvando,
-                    onTap: () => _escolherHorario(inicio: false),
-                    decoration: decoracaoFormulario('Fim').copyWith(
-                      suffixIcon: const Icon(Icons.access_time),
-                    ),
-                    validator: (valor) {
-                      if ((valor ?? '').isEmpty) {
-                        return 'Informe o horário de fim';
-                      }
-                      if (_inicio != null &&
-                          _fim != null &&
-                          _minutos(_fim!) <= _minutos(_inicio!)) {
-                        return 'O fim deve ser depois do início';
-                      }
-                      return null;
-                    },
-                  ),
-                  SwitchListTile(
-                    contentPadding: EdgeInsets.zero,
-                    title: const Text('Ativo'),
-                    value: _ativo,
-                    activeColor: PainelCores.vinho,
-                    onChanged:
-                        _salvando ? null : (v) => setState(() => _ativo = v),
-                  ),
-                  if (_erro != null)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 12),
-                      child: Text(
-                        _erro!,
-                        style: TextStyle(color: Colors.red.shade700),
-                      ),
+                  for (var i = 0; i < 7; i++)
+                    _chipOpcao(
+                      rotulo: _diasCurtos[i],
+                      selecionado: _dia == i,
+                      onTap: _salvando ? null : () => setState(() => _dia = i),
                     ),
                 ],
               ),
             ),
-          ),
+            Padding(
+              padding: const EdgeInsets.only(top: 6, left: 2),
+              child: Text(
+                _nomesDias[_dia],
+                style: const TextStyle(fontSize: 12, color: _corSuave),
+              ),
+            ),
+            const SizedBox(height: 16),
+            _rotulado(
+              'Atalhos',
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  for (final a in _atalhos)
+                    _chipOpcao(
+                      rotulo: a.rotulo,
+                      icone: a.icone,
+                      selecionado: _inicio == a.inicio && _fim == a.fim,
+                      onTap: _salvando ? null : () => _aplicar(a.inicio, a.fim),
+                    ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            if (telaEstreita) ...[
+              _campoHora('Início', _inicioController, true),
+              const SizedBox(height: 16),
+              _campoHora('Fim', _fimController, false),
+            ] else
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(child: _campoHora('Início', _inicioController, true)),
+                  const SizedBox(width: 12),
+                  Expanded(child: _campoHora('Fim', _fimController, false)),
+                ],
+              ),
+            if (_intervaloValido)
+              Padding(
+                padding: const EdgeInsets.only(top: 8, left: 2),
+                child: Row(
+                  children: [
+                    const Icon(Icons.timelapse, size: 14, color: _corSuave),
+                    const SizedBox(width: 6),
+                    Text(
+                      'Duração: ${_duracaoTexto(_minutos(_fim) - _minutos(_inicio))}',
+                      style: const TextStyle(fontSize: 12, color: _corSuave),
+                    ),
+                  ],
+                ),
+              ),
+            const SizedBox(height: 16),
+            _BlocoSwitch(
+              titulo: 'Horário ativo',
+              subtitulo: 'Disponível para as clientes agendarem.',
+              valor: _ativo,
+              onChanged: _salvando ? null : (v) => setState(() => _ativo = v),
+            ),
+            if (_erro != null) _BannerErro(_erro!),
+          ],
         ),
       ),
-      actions: [
-        TextButton(
-          onPressed: _salvando ? null : () => Navigator.pop(context, false),
-          child: const Text('Cancelar'),
-        ),
-        ElevatedButton(
-          onPressed: _salvando ? null : _salvar,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: PainelCores.vinho,
-            foregroundColor: Colors.white,
-          ),
-          child: _salvando
-              ? const SizedBox(
-                  width: 18,
-                  height: 18,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: Colors.white,
-                  ),
-                )
-              : const Text('Salvar'),
-        ),
-      ],
+      rodape: _RodapeDialogo(
+        salvando: _salvando,
+        rotuloSalvar: _editando ? 'Salvar alterações' : 'Criar horário',
+        onSalvar: _salvar,
+        onCancelar: () => Navigator.pop(context, false),
+      ),
     );
   }
+}
+
+class _Atalho {
+  final String rotulo;
+  final IconData icone;
+  final TimeOfDay inicio;
+  final TimeOfDay fim;
+
+  const _Atalho(this.rotulo, this.icone, this.inicio, this.fim);
 }
