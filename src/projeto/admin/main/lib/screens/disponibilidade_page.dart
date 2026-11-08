@@ -187,75 +187,95 @@ class _DisponibilidadePageState extends State<DisponibilidadePage>
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            TabBar(
-              controller: _tabController,
-              isScrollable: true,
-              labelColor: PainelCores.vinho,
-              unselectedLabelColor: Colors.grey.shade600,
-              indicatorColor: PainelCores.vinho,
-              tabs: [
-                Tab(
-                  child: Row(
-                    children: [
-                      const Icon(Icons.calendar_view_week, size: 18),
-                      const SizedBox(width: 8),
-                      Text('Horários Semanais (${_blocos.length})'),
-                    ],
-                  ),
-                ),
-                Tab(
-                  child: Row(
-                    children: [
-                      const Icon(Icons.block, size: 18),
-                      const SizedBox(width: 8),
-                      Text('Horários Bloqueados (${_bloqueios.length})'),
-                    ],
-                  ),
-                ),
-              ],
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final estreito = constraints.maxWidth < _larguraMinimaTabela;
+
+        final tabBar = TabBar(
+          controller: _tabController,
+          isScrollable: true,
+          tabAlignment: TabAlignment.start,
+          labelColor: PainelCores.vinho,
+          unselectedLabelColor: Colors.grey.shade600,
+          indicatorColor: PainelCores.vinho,
+          tabs: [
+            Tab(
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.calendar_view_week, size: 18),
+                  const SizedBox(width: 8),
+                  Text('Semanais (${_blocos.length})'),
+                ],
+              ),
             ),
-            Row(
-              children: [
-                OutlinedButton.icon(
-                  onPressed: _abrirFormularioBloqueio,
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: Colors.red.shade700,
-                    side: BorderSide(color: Colors.red.shade300),
-                  ),
-                  icon: const Icon(Icons.block, size: 16),
-                  label: const Text('Bloquear Horário'),
-                ),
-                const SizedBox(width: 8),
-                ElevatedButton.icon(
-                  onPressed: () => _abrirFormulario(),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: PainelCores.vinho,
-                    foregroundColor: Colors.white,
-                  ),
-                  icon: const Icon(Icons.add, size: 16),
-                  label: const Text('Novo Bloco Semanal'),
-                ),
-              ],
+            Tab(
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.block, size: 18),
+                  const SizedBox(width: 8),
+                  Text('Bloqueados (${_bloqueios.length})'),
+                ],
+              ),
             ),
           ],
-        ),
-        const SizedBox(height: 16),
-        Expanded(
-          child: TabBarView(
-            controller: _tabController,
-            children: [
-              _conteudoSemanal(),
-              _conteudoBloqueios(),
-            ],
-          ),
-        ),
-      ],
+        );
+
+        final botoes = Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            OutlinedButton.icon(
+              onPressed: _abrirFormularioBloqueio,
+              style: OutlinedButton.styleFrom(
+                foregroundColor: Colors.red.shade700,
+                side: BorderSide(color: Colors.red.shade300),
+              ),
+              icon: const Icon(Icons.block, size: 16),
+              label: const Text('Bloquear Horário'),
+            ),
+            ElevatedButton.icon(
+              onPressed: () => _abrirFormulario(),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: PainelCores.vinho,
+                foregroundColor: Colors.white,
+              ),
+              icon: const Icon(Icons.add, size: 16),
+              label: const Text('Novo Bloco Semanal'),
+            ),
+          ],
+        );
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (estreito) ...[
+              tabBar,
+              const SizedBox(height: 12),
+              botoes,
+            ] else
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Flexible(child: tabBar),
+                  const SizedBox(width: 16),
+                  botoes,
+                ],
+              ),
+            const SizedBox(height: 16),
+            Expanded(
+              child: TabBarView(
+                controller: _tabController,
+                children: [
+                  _conteudoSemanal(),
+                  _conteudoBloqueios(),
+                ],
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -293,27 +313,36 @@ class _DisponibilidadePageState extends State<DisponibilidadePage>
     }
     if (_bloqueios.isEmpty) {
       return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.check_circle_outline, size: 48, color: Colors.grey.shade400),
-            const SizedBox(height: 12),
-            const Text(
-              'Nenhum horário bloqueado pontualmente.',
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 6),
-            const Text(
-              'Use o botão "Bloquear Horário" acima para cancelar ou fechar um horário específico do dia.',
-              style: TextStyle(color: Colors.grey, fontSize: 13),
-            ),
-          ],
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.check_circle_outline,
+                  size: 48, color: Colors.grey.shade400),
+              const SizedBox(height: 12),
+              const Text(
+                'Nenhum horário bloqueado pontualmente.',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 6),
+              const Text(
+                'Use o botão "Bloquear Horário" acima para cancelar ou fechar um horário específico do dia.',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.grey, fontSize: 13),
+              ),
+            ],
+          ),
         ),
       );
     }
 
     return LayoutBuilder(
       builder: (context, constraints) {
+        if (constraints.maxWidth < _larguraMinimaTabela) {
+          return _listaCardsBloqueios();
+        }
         return SingleChildScrollView(
           child: SingleChildScrollView(
             scrollDirection: Axis.horizontal,
@@ -337,7 +366,8 @@ class _DisponibilidadePageState extends State<DisponibilidadePage>
                     DataCell(Text(b.motivo ?? 'Bloqueio administrativo')),
                     DataCell(
                       IconButton(
-                        icon: Icon(Icons.delete_outline, color: Colors.red.shade700),
+                        icon: Icon(Icons.delete_outline,
+                            color: Colors.red.shade700),
                         tooltip: 'Desbloquear horário',
                         onPressed: () => _excluirBloqueio(b),
                       ),
@@ -475,6 +505,59 @@ class _DisponibilidadePageState extends State<DisponibilidadePage>
       ),
     );
   }
+
+  Widget _listaCardsBloqueios() {
+    return ListView.separated(
+      itemCount: _bloqueios.length,
+      separatorBuilder: (_, __) => const SizedBox(height: 12),
+      itemBuilder: (_, i) => _cartaoBloqueio(_bloqueios[i]),
+    );
+  }
+
+  Widget _cartaoBloqueio(BloqueioModel b) {
+    return Card(
+      elevation: 0,
+      margin: EdgeInsets.zero,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: Colors.grey.shade300),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 14, 8, 8),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    b.dataTexto,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: PainelCores.vinho,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text('${b.horaInicioTexto} às ${b.horaFimTexto}'),
+                  const SizedBox(height: 4),
+                  Text(
+                    b.motivo ?? 'Bloqueio administrativo',
+                    style: const TextStyle(color: Colors.grey, fontSize: 13),
+                  ),
+                ],
+              ),
+            ),
+            IconButton(
+              icon: Icon(Icons.delete_outline, color: Colors.red.shade700),
+              tooltip: 'Desbloquear horário',
+              onPressed: () => _excluirBloqueio(b),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 class _FormularioBloqueio extends StatefulWidget {
@@ -489,7 +572,8 @@ class _FormularioBloqueioState extends State<_FormularioBloqueio> {
   final _dataController = TextEditingController();
   final _inicioController = TextEditingController();
   final _fimController = TextEditingController();
-  final _motivoController = TextEditingController(text: 'Indisponibilidade / Pausa');
+  final _motivoController =
+      TextEditingController(text: 'Indisponibilidade / Pausa');
 
   DateTime _data = DateTime.now();
   TimeOfDay _inicio = const TimeOfDay(hour: 14, minute: 0);
@@ -595,64 +679,68 @@ class _FormularioBloqueioState extends State<_FormularioBloqueio> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
+      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
       title: const Text('Bloquear Horário / Intervalo'),
       content: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 400),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text(
-                'Bloqueie um horário específico do dia para que clientes não possam agendar nele.',
-                style: TextStyle(fontSize: 12, color: Colors.grey),
-              ),
-              const SizedBox(height: 14),
-              TextFormField(
-                controller: _dataController,
-                readOnly: true,
-                onTap: _escolherData,
-                decoration: decoracaoFormulario('Data').copyWith(
-                  suffixIcon: const Icon(Icons.calendar_today),
+        child: SingleChildScrollView(
+          child: Form(
+            key: _formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'Bloqueie um horário específico do dia para que clientes não possam agendar nele.',
+                  style: TextStyle(fontSize: 12, color: Colors.grey),
                 ),
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextFormField(
-                      controller: _inicioController,
-                      readOnly: true,
-                      onTap: () => _escolherHorario(inicio: true),
-                      decoration: decoracaoFormulario('Início').copyWith(
-                        suffixIcon: const Icon(Icons.access_time),
+                const SizedBox(height: 14),
+                TextFormField(
+                  controller: _dataController,
+                  readOnly: true,
+                  onTap: _escolherData,
+                  decoration: decoracaoFormulario('Data').copyWith(
+                    suffixIcon: const Icon(Icons.calendar_today),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextFormField(
+                        controller: _inicioController,
+                        readOnly: true,
+                        onTap: () => _escolherHorario(inicio: true),
+                        decoration: decoracaoFormulario('Início').copyWith(
+                          suffixIcon: const Icon(Icons.access_time),
+                        ),
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: TextFormField(
-                      controller: _fimController,
-                      readOnly: true,
-                      onTap: () => _escolherHorario(inicio: false),
-                      decoration: decoracaoFormulario('Fim').copyWith(
-                        suffixIcon: const Icon(Icons.access_time),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: TextFormField(
+                        controller: _fimController,
+                        readOnly: true,
+                        onTap: () => _escolherHorario(inicio: false),
+                        decoration: decoracaoFormulario('Fim').copyWith(
+                          suffixIcon: const Icon(Icons.access_time),
+                        ),
                       ),
                     ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: _motivoController,
-                decoration: decoracaoFormulario('Motivo / Observação'),
-              ),
-              if (_erro != null)
-                Padding(
-                  padding: const EdgeInsets.only(top: 10),
-                  child: Text(_erro!, style: TextStyle(color: Colors.red.shade700)),
+                  ],
                 ),
-            ],
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _motivoController,
+                  decoration: decoracaoFormulario('Motivo / Observação'),
+                ),
+                if (_erro != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 10),
+                    child: Text(_erro!,
+                        style: TextStyle(color: Colors.red.shade700)),
+                  ),
+              ],
+            ),
           ),
         ),
       ),
@@ -671,7 +759,8 @@ class _FormularioBloqueioState extends State<_FormularioBloqueio> {
               ? const SizedBox(
                   width: 18,
                   height: 18,
-                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                  child: CircularProgressIndicator(
+                      strokeWidth: 2, color: Colors.white),
                 )
               : const Text('Confirmar Bloqueio'),
         ),

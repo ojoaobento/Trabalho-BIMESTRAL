@@ -6,6 +6,11 @@ import 'package:main/widgets/painel_widgets.dart';
 
 const double _larguraMinimaTabela = 720;
 
+const Color _corTexto = Color(0xFF4A1026);
+const Color _corSuave = Color(0xFF976D7B);
+const Color _corBorda = Color(0xFFF1DDE5);
+const Color _corFundoSuave = Color(0xFFFFF8FA);
+
 String _dois(int n) => n.toString().padLeft(2, '0');
 
 String _formatarData(DateTime d) => '${_dois(d.day)}/${_dois(d.month)}/${d.year}';
@@ -13,6 +18,103 @@ String _formatarData(DateTime d) => '${_dois(d.day)}/${_dois(d.month)}/${d.year}
 String _dataApi(DateTime d) => '${d.year}-${_dois(d.month)}-${_dois(d.day)}';
 
 String _formatarHora(TimeOfDay t) => '${_dois(t.hour)}:${_dois(t.minute)}';
+
+/// Tema usado nos calendários, relógio e diálogos desta tela: troca o roxo
+/// padrão do Material pelo vinho do painel e tira o tom (surface tint) das
+/// superfícies.
+ThemeData _temaPainel(BuildContext context) {
+  final base = Theme.of(context);
+  final vinho = PainelCores.vinho;
+
+  Color? selecionado(Set<WidgetState> s, Color com, [Color? senao]) =>
+      s.contains(WidgetState.selected) ? com : senao;
+
+  return base.copyWith(
+    colorScheme: base.colorScheme.copyWith(
+      primary: vinho,
+      onPrimary: Colors.white,
+      secondary: vinho,
+      surface: Colors.white,
+      onSurface: _corTexto,
+      surfaceTint: Colors.transparent,
+    ),
+    textSelectionTheme: TextSelectionThemeData(
+      cursorColor: vinho,
+      selectionColor: vinho.withOpacity(.2),
+      selectionHandleColor: vinho,
+    ),
+    datePickerTheme: DatePickerThemeData(
+      backgroundColor: Colors.white,
+      surfaceTintColor: Colors.transparent,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+      headerBackgroundColor: vinho,
+      headerForegroundColor: Colors.white,
+      dayForegroundColor: WidgetStateProperty.resolveWith(
+        (s) => s.contains(WidgetState.selected)
+            ? Colors.white
+            : s.contains(WidgetState.disabled)
+                ? Colors.grey.shade400
+                : _corTexto,
+      ),
+      dayBackgroundColor: WidgetStateProperty.resolveWith(
+        (s) => selecionado(s, vinho),
+      ),
+      todayForegroundColor: WidgetStateProperty.resolveWith(
+        (s) => selecionado(s, Colors.white, vinho),
+      ),
+      todayBackgroundColor: WidgetStateProperty.resolveWith(
+        (s) => selecionado(s, vinho),
+      ),
+      todayBorder: BorderSide(color: vinho),
+      yearForegroundColor: WidgetStateProperty.resolveWith(
+        (s) => selecionado(s, Colors.white, _corTexto),
+      ),
+      yearBackgroundColor: WidgetStateProperty.resolveWith(
+        (s) => selecionado(s, vinho),
+      ),
+      rangePickerBackgroundColor: Colors.white,
+      rangePickerSurfaceTintColor: Colors.transparent,
+      rangePickerHeaderBackgroundColor: vinho,
+      rangePickerHeaderForegroundColor: Colors.white,
+      rangeSelectionBackgroundColor: vinho.withOpacity(.12),
+      dividerColor: _corBorda,
+      cancelButtonStyle: TextButton.styleFrom(foregroundColor: _corSuave),
+      confirmButtonStyle: TextButton.styleFrom(foregroundColor: vinho),
+    ),
+    timePickerTheme: TimePickerThemeData(
+      backgroundColor: Colors.white,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+      hourMinuteShape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(14),
+      ),
+      hourMinuteColor: WidgetStateColor.resolveWith(
+        (s) => s.contains(WidgetState.selected)
+            ? vinho.withOpacity(.12)
+            : _corFundoSuave,
+      ),
+      hourMinuteTextColor: WidgetStateColor.resolveWith(
+        (s) => s.contains(WidgetState.selected) ? vinho : _corTexto,
+      ),
+      dialHandColor: vinho,
+      dialBackgroundColor: _corFundoSuave,
+      dialTextColor: WidgetStateColor.resolveWith(
+        (s) => s.contains(WidgetState.selected) ? Colors.white : _corTexto,
+      ),
+      entryModeIconColor: vinho,
+      dayPeriodColor: WidgetStateColor.resolveWith(
+        (s) => s.contains(WidgetState.selected)
+            ? vinho.withOpacity(.12)
+            : Colors.transparent,
+      ),
+      dayPeriodTextColor: WidgetStateColor.resolveWith(
+        (s) => s.contains(WidgetState.selected) ? vinho : _corSuave,
+      ),
+      dayPeriodBorderSide: const BorderSide(color: _corBorda),
+      cancelButtonStyle: TextButton.styleFrom(foregroundColor: _corSuave),
+      confirmButtonStyle: TextButton.styleFrom(foregroundColor: vinho),
+    ),
+  );
+}
 
 final Map<StatusAgendamento, Color> _coresStatus = {
   StatusAgendamento.reservado: Colors.blueGrey,
@@ -119,6 +221,14 @@ class _AgendamentoPageState extends State<AgendamentoPage> {
       firstDate: DateTime(2024),
       lastDate: DateTime(2100),
       initialDateRange: _periodo,
+      helpText: 'Selecione o período',
+      saveText: 'Aplicar',
+      cancelText: 'Cancelar',
+      confirmText: 'Aplicar',
+      fieldStartHintText: 'Início',
+      fieldEndHintText: 'Fim',
+      errorInvalidRangeText: 'Período inválido',
+      builder: (ctx, child) => Theme(data: _temaPainel(ctx), child: child!),
     );
     if (escolhido == null) return;
     setState(() => _periodo = escolhido);
@@ -134,11 +244,15 @@ class _AgendamentoPageState extends State<AgendamentoPage> {
     final resposta = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
         title: Text(titulo),
         content: Text(mensagem),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
+            style: TextButton.styleFrom(foregroundColor: _corSuave),
             child: const Text('Voltar'),
           ),
           ElevatedButton(
@@ -242,7 +356,13 @@ class _AgendamentoPageState extends State<AgendamentoPage> {
         ),
         OutlinedButton.icon(
           onPressed: _escolherPeriodo,
-          style: OutlinedButton.styleFrom(foregroundColor: PainelCores.vinho),
+          style: OutlinedButton.styleFrom(
+            foregroundColor: PainelCores.vinho,
+            side: const BorderSide(color: _corBorda),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
           icon: const Icon(Icons.date_range),
           label: Text(
             periodo == null
@@ -259,6 +379,8 @@ class _AgendamentoPageState extends State<AgendamentoPage> {
         DropdownButton<StatusAgendamento?>(
           value: _statusFiltro,
           isDense: true,
+          dropdownColor: Colors.white,
+          borderRadius: BorderRadius.circular(12),
           items: [
             const DropdownMenuItem(value: null, child: Text('Todos os status')),
             ...StatusAgendamento.values.map(
@@ -364,6 +486,11 @@ class _AgendamentoPageState extends State<AgendamentoPage> {
           icon: const Icon(Icons.swap_horiz),
           tooltip: 'Alterar status',
           enabled: proximos.isNotEmpty,
+          color: Colors.white,
+          surfaceTintColor: Colors.transparent,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
           onSelected: (novo) => _alterarStatus(a, novo),
           itemBuilder: (_) => proximos
               .map((s) => PopupMenuItem(
@@ -420,6 +547,8 @@ class _AgendamentoPageState extends State<AgendamentoPage> {
     return Card(
       elevation: 0,
       margin: EdgeInsets.zero,
+      color: Colors.white,
+      surfaceTintColor: Colors.transparent,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
         side: BorderSide(color: Colors.grey.shade300),
@@ -530,6 +659,10 @@ class _FormularioRemarcarState extends State<_FormularioRemarcar> {
       initialDate: _data.isBefore(hoje) ? hoje : _data,
       firstDate: hoje,
       lastDate: DateTime(hoje.year + 1, hoje.month, hoje.day),
+      helpText: 'Escolha a nova data',
+      cancelText: 'Cancelar',
+      confirmText: 'Confirmar',
+      builder: (ctx, child) => Theme(data: _temaPainel(ctx), child: child!),
     );
     if (escolhida == null) return;
     setState(() {
@@ -542,9 +675,17 @@ class _FormularioRemarcarState extends State<_FormularioRemarcar> {
     final escolhida = await showTimePicker(
       context: context,
       initialTime: _hora,
-      builder: (ctx, child) => MediaQuery(
-        data: MediaQuery.of(ctx).copyWith(alwaysUse24HourFormat: true),
-        child: child!,
+      helpText: 'Horário de início',
+      cancelText: 'Cancelar',
+      confirmText: 'Confirmar',
+      hourLabelText: 'Hora',
+      minuteLabelText: 'Minuto',
+      builder: (ctx, child) => Theme(
+        data: _temaPainel(ctx),
+        child: MediaQuery(
+          data: MediaQuery.of(ctx).copyWith(alwaysUse24HourFormat: true),
+          child: child!,
+        ),
       ),
     );
     if (escolhida == null) return;
@@ -586,94 +727,103 @@ class _FormularioRemarcarState extends State<_FormularioRemarcar> {
     final a = widget.agendamento;
     final duracao = a.servico?.duracaoMinutos;
 
-    return AlertDialog(
-      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-      title: const Text('Remarcar agendamento'),
-      content: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 400),
-        child: SizedBox(
-          width: double.maxFinite,
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '${a.cliente?.nome ?? 'Cliente'} • ${a.servico?.nome ?? 'Serviço'}',
-                  style: const TextStyle(fontWeight: FontWeight.w600),
-                ),
-                if (duracao != null)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 4),
-                    child: Text(
-                      'Duração: $duracao min. O horário de término é calculado automaticamente.',
-                      style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+    return Theme(
+      data: _temaPainel(context),
+      child: AlertDialog(
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+        insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+        title: const Text('Remarcar agendamento'),
+        content: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 400),
+          child: SizedBox(
+            width: double.maxFinite,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '${a.cliente?.nome ?? 'Cliente'} • ${a.servico?.nome ?? 'Serviço'}',
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                  if (duracao != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Text(
+                        'Duração: $duracao min. O horário de término é calculado automaticamente.',
+                        style: TextStyle(
+                            fontSize: 12, color: Colors.grey.shade600),
+                      ),
+                    ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: _dataController,
+                    readOnly: true,
+                    enabled: !_salvando,
+                    onTap: _escolherData,
+                    decoration: decoracaoFormulario('Data').copyWith(
+                      suffixIcon: const Icon(Icons.calendar_today_outlined),
                     ),
                   ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: _dataController,
-                  readOnly: true,
-                  enabled: !_salvando,
-                  onTap: _escolherData,
-                  decoration: decoracaoFormulario('Data').copyWith(
-                    suffixIcon: const Icon(Icons.calendar_today_outlined),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: _horaController,
-                  readOnly: true,
-                  enabled: !_salvando,
-                  onTap: _escolherHora,
-                  decoration: decoracaoFormulario('Horário de início').copyWith(
-                    suffixIcon: const Icon(Icons.access_time),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: _obsController,
-                  enabled: !_salvando,
-                  maxLines: 3,
-                  maxLength: 500,
-                  decoration: decoracaoFormulario('Observações (opcional)'),
-                ),
-                if (_erro != null)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 4),
-                    child: Text(
-                      _erro!,
-                      style: TextStyle(color: Colors.red.shade700),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: _horaController,
+                    readOnly: true,
+                    enabled: !_salvando,
+                    onTap: _escolherHora,
+                    decoration:
+                        decoracaoFormulario('Horário de início').copyWith(
+                      suffixIcon: const Icon(Icons.access_time),
                     ),
                   ),
-              ],
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: _obsController,
+                    enabled: !_salvando,
+                    maxLines: 3,
+                    maxLength: 500,
+                    decoration: decoracaoFormulario('Observações (opcional)'),
+                  ),
+                  if (_erro != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Text(
+                        _erro!,
+                        style: TextStyle(color: Colors.red.shade700),
+                      ),
+                    ),
+                ],
+              ),
             ),
           ),
         ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: _salvando ? null : () => Navigator.pop(context, false),
-          child: const Text('Cancelar'),
-        ),
-        ElevatedButton(
-          onPressed: _salvando ? null : _salvar,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: PainelCores.vinho,
-            foregroundColor: Colors.white,
+        actions: [
+          TextButton(
+            onPressed: _salvando ? null : () => Navigator.pop(context, false),
+            style: TextButton.styleFrom(foregroundColor: _corSuave),
+            child: const Text('Cancelar'),
           ),
-          child: _salvando
-              ? const SizedBox(
-                  width: 18,
-                  height: 18,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: Colors.white,
-                  ),
-                )
-              : const Text('Salvar'),
-        ),
-      ],
+          ElevatedButton(
+            onPressed: _salvando ? null : _salvar,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: PainelCores.vinho,
+              foregroundColor: Colors.white,
+            ),
+            child: _salvando
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
+                  )
+                : const Text('Salvar'),
+          ),
+        ],
+      ),
     );
   }
 }

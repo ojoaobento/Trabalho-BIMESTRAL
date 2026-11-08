@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_svg/flutter_svg.dart';
+import 'package:main/models/rascunho_cliente.dart';
 import 'package:main/data/sessao_cliente.dart';
 import 'package:main/models/servico.dart';
 import 'package:main/ui/screens/revisao_page.dart';
@@ -39,7 +39,29 @@ class _IdentificacaoPageState extends State<IdentificacaoPage> {
   @override
   void initState() {
     super.initState();
+
+    // Voltou de "Editar serviço": recupera o que ela já tinha digitado.
+    final rascunho = RascunhoCliente.atual;
+
+    if (rascunho != null) {
+      _nomeController.text = rascunho.nome;
+      _telefoneController.text = rascunho.telefone;
+      _emailController.text = rascunho.email;
+      _autorizouDados = rascunho.autorizouDados;
+      _autorizouEmail = rascunho.autorizouEmail;
+    }
+
     _preencherComSessao();
+  }
+
+  void _salvarRascunho() {
+    RascunhoCliente.atual = RascunhoCliente(
+      nome: _nomeController.text,
+      telefone: _telefoneController.text,
+      email: _emailController.text,
+      autorizouDados: _autorizouDados,
+      autorizouEmail: _autorizouEmail,
+    );
   }
 
   /// Se a cliente já entrou em "Meus agendamentos" neste aparelho, usa os
@@ -49,7 +71,7 @@ class _IdentificacaoPageState extends State<IdentificacaoPage> {
 
     if (!mounted || sessao == null) return;
 
-    // Não sobrescreve o que ela já tenha começado a digitar.
+    // Não sobrescreve o que já veio do rascunho ou que ela já tenha digitado.
     if (_nomeController.text.isNotEmpty ||
         _telefoneController.text.isNotEmpty ||
         _emailController.text.isNotEmpty) {
@@ -72,6 +94,7 @@ class _IdentificacaoPageState extends State<IdentificacaoPage> {
       _dadosDaConta = false;
     });
 
+    RascunhoCliente.limpar();
     _formKey.currentState?.reset();
   }
 
@@ -115,6 +138,10 @@ class _IdentificacaoPageState extends State<IdentificacaoPage> {
       return;
     }
 
+    // Guarda antes de seguir: se ela voltar para trocar o serviço, os dados
+    // reaparecem preenchidos.
+    _salvarRascunho();
+
     final nome = _nomeController.text.trim();
     final email = _emailController.text.trim();
 
@@ -135,16 +162,6 @@ class _IdentificacaoPageState extends State<IdentificacaoPage> {
           email: email,
           aceitaLembretes: _autorizouEmail,
           consentimento: _autorizouDados,
-        ),
-      ),
-    );
-  }
-
-  void _continuarComGoogle() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text(
-          'O login com Google ainda não está disponível.',
         ),
       ),
     );
@@ -189,26 +206,7 @@ class _IdentificacaoPageState extends State<IdentificacaoPage> {
                         color: Color(0xFF976D7B),
                       ),
                     ),
-                    const SizedBox(height: 12),
-                    _botaoGoogle(),
-                    const SizedBox(height: 10),
-                    const Row(
-                      children: [
-                        Expanded(child: Divider(color: _corBorda)),
-                        Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 10),
-                          child: Text(
-                            'OU PREENCHA ABAIXO',
-                            style: TextStyle(
-                              fontSize: 9,
-                              color: Color(0xFF976D7B),
-                            ),
-                          ),
-                        ),
-                        Expanded(child: Divider(color: _corBorda)),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 16),
                     _campo(
                       'Nome completo *',
                       _nomeController,
@@ -417,7 +415,11 @@ class _IdentificacaoPageState extends State<IdentificacaoPage> {
     return Row(
       children: [
         IconButton(
-          onPressed: () => Navigator.pop(context),
+          onPressed: () {
+            // Voltar para trocar o serviço não pode apagar o que ela digitou.
+            _salvarRascunho();
+            Navigator.pop(context);
+          },
           style: IconButton.styleFrom(
             backgroundColor: Colors.white,
             side: const BorderSide(color: _corBorda),
@@ -525,34 +527,6 @@ class _IdentificacaoPageState extends State<IdentificacaoPage> {
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _botaoGoogle() {
-    return SizedBox(
-      width: double.infinity,
-      child: OutlinedButton.icon(
-        onPressed: _continuarComGoogle,
-        style: OutlinedButton.styleFrom(
-          foregroundColor: _corTexto,
-          backgroundColor: Colors.white,
-          surfaceTintColor: Colors.white,
-          side: const BorderSide(color: _corBorda),
-          padding: const EdgeInsets.symmetric(vertical: 12),
-        ),
-        icon: SvgPicture.asset(
-          'assets/icons/google_g.svg',
-          width: 18,
-          height: 18,
-        ),
-        label: const Text(
-          'Continuar com o Google',
-          style: TextStyle(
-            fontSize: 11,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
       ),
     );
   }

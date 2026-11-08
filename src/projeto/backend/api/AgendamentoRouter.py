@@ -1,5 +1,5 @@
 from datetime import datetime
- 
+
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.orm import Session
 from core.dependencies import get_usuario_logado
@@ -24,6 +24,7 @@ from services.LembreteService import LembreteService
 from models.Usuario import Usuario
 from datetime import date, time
 from core.feriados import listar_feriados_ano
+from api.MeusAgendamentos import cliente_ja_cadastrado, token_de_sessao
 
 router = APIRouter(prefix="/agendamentos", tags=["Agendamentos"])
 
@@ -43,10 +44,30 @@ def get_service(db: Session = Depends(get_db)) -> AgendamentoService:
 
 
 @router.post("", response_model=AgendamentoPublicoResponse, status_code=status.HTTP_201_CREATED)
-def criar(dados: AgendamentoRequest, service: AgendamentoService = Depends(get_service)):
-    return service.criar(dados)
- 
- 
+def criar(
+    dados: AgendamentoRequest,
+    db: Session = Depends(get_db),
+    service: AgendamentoService = Depends(get_service),
+):
+    # Tem que vir ANTES de criar: depois, a cliente já existe no banco.
+    ja_existia = cliente_ja_cadastrado(db, dados.cliente.email, dados.cliente.telefone)
+
+    agendamento = service.criar(dados)
+
+    # Pydantic v1: use AgendamentoPublicoResponse.from_orm(agendamento).
+    # Se service.criar já devolver dict/schema pronto, remova esta linha
+    # e só atribua o token_acesso abaixo.
+    resposta = AgendamentoPublicoResponse.model_validate(agendamento)
+
+    # Só cliente nova ganha token automático (e-mail não é verificado aqui).
+    if not ja_existia:
+        cliente = ClienteRepository(db).buscar_por_id(agendamento.cliente_id)
+        if cliente is not None:
+            resposta.token_acesso = token_de_sessao(cliente)
+
+    return resposta
+
+
 @router.get("", response_model=list[AgendamentoResponse], dependencies=[Depends(get_usuario_logado)])
 def listar(
     cliente_id: int | None = None,
@@ -59,7 +80,7 @@ def listar(
     if inicio is not None and fim is not None:
         return service.listar_por_periodo(inicio, fim)
     return service.listar()
- 
+
 @router.get("/feriados", response_model=dict[str, str])
 def feriados(ano: int = date.today().year):
     return listar_feriados_ano(ano)
@@ -67,11 +88,11 @@ def feriados(ano: int = date.today().year):
 @router.get("/horarios-livres", response_model=list[HorarioLivreResponse])
 def horarios_livres(data: date, service: AgendamentoService = Depends(get_service)):
     return service.horarios_livres(data)
- 
+
 @router.get("/{agendamento_id}", response_model=AgendamentoResponse, dependencies=[Depends(get_usuario_logado)])
 def buscar(agendamento_id: int, service: AgendamentoService = Depends(get_service)):
     return service.buscar_por_id(agendamento_id)
- 
+
 
 @router.patch("/{agendamento_id}", response_model=AgendamentoResponse, dependencies=[Depends(get_usuario_logado)])
 def atualizar(
@@ -80,8 +101,8 @@ def atualizar(
     service: AgendamentoService = Depends(get_service),
 ):
     return service.atualizar(agendamento_id, dados)
- 
- 
+
+
 @router.patch("/{agendamento_id}/status", response_model=AgendamentoResponse, dependencies=[Depends(get_usuario_logado)])
 def alterar_status(
     agendamento_id: int,
@@ -90,8 +111,8 @@ def alterar_status(
     usuario: Usuario = Depends(get_usuario_logado),
 ):
     return service.alterar_status(agendamento_id, dados.status, usuario_id=usuario.id)
- 
- 
+
+
 @router.delete("/{agendamento_id}", status_code=status.HTTP_204_NO_CONTENT, dependencies=[Depends(get_usuario_logado)])
 def deletar(agendamento_id: int, service: AgendamentoService = Depends(get_service)):
     service.deletar(agendamento_id)

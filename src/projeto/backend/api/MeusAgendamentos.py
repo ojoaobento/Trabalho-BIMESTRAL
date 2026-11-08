@@ -1,5 +1,5 @@
 """
-backend/api/MeusAgendamentos.py  (v4 - sessão persistente + esqueci o telefone)
+backend/api/MeusAgendamentos.py  (v5 - token automático para cliente nova)
 
   POST  /agendamentos/acesso/codigo -> envia código de 6 dígitos por e-mail
                                        (com telefone, ou só com e-mail se a
@@ -8,6 +8,12 @@ backend/api/MeusAgendamentos.py  (v4 - sessão persistente + esqueci o telefone)
                                        OU com (token de sessão)
                                        Resposta: {"token": "...", "agendamentos": [...]}
   PATCH /agendamentos/minhas/telefone -> troca o telefone da cliente (por token)
+  PATCH /agendamentos/minhas/lembretes -> liga/desliga os lembretes por e-mail
+                                          (por token; precisa estar "logada")
+
+Funções públicas usadas pelo POST /agendamentos:
+  cliente_ja_cadastrado(db, email, telefone) -> bool
+  token_de_sessao(cliente) -> str
 
 O token é assinado (HMAC) e NÃO fica no banco. Vale VALIDADE_SESSAO_DIAS dias e
 deixa de valer sozinho se o e-mail ou o telefone da cliente mudarem, ou se
@@ -28,9 +34,11 @@ from sqlalchemy.orm import Session
 
 from core.database import Base, get_db
 
-from models.Agendamento import StatusAgendamento
+from models.Agendamento import Agendamento, StatusAgendamento
 from models.Cliente import Cliente  # ajuste ao caminho real do seu model
+from models.Lembrete import Lembrete, TipoLembrete  # ajuste ao caminho real
 from repositories.AgendamentoRepository import AgendamentoRepository
+from repositories.BloqueioHorarioRepository import BloqueioHorarioRepository
 from repositories.ClienteRepository import ClienteRepository
 from repositories.DisponibilidadeRepository import DisponibilidadeRepository
 from repositories.LembreteRepository import LembreteRepository
@@ -87,6 +95,11 @@ class AlterarTelefoneRequest(BaseModel):
     telefone: str = Field(pattern=r"^[1-9]{2}9\d{8}$")
 
 
+class AlterarLembretesRequest(BaseModel):
+    token: str
+    aceita_lembretes: bool
+
+
 class MeusAgendamentosRequest(BaseModel):
     # Informe (email + codigo, com telefone opcional) OU (token)
     email: EmailStr | None = None
@@ -128,6 +141,27 @@ def _cliente_por_email(db: Session, email: str):
     return achadas[0] if len(achadas) == 1 else None
 
 
+def cliente_ja_cadastrado(db: Session, email: str, telefone: str) -> bool:
+    """True se já existe cliente com esse e-mail OU esse telefone.
+    Usado no POST /agendamentos: só cliente nova ganha token automático."""
+    email = (email or "").strip().lower()
+    telefone = _digitos(telefone)
+
+    if telefone and ClienteRepository(db).buscar_por_telefone(telefone) is not None:
+        return True
+
+    if email:
+        achada = (
+            db.query(Cliente.id)
+            .filter(func.lower(func.trim(Cliente.email)) == email)
+            .first()
+        )
+        if achada is not None:
+            return True
+
+    return False
+
+
 def _cliente_valido(db: Session, email: str, telefone: str):
     """Com telefone: e-mail e telefone precisam bater.
     Sem telefone ("esqueci meu telefone"): vale só pelo e-mail."""
@@ -154,6 +188,11 @@ def _criar_token(cliente) -> str:
     exp = int((_agora() + timedelta(days=VALIDADE_SESSAO_DIAS)).timestamp())
     corpo = f"cliente.{cliente.id}.{exp}.{_impressao(cliente)}"
     return f"{corpo}.{_hmac(corpo)}"
+
+
+def token_de_sessao(cliente) -> str:
+    """Token de sessão para a cliente recém-criada (mesmo de /minhas)."""
+    return _criar_token(cliente)
 
 
 def _cliente_do_token(db: Session, token: str):
@@ -189,12 +228,14 @@ def _enviar_codigo(email: str, codigo: str):
          text-align:center;margin:20px 0">{codigo}</p>
       <p style="font-size:13px;color:#666">Ele vale por {VALIDADE_MINUTOS} minutos.
       Se você não solicitou, ignore esta mensagem.</p></div>"""
-    enviar_email(
+    ok = enviar_email(
         destino=email,
         assunto="Seu código de acesso - Studio Cleusa",
         corpo_texto=texto,
         corpo_html=html,
     )
+    # LOG DE DIAGNÓSTICO (pode remover depois)
+    print(f"[CODIGO] envio para {email}: {'OK' if ok else 'FALHOU'}")
 
 
 # ---------- listagem ----------
@@ -238,6 +279,7 @@ def _dados_cliente(cliente) -> dict:
         "nome": cliente.nome,
         "email": cliente.email,
         "telefone": _digitos(cliente.telefone),
+        "aceita_lembretes": bool(cliente.aceita_lembretes),
     }
 
 
@@ -257,10 +299,15 @@ def solicitar_codigo(
     telefone = _digitos(dados.telefone or "")   # "" = esqueci meu telefone
     resposta = {"mensagem": "Se os dados estiverem corretos, enviamos um código por e-mail."}
 
+    # LOGS DE DIAGNÓSTICO [CODIGO] (pode remover depois)
+    print(f"[CODIGO] pedido: email={email!r} telefone={telefone!r}")
+
     if telefone and not re.fullmatch(r"[1-9]{2}9\d{8}", telefone):
+        print("[CODIGO] ignorado: telefone em formato inválido")
         return resposta
 
     if _cliente_valido(db, email, telefone) is None:
+        print("[CODIGO] ignorado: cliente não encontrada (e-mail/telefone não batem)")
         return resposta
 
     ultimo = (
@@ -270,6 +317,7 @@ def solicitar_codigo(
         .first()
     )
     if ultimo and (_agora() - _com_fuso(ultimo.criado_em)).total_seconds() < INTERVALO_REENVIO_SEGUNDOS:
+        print("[CODIGO] ignorado: último pedido tem menos de 60s")
         return resposta
 
     db.query(CodigoAcesso).filter(
@@ -287,6 +335,7 @@ def solicitar_codigo(
     ))
     db.commit()
 
+    print(f"[CODIGO] código gerado, enviando para {email}")
     tarefas.add_task(_enviar_codigo, email, codigo)
     return resposta
 
@@ -350,6 +399,7 @@ def _montar_service(db: Session) -> AgendamentoService:
         servico_repository,
         DisponibilidadeRepository(db),
         LembreteService(LembreteRepository(db), agendamento_repository, servico_repository),
+        BloqueioHorarioRepository(db),
     )
 
 
@@ -414,3 +464,35 @@ def atualizar_meu_telefone(dados: AlterarTelefoneRequest, db: Session = Depends(
 
     # a impressão do token inclui o telefone: gera um token novo
     return {"token": _criar_token(cliente), "telefone": novo}
+
+
+@router.patch("/minhas/lembretes")
+def atualizar_meus_lembretes(dados: AlterarLembretesRequest, db: Session = Depends(get_db)):
+    """A cliente (identificada pelo token) liga ou desliga os lembretes."""
+    cliente = _cliente_do_token(db, dados.token)
+    if cliente is None:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Sessão expirada. Entre novamente.")
+
+    cliente.aceita_lembretes = dados.aceita_lembretes
+
+    if not dados.aceita_lembretes:
+        # Desligou: apaga os lembretes de 24h ainda não enviados dos
+        # agendamentos dela. A confirmação e o que já foi enviado ficam.
+        agendamentos_da_cliente = db.query(Agendamento.id).filter(
+            Agendamento.cliente_id == cliente.id
+        )
+        (
+            db.query(Lembrete)
+            .filter(
+                Lembrete.agendamento_id.in_(agendamentos_da_cliente),
+                Lembrete.enviado.is_(False),
+                Lembrete.tipo == TipoLembrete.LEMBRETE_24H,
+            )
+            .delete(synchronize_session=False)
+        )
+
+    db.commit()
+    db.refresh(cliente)
+
+    # O token não muda: a impressão dele só depende de e-mail e telefone.
+    return {"aceita_lembretes": bool(cliente.aceita_lembretes)}

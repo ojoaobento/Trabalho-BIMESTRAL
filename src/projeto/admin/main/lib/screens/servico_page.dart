@@ -8,6 +8,21 @@ import 'package:main/widgets/painel_widgets.dart';
 
 const double _larguraMinimaTabela = 720;
 
+/// Minúsculas e sem acentos, para a busca não depender disso.
+String _normalizar(String texto) {
+  const de = 'áàâãäéèêëíìîïóòôõöúùûüçñ';
+  const para = 'aaaaaeeeeiiiiooooouuuucn';
+
+  final saida = StringBuffer();
+
+  for (final c in texto.toLowerCase().split('')) {
+    final i = de.indexOf(c);
+    saida.write(i == -1 ? c : para[i]);
+  }
+
+  return saida.toString();
+}
+
 class ServicosPage extends StatefulWidget {
   const ServicosPage({super.key});
 
@@ -21,14 +36,44 @@ class _ServicosPageState extends State<ServicosPage> {
   bool _carregando = true;
   String? _erro;
 
+  final _buscaController = TextEditingController();
+  String _busca = '';
+
   Map<int, String> get _nomesCategoria => {
         for (final c in _categorias) c.id: c.nome,
       };
+
+  /// Serviços que combinam com o texto da busca (nome, descrição ou
+  /// categoria), ignorando maiúsculas e acentos.
+  List<ServicoModel> get _filtrados {
+    final termo = _normalizar(_busca.trim());
+    if (termo.isEmpty) return _servicos;
+
+    final nomes = _nomesCategoria;
+
+    return _servicos.where((s) {
+      final alvo = _normalizar(
+        '${s.nome} ${s.descricao ?? ''} ${nomes[s.categoriaId] ?? ''}',
+      );
+      return alvo.contains(termo);
+    }).toList();
+  }
 
   @override
   void initState() {
     super.initState();
     _carregar();
+  }
+
+  @override
+  void dispose() {
+    _buscaController.dispose();
+    super.dispose();
+  }
+
+  void _limparBusca() {
+    _buscaController.clear();
+    setState(() => _busca = '');
   }
 
   Future<void> _carregar({bool silencioso = false}) async {
@@ -121,13 +166,63 @@ class _ServicosPageState extends State<ServicosPage> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         CabecalhoLista(
-          resumo: '${_servicos.length} serviço(s)',
+          resumo: _busca.trim().isEmpty
+              ? '${_servicos.length} serviço(s)'
+              : '${_filtrados.length} de ${_servicos.length} serviço(s)',
           rotuloBotao: 'Novo serviço',
           onPressed: () => _abrirFormulario(),
         ),
         const SizedBox(height: 16),
+        if (!_carregando && _erro == null && _servicos.isNotEmpty) ...[
+          _campoBusca(),
+          const SizedBox(height: 16),
+        ],
         Expanded(child: _conteudo()),
       ],
+    );
+  }
+
+  Widget _campoBusca() {
+    OutlineInputBorder borda(Color cor, {double largura = 1}) {
+      return OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: cor, width: largura),
+      );
+    }
+
+    return TextField(
+      controller: _buscaController,
+      onChanged: (valor) => setState(() => _busca = valor),
+      textInputAction: TextInputAction.search,
+      cursorColor: PainelCores.vinho,
+      decoration: InputDecoration(
+        isDense: true,
+        filled: true,
+        fillColor: Colors.white,
+        hintText: 'Buscar por nome, descrição ou categoria',
+        hintStyle: TextStyle(color: Colors.grey.shade500, fontSize: 14),
+        prefixIcon: const Icon(
+          Icons.search_rounded,
+          size: 20,
+          color: PainelCores.vinho,
+        ),
+        suffixIcon: _busca.isEmpty
+            ? null
+            : IconButton(
+                tooltip: 'Limpar busca',
+                icon: Icon(
+                  Icons.close_rounded,
+                  size: 18,
+                  color: Colors.grey.shade600,
+                ),
+                onPressed: _limparBusca,
+              ),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+        border: borda(Colors.grey.shade300),
+        enabledBorder: borda(Colors.grey.shade300),
+        focusedBorder: borda(PainelCores.vinho, largura: 1.6),
+      ),
     );
   }
 
@@ -145,24 +240,53 @@ class _ServicosPageState extends State<ServicosPage> {
     }
 
     final nomes = _nomesCategoria;
+    final lista = _filtrados;
+
+    if (lista.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.search_off_rounded,
+                size: 40, color: Colors.grey.shade400),
+            const SizedBox(height: 8),
+            Text(
+              'Nenhum serviço encontrado para "${_busca.trim()}".',
+              textAlign: TextAlign.center,
+            ),
+            TextButton(
+              onPressed: _limparBusca,
+              style: TextButton.styleFrom(foregroundColor: PainelCores.vinho),
+              child: const Text('Limpar busca'),
+            ),
+          ],
+        ),
+      );
+    }
 
     return LayoutBuilder(
       builder: (context, constraints) {
         if (constraints.maxWidth < _larguraMinimaTabela) {
-          return _listaCards(nomes);
+          return _listaCards(lista, nomes);
         }
-        return _tabela(constraints, nomes);
+        return _tabela(constraints, lista, nomes);
       },
     );
   }
 
-  Widget _tabela(BoxConstraints constraints, Map<int, String> nomes) {
+  Widget _tabela(
+    BoxConstraints constraints,
+    List<ServicoModel> lista,
+    Map<int, String> nomes,
+  ) {
     return SingleChildScrollView(
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
         child: ConstrainedBox(
           constraints: BoxConstraints(minWidth: constraints.maxWidth),
           child: DataTable(
+            dataRowMinHeight: 56,
+            dataRowMaxHeight: 64,
             headingTextStyle: const TextStyle(
               fontWeight: FontWeight.bold,
               color: PainelCores.vinho,
@@ -175,7 +299,7 @@ class _ServicosPageState extends State<ServicosPage> {
               DataColumn(label: Text('Status')),
               DataColumn(label: Text('Ações')),
             ],
-            rows: _servicos.map((s) {
+            rows: lista.map((s) {
               final descricao = s.descricao;
               return DataRow(cells: [
                 DataCell(ConstrainedBox(
@@ -186,6 +310,8 @@ class _ServicosPageState extends State<ServicosPage> {
                     children: [
                       Text(
                         s.nome,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                         style: const TextStyle(fontWeight: FontWeight.w600),
                       ),
                       if (descricao != null && descricao.isNotEmpty)
@@ -239,11 +365,11 @@ class _ServicosPageState extends State<ServicosPage> {
     );
   }
 
-  Widget _listaCards(Map<int, String> nomes) {
+  Widget _listaCards(List<ServicoModel> lista, Map<int, String> nomes) {
     return ListView.separated(
-      itemCount: _servicos.length,
+      itemCount: lista.length,
       separatorBuilder: (_, __) => const SizedBox(height: 12),
-      itemBuilder: (_, i) => _cartaoServico(_servicos[i], nomes),
+      itemBuilder: (_, i) => _cartaoServico(lista[i], nomes),
     );
   }
 
@@ -341,6 +467,10 @@ class _ServicosPageState extends State<ServicosPage> {
   }
 }
 
+// ---------------------------------------------------------------------------
+// Formulário de serviço (criar / editar)
+// ---------------------------------------------------------------------------
+
 class _FormularioServico extends StatefulWidget {
   final List<CategoriaModel> categorias;
   final ServicoModel? servico;
@@ -352,6 +482,13 @@ class _FormularioServico extends StatefulWidget {
 }
 
 class _FormularioServicoState extends State<_FormularioServico> {
+  static const _corFundo = Color(0xFFFFF8FA);
+  static const _corTexto = Color(0xFF4A1026);
+  static const _corSuave = Color(0xFF976D7B);
+  static const _corBorda = Color(0xFFF1DDE5);
+  static const _corErro = Color(0xFFB3261E);
+  static const _corErroFundo = Color(0xFFFDE7E9);
+
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _nomeController;
   late final TextEditingController _descricaoController;
@@ -424,39 +561,224 @@ class _FormularioServicoState extends State<_FormularioServico> {
     }
   }
 
+  // ---------- visual ----------
+
+  OutlineInputBorder _borda(Color cor, {double largura = 1}) {
+    return OutlineInputBorder(
+      borderRadius: BorderRadius.circular(12),
+      borderSide: BorderSide(color: cor, width: largura),
+    );
+  }
+
+  InputDecoration _decoracao({
+    String? dica,
+    String? prefixo,
+    String? sufixo,
+    IconData? icone,
+  }) {
+    return InputDecoration(
+      isDense: true,
+      filled: true,
+      fillColor: _corFundo,
+      hintText: dica,
+      hintStyle: TextStyle(color: _corSuave.withOpacity(.6), fontSize: 14),
+      prefixText: prefixo,
+      prefixStyle: const TextStyle(
+        color: _corTexto,
+        fontWeight: FontWeight.w600,
+      ),
+      suffixText: sufixo,
+      suffixStyle: const TextStyle(color: _corSuave, fontSize: 13),
+      prefixIcon: icone == null
+          ? null
+          : Icon(icone, size: 18, color: PainelCores.vinho),
+      counterStyle: const TextStyle(fontSize: 11, color: _corSuave),
+      errorMaxLines: 2,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+      border: _borda(_corBorda),
+      enabledBorder: _borda(_corBorda),
+      disabledBorder: _borda(_corBorda),
+      focusedBorder: _borda(PainelCores.vinho, largura: 1.6),
+      errorBorder: _borda(_corErro),
+      focusedErrorBorder: _borda(_corErro, largura: 1.6),
+    );
+  }
+
+  Widget _rotulado(String titulo, Widget campo) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(bottom: 6, left: 2),
+          child: Text(
+            titulo,
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+              color: _corTexto,
+            ),
+          ),
+        ),
+        campo,
+      ],
+    );
+  }
+
   Widget _campoPreco() {
-    return TextFormField(
-      controller: _precoController,
-      enabled: !_salvando,
-      keyboardType: const TextInputType.numberWithOptions(decimal: true),
-      decoration: decoracaoFormulario('Preço', prefixo: 'R\$ '),
-      validator: (valor) {
-        final texto = (valor ?? '').trim().replaceAll(',', '.');
-        if (!RegExp(r'^\d{1,8}(\.\d{1,2})?$').hasMatch(texto)) {
-          return 'Ex.: 80 ou 80,50';
-        }
-        if (double.parse(texto) <= 0) {
-          return 'Deve ser maior que zero';
-        }
-        return null;
-      },
+    return _rotulado(
+      'Preço',
+      TextFormField(
+        controller: _precoController,
+        enabled: !_salvando,
+        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+        inputFormatters: [
+          FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
+        ],
+        style: const TextStyle(fontSize: 14, color: _corTexto),
+        decoration: _decoracao(prefixo: 'R\$ ', dica: '80,00'),
+        validator: (valor) {
+          final texto = (valor ?? '').trim().replaceAll(',', '.');
+          if (!RegExp(r'^\d{1,8}(\.\d{1,2})?$').hasMatch(texto)) {
+            return 'Ex.: 80 ou 80,50';
+          }
+          if (double.parse(texto) <= 0) {
+            return 'Deve ser maior que zero';
+          }
+          return null;
+        },
+      ),
     );
   }
 
   Widget _campoDuracao() {
-    return TextFormField(
-      controller: _duracaoController,
-      enabled: !_salvando,
-      keyboardType: TextInputType.number,
-      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-      decoration: decoracaoFormulario('Duração (min)'),
-      validator: (valor) {
-        final numero = int.tryParse((valor ?? '').trim());
-        if (numero == null || numero <= 0) {
-          return 'Informe os minutos';
-        }
-        return null;
-      },
+    return _rotulado(
+      'Duração',
+      TextFormField(
+        controller: _duracaoController,
+        enabled: !_salvando,
+        keyboardType: TextInputType.number,
+        inputFormatters: [
+          FilteringTextInputFormatter.digitsOnly,
+          LengthLimitingTextInputFormatter(4),
+        ],
+        style: const TextStyle(fontSize: 14, color: _corTexto),
+        decoration: _decoracao(sufixo: 'min', dica: '60'),
+        validator: (valor) {
+          final numero = int.tryParse((valor ?? '').trim());
+          if (numero == null || numero <= 0) {
+            return 'Informe os minutos';
+          }
+          return null;
+        },
+      ),
+    );
+  }
+
+  Widget _cabecalho() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 20, 8, 16),
+      child: Row(
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: const BoxDecoration(
+              color: Color(0xFFFFEEF3),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              _editando ? Icons.edit_outlined : Icons.spa_outlined,
+              color: PainelCores.vinho,
+              size: 22,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  _editando ? 'Editar serviço' : 'Novo serviço',
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: _corTexto,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  _editando
+                      ? 'Atualize os dados do serviço.'
+                      : 'Preencha os dados para cadastrar.',
+                  style: const TextStyle(fontSize: 12, color: _corSuave),
+                ),
+              ],
+            ),
+          ),
+          IconButton(
+            tooltip: 'Fechar',
+            onPressed: _salvando ? null : () => Navigator.pop(context, false),
+            icon: const Icon(Icons.close_rounded, color: _corSuave),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _rodape(bool semCategorias) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
+      child: Row(
+        children: [
+          Expanded(
+            child: OutlinedButton(
+              onPressed: _salvando ? null : () => Navigator.pop(context, false),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: PainelCores.vinho,
+                side: const BorderSide(color: _corBorda),
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child: const Text(
+                'Cancelar',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            flex: 2,
+            child: FilledButton(
+              onPressed: (_salvando || semCategorias) ? null : _salvar,
+              style: FilledButton.styleFrom(
+                backgroundColor: PainelCores.vinho,
+                foregroundColor: Colors.white,
+                disabledBackgroundColor: PainelCores.vinho.withOpacity(.4),
+                disabledForegroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child: _salvando
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : Text(
+                      _editando ? 'Salvar alterações' : 'Criar serviço',
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -468,125 +790,241 @@ class _FormularioServicoState extends State<_FormularioServico> {
 
     final telaEstreita = MediaQuery.of(context).size.width < 400;
 
-    return AlertDialog(
-      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-      title: Text(_editando ? 'Editar serviço' : 'Novo serviço'),
-      content: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 460),
-        child: SizedBox(
-          width: double.maxFinite,
-          child: Form(
-            key: _formKey,
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (opcoes.isEmpty)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: Text(
-                        'Cadastre uma categoria ativa antes de criar um serviço.',
-                        style: TextStyle(color: Colors.red.shade700),
-                      ),
-                    ),
-                  DropdownButtonFormField<int>(
-                    value: _categoriaId,
-                    isExpanded: true,
-                    decoration: decoracaoFormulario('Categoria'),
-                    items: opcoes
-                        .map((c) => DropdownMenuItem<int>(
-                              value: c.id,
-                              child: Text(c.nome),
-                            ))
-                        .toList(),
-                    onChanged: _salvando
-                        ? null
-                        : (valor) => setState(() => _categoriaId = valor),
-                    validator: (valor) =>
-                        valor == null ? 'Escolha uma categoria' : null,
-                  ),
-                  const SizedBox(height: 12),
-                  TextFormField(
-                    controller: _nomeController,
-                    enabled: !_salvando,
-                    decoration: decoracaoFormulario('Nome'),
-                    validator: (valor) {
-                      final texto = (valor ?? '').trim();
-                      if (texto.length < 2) {
-                        return 'Informe pelo menos 2 caracteres';
-                      }
-                      if (texto.length > 100) return 'No máximo 100 caracteres';
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 12),
-                  TextFormField(
-                    controller: _descricaoController,
-                    enabled: !_salvando,
-                    maxLines: 2,
-                    maxLength: 255,
-                    decoration: decoracaoFormulario('Descrição'),
-                  ),
-                  const SizedBox(height: 4),
-                  if (telaEstreita) ...[
-                    _campoPreco(),
-                    const SizedBox(height: 12),
-                    _campoDuracao(),
-                  ] else
-                    Row(
+    // Troca o roxo padrão do Material pela cor do painel dentro do diálogo
+    // (cursor, seleção de texto, menu da categoria, switch).
+    final tema = Theme.of(context).copyWith(
+      colorScheme: Theme.of(context).colorScheme.copyWith(
+            primary: PainelCores.vinho,
+            onPrimary: Colors.white,
+            surface: Colors.white,
+            surfaceTint: Colors.transparent,
+          ),
+      textSelectionTheme: TextSelectionThemeData(
+        cursorColor: PainelCores.vinho,
+        selectionColor: PainelCores.vinho.withOpacity(.2),
+        selectionHandleColor: PainelCores.vinho,
+      ),
+    );
+
+    return Theme(
+      data: tema,
+      child: Dialog(
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.transparent,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 480),
+          child: SingleChildScrollView(
+            child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _cabecalho(),
+              const Divider(height: 1, color: _corBorda),
+              Form(
+                  key: _formKey,
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 18, 20, 4),
+                    child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Expanded(child: _campoPreco()),
-                        const SizedBox(width: 12),
-                        Expanded(child: _campoDuracao()),
+                        if (opcoes.isEmpty)
+                          Container(
+                            width: double.infinity,
+                            margin: const EdgeInsets.only(bottom: 16),
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: _corErroFundo,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: const Text(
+                              'Cadastre uma categoria ativa antes de criar um serviço.',
+                              style: TextStyle(fontSize: 13, color: _corErro),
+                            ),
+                          ),
+                        _rotulado(
+                          'Categoria',
+                          DropdownButtonFormField<int>(
+                            value: _categoriaId,
+                            isExpanded: true,
+                            borderRadius: BorderRadius.circular(12),
+                            dropdownColor: Colors.white,
+                            icon: const Icon(
+                              Icons.keyboard_arrow_down_rounded,
+                              color: _corSuave,
+                            ),
+                            style: const TextStyle(
+                              fontSize: 14,
+                              color: _corTexto,
+                            ),
+                            decoration: _decoracao(
+                              dica: 'Selecione',
+                              icone: Icons.category_outlined,
+                            ),
+                            items: opcoes
+                                .map((c) => DropdownMenuItem<int>(
+                                      value: c.id,
+                                      child: Text(c.nome),
+                                    ))
+                                .toList(),
+                            onChanged: _salvando
+                                ? null
+                                : (valor) =>
+                                    setState(() => _categoriaId = valor),
+                            validator: (valor) =>
+                                valor == null ? 'Escolha uma categoria' : null,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        _rotulado(
+                          'Nome do serviço',
+                          TextFormField(
+                            controller: _nomeController,
+                            enabled: !_salvando,
+                            textCapitalization: TextCapitalization.sentences,
+                            style: const TextStyle(
+                              fontSize: 14,
+                              color: _corTexto,
+                            ),
+                            decoration: _decoracao(
+                              dica: 'Ex.: Limpeza de pele',
+                              icone: Icons.spa_outlined,
+                            ),
+                            validator: (valor) {
+                              final texto = (valor ?? '').trim();
+                              if (texto.length < 2) {
+                                return 'Informe pelo menos 2 caracteres';
+                              }
+                              if (texto.length > 100) {
+                                return 'No máximo 100 caracteres';
+                              }
+                              return null;
+                            },
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        _rotulado(
+                          'Descrição (opcional)',
+                          TextFormField(
+                            controller: _descricaoController,
+                            enabled: !_salvando,
+                            maxLines: 3,
+                            minLines: 2,
+                            maxLength: 255,
+                            textCapitalization: TextCapitalization.sentences,
+                            style: const TextStyle(
+                              fontSize: 14,
+                              color: _corTexto,
+                            ),
+                            decoration: _decoracao(
+                              dica: 'Conte o que está incluso no serviço',
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        if (telaEstreita) ...[
+                          _campoPreco(),
+                          const SizedBox(height: 16),
+                          _campoDuracao(),
+                        ] else
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(child: _campoPreco()),
+                              const SizedBox(width: 12),
+                              Expanded(child: _campoDuracao()),
+                            ],
+                          ),
+                        if (_editando) ...[
+                          const SizedBox(height: 16),
+                          Container(
+                            padding: const EdgeInsets.fromLTRB(14, 4, 6, 4),
+                            decoration: BoxDecoration(
+                              color: _corFundo,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: _corBorda),
+                            ),
+                            child: Row(
+                              children: [
+                                const Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Serviço ativo',
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w600,
+                                          color: _corTexto,
+                                        ),
+                                      ),
+                                      Text(
+                                        'Aparece para as clientes agendarem.',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: _corSuave,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                Switch(
+                                  value: _ativo,
+                                  activeColor: Colors.white,
+                                  activeTrackColor: PainelCores.vinho,
+                                  inactiveThumbColor: Colors.white,
+                                  inactiveTrackColor: _corBorda,
+                                  trackOutlineColor:
+                                      WidgetStateProperty.all(Colors.transparent),
+                                  onChanged: _salvando
+                                      ? null
+                                      : (v) => setState(() => _ativo = v),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                        if (_erro != null)
+                          Container(
+                            width: double.infinity,
+                            margin: const EdgeInsets.only(top: 14),
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: _corErroFundo,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Icon(
+                                  Icons.error_outline,
+                                  size: 18,
+                                  color: _corErro,
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    _erro!,
+                                    style: const TextStyle(
+                                      fontSize: 13,
+                                      color: _corErro,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                       ],
                     ),
-                  if (_editando)
-                    SwitchListTile(
-                      contentPadding: EdgeInsets.zero,
-                      title: const Text('Ativo'),
-                      value: _ativo,
-                      activeColor: PainelCores.vinho,
-                      onChanged:
-                          _salvando ? null : (v) => setState(() => _ativo = v),
-                    ),
-                  if (_erro != null)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 12),
-                      child: Text(
-                        _erro!,
-                        style: TextStyle(color: Colors.red.shade700),
-                      ),
-                    ),
-                ],
-              ),
+                  ),
+                ),
+              _rodape(opcoes.isEmpty),
+            ],
             ),
           ),
         ),
       ),
-      actions: [
-        TextButton(
-          onPressed: _salvando ? null : () => Navigator.pop(context, false),
-          child: const Text('Cancelar'),
-        ),
-        ElevatedButton(
-          onPressed: (_salvando || opcoes.isEmpty) ? null : _salvar,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: PainelCores.vinho,
-            foregroundColor: Colors.white,
-          ),
-          child: _salvando
-              ? const SizedBox(
-                  width: 18,
-                  height: 18,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: Colors.white,
-                  ),
-                )
-              : const Text('Salvar'),
-        ),
-      ],
     );
   }
 }

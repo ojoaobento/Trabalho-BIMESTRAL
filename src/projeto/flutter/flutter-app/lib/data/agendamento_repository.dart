@@ -12,6 +12,7 @@ class AcessoCliente {
     required this.agendamentos,
     this.nome,
     this.telefone,
+    this.aceitaLembretes,
   });
 
   final String token;
@@ -20,6 +21,9 @@ class AcessoCliente {
   /// Telefone cadastrado da cliente (só dígitos). Necessário quando ela
   /// entra pelo "Esqueci meu telefone", já que o app não o conhecia.
   final String? telefone;
+
+  /// Preferência de lembretes por e-mail. Nulo se o servidor não informar.
+  final bool? aceitaLembretes;
   final List<AgendamentoCriado> agendamentos;
 }
 
@@ -174,6 +178,20 @@ class AgendamentoRepository {
     );
   }
 
+  /// Liga ou desliga os lembretes por e-mail da cliente logada.
+  /// Devolve o valor realmente gravado pelo servidor.
+  Future<bool> atualizarLembretes({
+    required String token,
+    required bool aceitaLembretes,
+  }) async {
+    final resp = await _api.patch('/agendamentos/minhas/lembretes', {
+      'token': token,
+      'aceita_lembretes': aceitaLembretes,
+    }) as Map<String, dynamic>;
+
+    return resp['aceita_lembretes'] as bool;
+  }
+
   AcessoCliente _acesso(Map<String, dynamic> dados) {
     final lista = (dados['agendamentos'] as List)
         .map((e) => AgendamentoCriado.fromJson(e as Map<String, dynamic>))
@@ -185,6 +203,8 @@ class AgendamentoRepository {
       token: dados['token'] as String,
       nome: cliente is Map ? cliente['nome'] as String? : null,
       telefone: cliente is Map ? cliente['telefone'] as String? : null,
+      aceitaLembretes:
+          cliente is Map ? cliente['aceita_lembretes'] as bool? : null,
       agendamentos: lista,
     );
   }

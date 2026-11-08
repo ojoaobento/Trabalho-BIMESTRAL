@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:main/models/servico.dart';
 import 'package:main/data/agendamento_repository.dart';
 import 'package:main/data/api_service.dart';
+import 'package:main/models/rascunho_cliente.dart';
+import 'package:main/data/sessao_cliente.dart';
 import 'package:main/ui/screens/status_page.dart';
 
 class RevisaoPage extends StatefulWidget {
@@ -44,6 +46,28 @@ class _RevisaoPageState extends State<RevisaoPage> {
     return 'R\$ ${valor.toStringAsFixed(2).replaceAll('.', ',')}';
   }
 
+  /// Primeira vez: o servidor devolve um token e a cliente já fica "logada"
+  /// neste aparelho. Falhar aqui não pode estragar o agendamento já criado.
+  Future<void> _guardarSessao(String? token) async {
+    if (token == null || token.isEmpty) return;
+
+    try {
+      final existente = await SessaoCliente.carregar();
+
+      // Não sobrescreve a sessão de outra cliente já logada neste aparelho.
+      if (existente != null) return;
+
+      await SessaoCliente(
+        token: token,
+        email: widget.email.trim(),
+        telefone: widget.whatsApp.replaceAll(RegExp(r'\D'), ''),
+        nome: widget.nome.trim(),
+      ).salvar();
+    } catch (e) {
+      debugPrint('Erro ao guardar sessão: $e');
+    }
+  }
+
   Future<void> _confirmar() async {
     if (_enviando) return;
 
@@ -62,6 +86,11 @@ class _RevisaoPageState extends State<RevisaoPage> {
         aceitaLembretes: widget.aceitaLembretes,
         consentimento: widget.consentimento,
       );
+
+      await _guardarSessao(criado.tokenAcesso);
+
+      // Agendamento criado: o rascunho dos dados não é mais necessário.
+      RascunhoCliente.limpar();
 
       if (!mounted) return;
 

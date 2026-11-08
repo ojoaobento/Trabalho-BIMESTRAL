@@ -52,6 +52,9 @@ class AgendamentoPublicoResponse(BaseModel):
     status: StatusAgendamento
     servico: ServicoResponse
 
+    # Só vem preenchido quando o POST /agendamentos cria uma cliente nova.
+    token_acesso: str | None = None
+
 class HorarioLivreResponse(BaseModel):
     horario: str          
     minutos_livres: int

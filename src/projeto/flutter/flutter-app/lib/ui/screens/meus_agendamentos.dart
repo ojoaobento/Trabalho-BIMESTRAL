@@ -4,6 +4,7 @@ import 'package:main/data/agendamento_repository.dart';
 import 'package:main/data/api_service.dart';
 import 'package:main/data/sessao_cliente.dart';
 import 'package:main/models/agendamento_criado.dart';
+import 'package:main/models/cancelar.dart';
 
 enum _Etapa { iniciando, dados, codigo, lista }
 
@@ -429,31 +430,13 @@ class _MeusAgendamentosPageState extends State<MeusAgendamentosPage> {
       return;
     }
 
-    final confirmou = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Cancelar horário?'),
-        content: Text(
-          '${a.servicoNome}\n${_periodo(a)}\n\n'
-          'O horário ficará livre para outras clientes.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Manter horário'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            style: FilledButton.styleFrom(
-              backgroundColor: const Color(0xFFB3261E),
-            ),
-            child: const Text('Cancelar horário'),
-          ),
-        ],
-      ),
+    final confirmou = await confirmarCancelamento(
+      context,
+      servico: a.servicoNome,
+      periodo: _periodo(a),
     );
 
-    if (confirmou != true || !mounted) return;
+    if (!confirmou || !mounted) return;
 
     setState(() => _cancelandoId = a.id);
 

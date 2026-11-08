@@ -4,6 +4,7 @@ import 'package:main/data/api_service.dart';
 import 'package:main/models/horario_livre.dart';
 import 'package:main/utils/feriados_utils.dart';
 import 'meus_agendamentos.dart';
+import 'package:main/models/lembretes_sheet.dart';
 import 'package:main/ui/screens/servicos_page.dart';
 
 class HomePage extends StatefulWidget {
@@ -23,8 +24,8 @@ class _HomePageState extends State<HomePage> {
   // Contatos exibidos no menu. Preencha os que o studio quiser divulgar;
   // os que ficarem vazios não aparecem.
   static const _enderecoStudio = 'Av. Brasil, 1420 – Sala 4 · Maringá, PR';
-  static const _telefoneStudio = '';
-  static const _emailStudio = '';
+  static const _telefoneStudio = '44988256813';
+  static const _emailStudio = 'studiocleusamga@gmail.com';
 
   final _repositorio = AgendamentoRepository();
   final _scaffoldKey = GlobalKey<ScaffoldState>();
@@ -301,6 +302,21 @@ class _HomePageState extends State<HomePage> {
             ),
             ListTile(
               leading: const Icon(
+                Icons.notifications_outlined,
+                color: corPrincipal,
+              ),
+              title: const Text(
+                'NOTIFICAÇÕES',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                  color: corTexto,
+                ),
+              ),
+              onTap: _abrirNotificacoes,
+            ),
+            ListTile(
+              leading: const Icon(
                 Icons.call_outlined,
                 color: corPrincipal,
               ),
@@ -325,6 +341,31 @@ class _HomePageState extends State<HomePage> {
 
     Navigator.of(context).push(
       MaterialPageRoute(builder: (_) => const MeusAgendamentosPage()),
+    );
+  }
+
+  /// Abre a folha para ligar/desligar os lembretes por e-mail. Só funciona
+  /// com a cliente "logada"; sem sessão, a folha convida a entrar em
+  /// "Meus agendamentos".
+  void _abrirNotificacoes() {
+    Navigator.of(context).pop(); // fecha o menu
+
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.white,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+      ),
+      builder: (sheetContext) => LembretesSheet(
+        onEntrar: () {
+          Navigator.of(sheetContext).pop(); // fecha a folha
+
+          Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const MeusAgendamentosPage()),
+          );
+        },
+      ),
     );
   }
 

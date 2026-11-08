@@ -7,7 +7,6 @@ import email.utils
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.mime.base import MIMEBase
-from email.mime.image import MIMEImage
 from email import encoders
 from pathlib import Path
 from dotenv import load_dotenv
@@ -30,34 +29,55 @@ CAMINHO_LOGO = CAMINHO_LOGO_CIRCLE if CAMINHO_LOGO_CIRCLE.exists() else Path(__f
 
 
 def gerar_marca_studio_html() -> str:
-    """Gera a marca visual do Studio Cleusa exclusivamente com HTML e CSS inline.
-    
-    Substitui imagens e anexos CID, evitando problemas de bloqueio de imagem ou
-    anexos indesejados quando o e-mail cai na caixa de spam do destinatário.
+    """Logo do Studio Cleusa (flor de lótus com gota) feita só com HTML e CSS.
+
+    Sem <img>, sem CID e sem SVG: nada para o e-mail "bloquear imagens" nem
+    anexo escondido, o que ajuda a não cair no spam. Usa só tabelas, divs e
+    border-radius, que Gmail, Apple Mail, Outlook.com e Thunderbird renderizam.
+    (O Outlook para desktop não suporta border-radius e mostra formas retas.)
     """
-    return """
-    <table role="presentation" align="center" cellpadding="0" cellspacing="0" style="margin: 0 auto 14px auto;">
-      <tr>
-        <td align="center">
-          <table role="presentation" cellpadding="0" cellspacing="0" style="width: 78px; height: 78px; background: linear-gradient(145deg, #FFF5F8 0%, #FBEBF1 100%); border: 2px solid #8E2348; border-radius: 50%; box-shadow: 0 2px 8px rgba(142,35,72,0.12); text-align: center;">
-            <tr>
-              <td align="center" valign="middle" style="height: 74px; width: 74px; padding: 0;">
-                <table role="presentation" cellpadding="0" cellspacing="0" style="margin: 0 auto; width: 62px; height: 62px; border: 1px dashed rgba(142,35,72,0.45); border-radius: 50%;">
-                  <tr>
-                    <td align="center" valign="middle" style="font-family: 'Playfair Display', Didot, 'Bodoni MT', Georgia, serif; font-size: 26px; font-weight: 700; color: #8E2348; letter-spacing: 1px; line-height: 1;">
-                      SC
-                    </td>
-                  </tr>
-                </table>
-              </td>
-            </tr>
-          </table>
-        </td>
-      </tr>
-    </table>
-    <h1 style="margin: 0; font-family: 'Playfair Display', Georgia, serif; font-size: 21px; font-weight: 700; color: #8E2348; letter-spacing: 1.5px; text-transform: uppercase;">Studio Cleusa</h1>
-    <p style="margin: 3px 0 0 0; font-size: 10px; font-weight: 600; color: #A45C74; letter-spacing: 2.5px; text-transform: uppercase;">Beleza &bull; Est&eacute;tica</p>
-    """.strip()
+    cor = "#D6284A"
+    fundo = "#FCE8ED"
+    zero = "padding:0;line-height:0;font-size:0;"
+    return f"""
+<table role="presentation" align="center" cellpadding="0" cellspacing="0" border="0" style="margin:0 auto 14px auto;">
+  <tr>
+    <td align="center" valign="middle" width="78" height="78" style="width:78px;height:78px;background-color:{fundo};border-radius:50%;text-align:center;">
+      <table role="presentation" align="center" cellpadding="0" cellspacing="0" border="0" style="margin:0 auto;">
+        <tr>
+          <td align="center" style="{zero}">
+            <div style="width:7px;height:10px;background-color:{cor};border-radius:50% 50% 50% 50% / 70% 70% 30% 30%;margin:0 auto 3px auto;"></div>
+          </td>
+        </tr>
+        <tr>
+          <td align="center" style="{zero}">
+            <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 auto;">
+              <tr>
+                <td valign="bottom" style="{zero}">
+                  <div style="width:14px;height:20px;border:2px solid {cor};border-radius:0 100% 0 100%;"></div>
+                </td>
+                <td valign="bottom" style="padding:0 1px;line-height:0;font-size:0;">
+                  <div style="width:12px;height:26px;border:2px solid {cor};border-radius:50% 50% 50% 50% / 80% 80% 20% 20%;"></div>
+                </td>
+                <td valign="bottom" style="{zero}">
+                  <div style="width:14px;height:20px;border:2px solid {cor};border-radius:100% 0 100% 0;"></div>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+        <tr>
+          <td align="center" style="{zero}">
+            <div style="width:34px;height:7px;border:2px solid {cor};border-top:0;border-radius:0 0 50% 50% / 0 0 100% 100%;margin:2px auto 0 auto;"></div>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>
+<h1 style="margin:0;font-family:Georgia,'Times New Roman',serif;font-size:21px;font-weight:700;color:#8E2348;letter-spacing:1.5px;text-transform:uppercase;">Studio Cleusa</h1>
+<p style="margin:3px 0 0 0;font-size:10px;font-weight:600;color:#A45C74;letter-spacing:2.5px;text-transform:uppercase;">Beleza &bull; Est&eacute;tica</p>
+""".strip()
 
 
 def obter_logo_bytes() -> bytes | None:
@@ -359,22 +379,21 @@ def enviar_email(
         if corpo_html:
             msg_raiz.attach(MIMEText(corpo_html, "html", "utf-8"))
 
-    msg_raiz["From"] = f"{config['remetente_nome']} <{config['usuario']}>"
+    # Cabeçalhos enxutos de propósito: nada de Message-ID com domínio falso,
+    # Auto-Submitted ou Reply-To repetido. O Gmail gera o Message-ID correto
+    # e assina o e-mail (SPF/DKIM) sozinho.
+    msg_raiz["From"] = email.utils.formataddr((config["remetente_nome"], config["usuario"]))
     msg_raiz["To"] = destino
     msg_raiz["Subject"] = assunto
     msg_raiz["Date"] = email.utils.formatdate(localtime=True)
-    msg_raiz["Message-ID"] = email.utils.make_msgid(domain="gmail.com")
-    msg_raiz["Reply-To"] = config["usuario"]
-    msg_raiz["Auto-Submitted"] = "auto-generated"
 
     try:
-        server = smtplib.SMTP(config["host"], config["port"], timeout=20)
-        server.ehlo()
-        server.starttls()
-        server.ehlo()
-        server.login(config["usuario"], config["senha"])
-        server.send_message(msg_raiz)
-        server.quit()
+        with smtplib.SMTP(config["host"], config["port"], timeout=20) as server:
+            server.ehlo()
+            server.starttls()
+            server.ehlo()
+            server.login(config["usuario"], config["senha"])
+            server.send_message(msg_raiz)
         print(f"E-mail enviado para: {destino}")
         return True
     except Exception as e:
