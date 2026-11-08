@@ -19,9 +19,6 @@ String _dataApi(DateTime d) => '${d.year}-${_dois(d.month)}-${_dois(d.day)}';
 
 String _formatarHora(TimeOfDay t) => '${_dois(t.hour)}:${_dois(t.minute)}';
 
-/// Tema usado nos calendários, relógio e diálogos desta tela: troca o roxo
-/// padrão do Material pelo vinho do painel e tira o tom (surface tint) das
-/// superfícies.
 ThemeData _temaPainel(BuildContext context) {
   final base = Theme.of(context);
   final vinho = PainelCores.vinho;

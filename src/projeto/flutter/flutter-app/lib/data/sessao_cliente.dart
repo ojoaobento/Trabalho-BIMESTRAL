@@ -1,8 +1,6 @@
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Sessão da cliente guardada no aparelho (token + dados usados no acesso).
-///
-/// Instale a dependência com:  flutter pub add shared_preferences
 class SessaoCliente {
   const SessaoCliente({
     required this.token,

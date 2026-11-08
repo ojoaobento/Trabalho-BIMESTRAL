@@ -379,7 +379,6 @@ def enviar_email(
         if corpo_html:
             msg_raiz.attach(MIMEText(corpo_html, "html", "utf-8"))
 
-    # Cabeçalhos enxutos de propósito: nada de Message-ID com domínio falso,
     # Auto-Submitted ou Reply-To repetido. O Gmail gera o Message-ID correto
     # e assina o e-mail (SPF/DKIM) sozinho.
     msg_raiz["From"] = email.utils.formataddr((config["remetente_nome"], config["usuario"]))

@@ -21,8 +21,6 @@ class _HomePageState extends State<HomePage> {
   static const corSuave = Color(0xFFFFEEF3);
   static const corBorda = Color(0xFFF1DDE5);
 
-  // Contatos exibidos no menu. Preencha os que o studio quiser divulgar;
-  // os que ficarem vazios não aparecem.
   static const _enderecoStudio = 'Av. Brasil, 1420 – Sala 4 · Maringá, PR';
   static const _telefoneStudio = '44988256813';
   static const _emailStudio = 'studiocleusamga@gmail.com';
@@ -250,8 +248,6 @@ class _HomePageState extends State<HomePage> {
       padding: const EdgeInsets.fromLTRB(8, 10, 8, 10),
       child: Row(
         children: [
-          // Espaço do mesmo tamanho do botão do menu, para manter a marca
-          // centralizada.
           const SizedBox(width: 48),
           Expanded(child: Center(child: _marca())),
           IconButton(

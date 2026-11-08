@@ -43,8 +43,6 @@ class _ServicosPageState extends State<ServicosPage> {
         for (final c in _categorias) c.id: c.nome,
       };
 
-  /// Serviços que combinam com o texto da busca (nome, descrição ou
-  /// categoria), ignorando maiúsculas e acentos.
   List<ServicoModel> get _filtrados {
     final termo = _normalizar(_busca.trim());
     if (termo.isEmpty) return _servicos;
@@ -141,17 +139,19 @@ class _ServicosPageState extends State<ServicosPage> {
   }
 
   Future<void> _excluir(ServicoModel servico) async {
-    final confirmou = await confirmarExclusao(
-      context,
-      titulo: 'Excluir serviço',
-      mensagem: 'Excluir "${servico.nome}"?\n'
-          'Se já houver agendamentos com ele, o sistema não permite: desative em vez de excluir.',
+    final confirmou = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => _DialogExcluirServico(servico: servico),
     );
-    if (!confirmou) return;
+
+    if (confirmou != true) return;
 
     try {
       await ApiClient.instancia.delete('/servicos/${servico.id}');
+
       if (!mounted) return;
+
       mostrarMensagem(context, 'Serviço excluído.');
       await _carregar(silencioso: true);
     } on ApiException catch (e) {
@@ -790,8 +790,6 @@ class _FormularioServicoState extends State<_FormularioServico> {
 
     final telaEstreita = MediaQuery.of(context).size.width < 400;
 
-    // Troca o roxo padrão do Material pela cor do painel dentro do diálogo
-    // (cursor, seleção de texto, menu da categoria, switch).
     final tema = Theme.of(context).copyWith(
       colorScheme: Theme.of(context).colorScheme.copyWith(
             primary: PainelCores.vinho,
@@ -1022,6 +1020,219 @@ class _FormularioServicoState extends State<_FormularioServico> {
               _rodape(opcoes.isEmpty),
             ],
             ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+
+class _DialogExcluirServico extends StatelessWidget {
+  final ServicoModel servico;
+
+  const _DialogExcluirServico({
+    required this.servico,
+  });
+
+  static const _corTexto = Color(0xFF4A1026);
+  static const _corSuave = Color(0xFF976D7B);
+  static const _corBorda = Color(0xFFF1DDE5);
+  static const _corFundo = Color(0xFFFFF8FA);
+
+  @override
+  Widget build(BuildContext context) {
+    final tema = Theme.of(context).copyWith(
+      colorScheme: Theme.of(context).colorScheme.copyWith(
+        primary: PainelCores.vinho,
+        onPrimary: Colors.white,
+        surface: Colors.white,
+        surfaceTint: Colors.transparent,
+      ),
+    );
+
+    return Theme(
+      data: tema,
+      child: Dialog(
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.transparent,
+        insetPadding: const EdgeInsets.symmetric(
+          horizontal: 24,
+          vertical: 24,
+        ),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(22),
+        ),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 420),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 20, 8, 16),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 44,
+                      height: 44,
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFFFEEF3),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.delete_outline_rounded,
+                        color: PainelCores.vinho,
+                        size: 23,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    const Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Excluir serviço',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: _corTexto,
+                            ),
+                          ),
+                          SizedBox(height: 2),
+                          Text(
+                            'Confirme esta ação.',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: _corSuave,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () => Navigator.pop(context, false),
+                      icon: const Icon(
+                        Icons.close_rounded,
+                        color: _corSuave,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const Divider(height: 1, color: _corBorda),
+
+              Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: _corFundo,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: _corBorda),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.spa_outlined,
+                            color: PainelCores.vinho,
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              servico.nome,
+                              style: const TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                                color: _corTexto,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    const Text(
+                      'Deseja realmente excluir este serviço?',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: _corTexto,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    const Text(
+                      'Se já houver agendamentos vinculados a ele, '
+                      'o sistema não permitirá a exclusão. Nesse caso, '
+                      'desative o serviço em vez de excluí-lo.',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: _corSuave,
+                        height: 1.5,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () =>
+                            Navigator.pop(context, false),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: PainelCores.vinho,
+                          side: const BorderSide(color: _corBorda),
+                          padding: const EdgeInsets.symmetric(
+                            vertical: 14,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: const Text(
+                          'Cancelar',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      flex: 2,
+                      child: FilledButton(
+                        onPressed: () =>
+                            Navigator.pop(context, true),
+                        style: FilledButton.styleFrom(
+                          backgroundColor: PainelCores.vinho,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(
+                            vertical: 14,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: const Text(
+                          'Excluir serviço',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
         ),
       ),

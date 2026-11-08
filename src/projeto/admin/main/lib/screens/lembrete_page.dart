@@ -17,8 +17,6 @@ String _formatarDataHora(DateTime d) {
   return '${_formatarData(l)} às ${_dois(l.hour)}:${_dois(l.minute)}';
 }
 
-/// Tema vinho para o calendário (showDatePicker) e o relógio (showTimePicker),
-/// que por padrão usam o roxo do Material.
 Widget _temaSeletor(BuildContext context, Widget? child) {
   final base = Theme.of(context);
   const vinho = PainelCores.vinho;
@@ -143,8 +141,6 @@ class _ChipSituacao extends StatelessWidget {
   }
 }
 
-/// Uma opção dos filtros em lista suspensa (valor, texto, cor opcional e
-/// quantidade de lembretes que ela mostraria).
 class _OpcaoFiltro<T> {
   final T valor;
   final String rotulo;
@@ -191,7 +187,6 @@ class _LembretePageState extends State<LembretePage> {
     }).toList();
   }
 
-  /// Quantos lembretes existem em cada situação, respeitando o filtro de tipo.
   int _contarSituacao(_Situacao? situacao) {
     return _lembretes.where((l) {
       if (_tipoFiltro != null && l.tipo != _tipoFiltro) return false;
@@ -199,7 +194,6 @@ class _LembretePageState extends State<LembretePage> {
     }).length;
   }
 
-  /// Quantos lembretes existem de cada tipo, respeitando o filtro de situação.
   int _contarTipo(TipoLembrete? tipo) {
     return _lembretes.where((l) {
       if (_situacaoFiltro != null && _situacaoDe(l) != _situacaoFiltro) {
@@ -449,8 +443,6 @@ class _LembretePageState extends State<LembretePage> {
     );
   }
 
-  /// Lista suspensa com rótulo, ícone e contagem por opção. Quando algo
-  /// diferente de "Todos" está escolhido, o campo ganha destaque vinho.
   Widget _campoFiltro<T>({
     required String rotulo,
     required IconData icone,

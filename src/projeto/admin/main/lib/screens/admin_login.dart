@@ -25,7 +25,6 @@ class _AdminloginState extends State<Adminlogin> {
   static const Color texto = Color(0xFF4A1026);
   static const Color suave = Color(0xFF976D7B);
 
-  /// A partir dessa largura, mostra o painel da marca ao lado do formulário.
   static const double _larguraDesktop = 900;
 
   @override
@@ -95,8 +94,6 @@ class _AdminloginState extends State<Adminlogin> {
         ),
       );
   }
-
-  // ---------- visual ----------
 
   InputDecoration _decoracaoCampo({
     required String label,
@@ -174,7 +171,6 @@ class _AdminloginState extends State<Adminlogin> {
     );
   }
 
-  /// Painel lateral (só em telas largas): fundo vinho com a marca.
   Widget _painelMarca() {
     return Container(
       decoration: const BoxDecoration(
@@ -262,8 +258,6 @@ class _AdminloginState extends State<Adminlogin> {
     );
   }
 
-  /// Cartão com o formulário. [mostrarLogo] é true quando não há painel
-  /// lateral (celular e telas médias).
   Widget _cartaoFormulario({
     required bool mostrarLogo,
     required bool compacto,
@@ -406,7 +400,6 @@ class _AdminloginState extends State<Adminlogin> {
     );
   }
 
-  /// Área do formulário: rola quando falta espaço e centraliza quando sobra.
   Widget _areaFormulario({required bool mostrarLogo}) {
     return SafeArea(
       child: LayoutBuilder(
@@ -440,7 +433,6 @@ class _AdminloginState extends State<Adminlogin> {
 
   @override
   Widget build(BuildContext context) {
-    // Cursor e seleção de texto na cor do painel (sem o roxo padrão).
     final tema = Theme.of(context).copyWith(
       colorScheme: Theme.of(context).colorScheme.copyWith(
             primary: vinho,

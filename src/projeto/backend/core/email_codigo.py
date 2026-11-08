@@ -14,7 +14,6 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-# backend/core/email_codigo.py -> backend/.env
 _ENV = Path(__file__).resolve().parent.parent / ".env"
 load_dotenv(_ENV if _ENV.exists() else None)
 

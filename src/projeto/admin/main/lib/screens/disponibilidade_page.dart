@@ -32,8 +32,7 @@ int _minutos(TimeOfDay t) => t.hour * 60 + t.minute;
 String _formatarDataCampo(DateTime d) =>
     '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
 
-/// Tema vinho para o calendário (showDatePicker) e o relógio (showTimePicker),
-/// que por padrão usam o roxo do Material.
+
 Widget _temaSeletor(BuildContext context, Widget? child) {
   final base = Theme.of(context);
   const vinho = PainelCores.vinho;
@@ -109,9 +108,6 @@ String _duracaoTexto(int minutos) {
   return '${h}h${m.toString().padLeft(2, '0')}min';
 }
 
-// ---------------------------------------------------------------------------
-// Peças visuais compartilhadas pelos formulários
-// ---------------------------------------------------------------------------
 
 const _corFundo = Color(0xFFFFF8FA);
 const _corTexto = Color(0xFF4A1026);
@@ -436,7 +432,6 @@ class _RodapeDialogo extends StatelessWidget {
   }
 }
 
-/// Moldura comum: tema local (troca o roxo do Material pelo vinho) + Dialog.
 class _DialogoPadrao extends StatelessWidget {
   final Widget cabecalho;
   final Widget corpo;
@@ -493,9 +488,6 @@ class _DialogoPadrao extends StatelessWidget {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Página
-// ---------------------------------------------------------------------------
 
 class DisponibilidadePage extends StatefulWidget {
   const DisponibilidadePage({super.key});
@@ -614,18 +606,174 @@ class _DisponibilidadePageState extends State<DisponibilidadePage>
     }
   }
 
-  Future<void> _excluir(DisponibilidadeModel bloco) async {
-    final confirmou = await confirmarExclusao(
-      context,
-      titulo: 'Excluir horário',
-      mensagem: 'Excluir o bloco de ${bloco.nomeDia}, '
-          '${bloco.inicioCurto} às ${bloco.fimCurto}?',
+  Future<bool> _confirmarExclusaoPersonalizada({
+    required String titulo,
+    required String mensagem,
+    required String textoAcao,
+  }) async {
+    final confirmou = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return Dialog(
+          backgroundColor: Colors.white,
+          surfaceTintColor: Colors.transparent,
+          insetPadding: const EdgeInsets.symmetric(
+            horizontal: 24,
+            vertical: 24,
+          ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(22),
+          ),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 420),
+            child: Padding(
+              padding: const EdgeInsets.all(22),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 64,
+                    height: 64,
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFFDE7E9),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.delete_outline_rounded,
+                      color: Color(0xFFB3261E),
+                      size: 32,
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+
+                  Text(
+                    titulo,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontSize: 19,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF4A1026),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+
+                  Text(
+                    mensagem,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      height: 1.5,
+                      color: Color(0xFF795563),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFF8FA),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: const Color(0xFFF1DDE5),
+                      ),
+                    ),
+                    child: const Row(
+                      children: [
+                        Icon(
+                          Icons.info_outline_rounded,
+                          size: 19,
+                          color: PainelCores.vinho,
+                        ),
+                        SizedBox(width: 9),
+                        Expanded(
+                          child: Text(
+                            'Essa ação não poderá ser desfeita.',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Color(0xFF795563),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 22),
+
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () => Navigator.pop(context, false),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: PainelCores.vinho,
+                            side: const BorderSide(
+                              color: Color(0xFFF1DDE5),
+                            ),
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          child: const Text(
+                            'Cancelar',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: FilledButton.icon(
+                          onPressed: () => Navigator.pop(context, true),
+                          style: FilledButton.styleFrom(
+                            backgroundColor: const Color(0xFFB3261E),
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          icon: const Icon(
+                            Icons.delete_outline,
+                            size: 18,
+                          ),
+                          label: Text(
+                            textoAcao,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
     );
+
+    return confirmou == true;
+  }
+
+  Future<void> _excluir(DisponibilidadeModel bloco) async {
+    final confirmou = await _confirmarExclusaoPersonalizada(
+      titulo: 'Excluir horário?',
+      mensagem: 'Deseja realmente excluir o horário de '
+          '${bloco.nomeDia}, das ${bloco.inicioCurto} às ${bloco.fimCurto}?',
+      textoAcao: 'Excluir',
+    );
+
     if (!confirmou) return;
 
     try {
       await ApiClient.instancia.delete('/disponibilidades/${bloco.id}');
       if (!mounted) return;
+
       mostrarMensagem(context, 'Horário excluído.');
       await _carregar(silencioso: true);
     } on ApiException catch (e) {
@@ -635,18 +783,20 @@ class _DisponibilidadePageState extends State<DisponibilidadePage>
   }
 
   Future<void> _excluirBloqueio(BloqueioModel b) async {
-    final confirmou = await confirmarExclusao(
-      context,
-      titulo: 'Remover bloqueio',
-      mensagem: 'Desbloquear o horário de ${b.dataTexto} '
-          'das ${b.horaInicioTexto} às ${b.horaFimTexto}?\n'
+    final confirmou = await _confirmarExclusaoPersonalizada(
+      titulo: 'Remover bloqueio?',
+      mensagem: 'Deseja desbloquear o horário de ${b.dataTexto}, '
+          'das ${b.horaInicioTexto} às ${b.horaFimTexto}?\n\n'
           'Esse horário voltará a ficar disponível para agendamento.',
+      textoAcao: 'Desbloquear',
     );
+
     if (!confirmou) return;
 
     try {
       await ApiClient.instancia.delete('/bloqueios/${b.id}');
       if (!mounted) return;
+
       mostrarMensagem(context, 'Bloqueio removido.');
       await _carregar(silencioso: true);
     } on ApiException catch (e) {
@@ -654,6 +804,7 @@ class _DisponibilidadePageState extends State<DisponibilidadePage>
       mostrarMensagem(context, e.mensagem, erro: true);
     }
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -1034,9 +1185,6 @@ class _DisponibilidadePageState extends State<DisponibilidadePage>
   }
 }
 
-// ---------------------------------------------------------------------------
-// Formulário de bloqueio pontual
-// ---------------------------------------------------------------------------
 
 class _FormularioBloqueio extends StatefulWidget {
   const _FormularioBloqueio();
@@ -1293,9 +1441,6 @@ class _FormularioBloqueioState extends State<_FormularioBloqueio> {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Formulário de horário semanal
-// ---------------------------------------------------------------------------
 
 class _FormularioDisponibilidade extends StatefulWidget {
   final DisponibilidadeModel? bloco;

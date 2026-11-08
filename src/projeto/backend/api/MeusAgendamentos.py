@@ -35,8 +35,8 @@ from sqlalchemy.orm import Session
 from core.database import Base, get_db
 
 from models.Agendamento import Agendamento, StatusAgendamento
-from models.Cliente import Cliente  # ajuste ao caminho real do seu model
-from models.Lembrete import Lembrete, TipoLembrete  # ajuste ao caminho real
+from models.Cliente import Cliente  
+from models.Lembrete import Lembrete, TipoLembrete 
 from repositories.AgendamentoRepository import AgendamentoRepository
 from repositories.BloqueioHorarioRepository import BloqueioHorarioRepository
 from repositories.ClienteRepository import ClienteRepository
@@ -48,7 +48,6 @@ from services.AgendamentoService import AgendamentoService
 from services.ClienteService import ClienteService
 from services.LembreteService import LembreteService
 
-# Mantém o que funcionar no seu core/email_codigo.py (função com um dos dois nomes)
 try:
     from core.email_codigo import enviar_email_simples as enviar_email
 except ImportError:
@@ -63,7 +62,6 @@ HORAS_MIN_CANCELAMENTO = int(os.getenv("CANCELAMENTO_ANTECEDENCIA_HORAS", "2"))
 
 SEGREDO = os.getenv("ACESSO_CLIENTE_SECRET")
 if not SEGREDO:
-    # Sem segredo próprio, qualquer pessoa conseguiria forjar tokens.
     raise RuntimeError("Defina ACESSO_CLIENTE_SECRET no backend/.env")
 
 
@@ -72,7 +70,6 @@ class CodigoAcesso(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     email = Column(String(255), nullable=False, index=True)
-    # Vazio ("") quando o código foi pedido pelo "esqueci meu telefone".
     telefone = Column(String(11), nullable=False)
     codigo_hash = Column(String(64), nullable=False)
     tentativas = Column(Integer, nullable=False, default=0)
@@ -82,7 +79,6 @@ class CodigoAcesso(Base):
 
 class SolicitarCodigoRequest(BaseModel):
     email: EmailStr
-    # Opcional: sem telefone = "esqueci meu telefone" (só e-mail + código).
     telefone: str | None = None
 
 
@@ -101,7 +97,6 @@ class AlterarLembretesRequest(BaseModel):
 
 
 class MeusAgendamentosRequest(BaseModel):
-    # Informe (email + codigo, com telefone opcional) OU (token)
     email: EmailStr | None = None
     telefone: str | None = None
     codigo: str | None = Field(default=None, min_length=6, max_length=6)
@@ -234,9 +229,6 @@ def _enviar_codigo(email: str, codigo: str):
         corpo_texto=texto,
         corpo_html=html,
     )
-    # LOG DE DIAGNÓSTICO (pode remover depois)
-    print(f"[CODIGO] envio para {email}: {'OK' if ok else 'FALHOU'}")
-
 
 # ---------- listagem ----------
 
@@ -244,7 +236,6 @@ STATUS_CANCELAVEIS = (StatusAgendamento.PENDENTE, StatusAgendamento.CONFIRMADO)
 
 
 def _local(dt: datetime) -> str:
-    # horário do studio, sem offset: o Flutter exibe exatamente essa hora
     return _com_fuso(dt).astimezone(FUSO).strftime("%Y-%m-%dT%H:%M:%S")
 
 
@@ -269,7 +260,7 @@ def _listar(db: Session, cliente) -> list[dict]:
     return [
         _item(a)
         for a in sorted(agendamentos, key=lambda x: x.dt_inicio, reverse=True)
-        if a.status != StatusAgendamento.RESERVADO   # reserva temporária: não mostrar
+        if a.status != StatusAgendamento.RESERVADO  
     ]
 
 
@@ -296,19 +287,8 @@ def solicitar_codigo(
 ):
     """Resposta sempre igual, exista a cliente ou não."""
     email = dados.email.lower().strip()
-    telefone = _digitos(dados.telefone or "")   # "" = esqueci meu telefone
+    telefone = _digitos(dados.telefone or "")   
     resposta = {"mensagem": "Se os dados estiverem corretos, enviamos um código por e-mail."}
-
-    # LOGS DE DIAGNÓSTICO [CODIGO] (pode remover depois)
-    print(f"[CODIGO] pedido: email={email!r} telefone={telefone!r}")
-
-    if telefone and not re.fullmatch(r"[1-9]{2}9\d{8}", telefone):
-        print("[CODIGO] ignorado: telefone em formato inválido")
-        return resposta
-
-    if _cliente_valido(db, email, telefone) is None:
-        print("[CODIGO] ignorado: cliente não encontrada (e-mail/telefone não batem)")
-        return resposta
 
     ultimo = (
         db.query(CodigoAcesso)
@@ -434,7 +414,7 @@ def cancelar_meu_agendamento(
             "do horário. Entre em contato com o studio.",
         )
 
-    # Cancela e apaga os lembretes ainda não enviados (regra já existente).
+    # Cancela e apaga os lembretes ainda não enviados
     atualizado = service.alterar_status(agendamento_id, StatusAgendamento.CANCELADO)
     return _item(atualizado)
 
@@ -458,7 +438,6 @@ def atualizar_meu_telefone(dados: AlterarTelefoneRequest, db: Session = Depends(
             "Não foi possível usar este telefone.",
         )
 
-    # reaproveita o PATCH que já existe no service (nome, e-mail etc. ficam intactos)
     ClienteService(repo).atualizar(cliente.id, ClienteAtualizarRequest(telefone=novo))
     db.refresh(cliente)
 

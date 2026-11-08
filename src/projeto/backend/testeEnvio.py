@@ -6,7 +6,7 @@ destino = "joaovictorbento.s.b@gmail.com"
 
 try:
     with smtplib.SMTP(cfg["host"], cfg["port"], timeout=20) as s:
-        s.set_debuglevel(1)  # mostra a conversa com o servidor
+        s.set_debuglevel(1)  
         s.ehlo()
         s.starttls()
         s.ehlo()

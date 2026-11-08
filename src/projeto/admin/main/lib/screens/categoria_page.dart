@@ -86,26 +86,187 @@ class _CategoriasPageState extends State<CategoriasPage> {
       mostrarMensagem(context, e.mensagem, erro: true);
     }
   }
+Future<void> _excluir(CategoriaModel categoria) async {
+  final confirmou = await showDialog<bool>(
+    context: context,
+    builder: (context) {
+      return Dialog(
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.transparent,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 20),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(22),
+        ),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 420),
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Ícone
+                Container(
+                  width: 64,
+                  height: 64,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFDEBED),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: const Icon(
+                    Icons.delete_outline_rounded,
+                    color: Color(0xFFB3261E),
+                    size: 32,
+                  ),
+                ),
 
-  Future<void> _excluir(CategoriaModel categoria) async {
-    final confirmou = await confirmarExclusao(
-      context,
-      titulo: 'Excluir categoria',
-      mensagem: 'Excluir "${categoria.nome}"?\n'
-          'Se ela tiver serviços, o sistema não permite: desative em vez de excluir.',
-    );
-    if (!confirmou) return;
+                const SizedBox(height: 20),
 
-    try {
-      await ApiClient.instancia.delete('/categorias/${categoria.id}');
-      if (!mounted) return;
-      mostrarMensagem(context, 'Categoria excluída.');
-      await _carregar(silencioso: true);
-    } on ApiException catch (e) {
-      if (!mounted) return;
-      mostrarMensagem(context, e.mensagem, erro: true);
-    }
+                // Título
+                const Text(
+                  'Excluir categoria?',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 19,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF4A1026),
+                  ),
+                ),
+
+                const SizedBox(height: 10),
+
+                // Descrição
+                Text.rich(
+                  TextSpan(
+                    style: const TextStyle(
+                      fontSize: 14,
+                      height: 1.5,
+                      color: Color(0xFF795563),
+                    ),
+                    children: [
+                      const TextSpan(text: 'Tem certeza que deseja excluir a categoria '),
+                      TextSpan(
+                        text: '"${categoria.nome}"',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF4A1026),
+                        ),
+                      ),
+                      const TextSpan(text: '?'),
+                    ],
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+
+                const SizedBox(height: 16),
+
+                // Aviso
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFF8FA),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: const Color(0xFFF1DDE5),
+                    ),
+                  ),
+                  child: const Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(
+                        Icons.info_outline_rounded,
+                        color: PainelCores.vinho,
+                        size: 19,
+                      ),
+                      SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          'Se esta categoria possuir serviços vinculados, '
+                          'não será possível excluí-la. Nesse caso, '
+                          'recomendamos desativá-la.',
+                          style: TextStyle(
+                            fontSize: 12,
+                            height: 1.5,
+                            color: Color(0xFF795563),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 24),
+
+                // Botões
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.pop(context, false),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: PainelCores.vinho,
+                          side: const BorderSide(
+                            color: Color(0xFFF1DDE5),
+                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 13),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: const Text(
+                          'Cancelar',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(width: 12),
+
+                    Expanded(
+                      child: FilledButton.icon(
+                        onPressed: () => Navigator.pop(context, true),
+                        icon: const Icon(
+                          Icons.delete_outline,
+                          size: 18,
+                        ),
+                        label: const Text('Excluir'),
+                        style: FilledButton.styleFrom(
+                          backgroundColor: const Color(0xFFB3261E),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 13),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    },
+  );
+
+  if (confirmou != true) return;
+
+  try {
+    await ApiClient.instancia.delete('/categorias/${categoria.id}');
+
+    if (!mounted) return;
+
+    mostrarMensagem(context, 'Categoria excluída.');
+
+    await _carregar(silencioso: true);
+  } on ApiException catch (e) {
+    if (!mounted) return;
+    mostrarMensagem(context, e.mensagem, erro: true);
   }
+}
 
   @override
   Widget build(BuildContext context) {
@@ -121,6 +282,7 @@ class _CategoriasPageState extends State<CategoriasPage> {
         ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 360),
           child: TextField(
+            cursorColor: PainelCores.vinho,
             onChanged: (v) => setState(() => _busca = v),
             decoration: decoracaoFormulario('Buscar por nome da categoria')
                 .copyWith(prefixIcon: const Icon(Icons.search)),
@@ -516,8 +678,6 @@ class _FormularioCategoriaState extends State<_FormularioCategoria> {
 
   @override
   Widget build(BuildContext context) {
-    // Troca o roxo padrão do Material pela cor do painel dentro do diálogo
-    // (cursor, seleção de texto, switch).
     final tema = Theme.of(context).copyWith(
       colorScheme: Theme.of(context).colorScheme.copyWith(
             primary: PainelCores.vinho,

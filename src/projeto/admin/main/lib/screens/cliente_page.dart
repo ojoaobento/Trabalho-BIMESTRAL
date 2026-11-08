@@ -92,17 +92,19 @@ class _ClientePageState extends State<ClientePage> {
   }
 
   Future<void> _excluir(ClienteModel cliente) async {
-    final confirmou = await confirmarExclusao(
-      context,
-      titulo: 'Excluir cliente',
-      mensagem: 'Excluir "${cliente.nome}"?\n'
-          'Se ele tiver agendamentos, o sistema não permite a exclusão.',
+    final confirmou = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => _DialogExcluirCliente(cliente: cliente),
     );
-    if (!confirmou) return;
+
+    if (confirmou != true) return;
 
     try {
       await ApiClient.instancia.delete('/clientes/${cliente.id}');
+
       if (!mounted) return;
+
       mostrarMensagem(context, 'Cliente excluído.');
       await _carregar(silencioso: true);
     } on ApiException catch (e) {
@@ -138,6 +140,7 @@ class _ClientePageState extends State<ClientePage> {
         ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 360),
           child: TextField(
+            cursorColor: PainelCores.vinho,
             onChanged: (v) => setState(() => _busca = v),
             decoration: decoracaoFormulario('Buscar por nome, telefone ou e-mail')
                 .copyWith(prefixIcon: const Icon(Icons.search)),
@@ -337,7 +340,6 @@ class _ClientePageState extends State<ClientePage> {
 // Formulário de cliente (criar / editar)
 // ---------------------------------------------------------------------------
 
-/// Aplica a máscara (44) 98813-6876 enquanto o usuário digita.
 class _TelefoneFormatter extends TextInputFormatter {
   @override
   TextEditingValue formatEditUpdate(
@@ -697,8 +699,6 @@ class _FormularioClienteState extends State<_FormularioCliente> {
 
   @override
   Widget build(BuildContext context) {
-    // Troca o roxo padrão do Material pela cor do painel dentro do diálogo
-    // (cursor, seleção de texto, checkbox, switch).
     final tema = Theme.of(context).copyWith(
       colorScheme: Theme.of(context).colorScheme.copyWith(
             primary: PainelCores.vinho,
@@ -872,6 +872,163 @@ class _FormularioClienteState extends State<_FormularioCliente> {
                 _rodape(),
               ],
             ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Diálogo de confirmação de exclusão de cliente
+// ---------------------------------------------------------------------------
+
+class _DialogExcluirCliente extends StatelessWidget {
+  final ClienteModel cliente;
+
+  const _DialogExcluirCliente({required this.cliente});
+
+  static const _corTexto = Color(0xFF4A1026);
+  static const _corSuave = Color(0xFF976D7B);
+  static const _corBorda = Color(0xFFF1DDE5);
+  static const _corErro = Color(0xFFB3261E);
+  static const _corErroFundo = Color(0xFFFDE7E9);
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      backgroundColor: Colors.white,
+      surfaceTintColor: Colors.transparent,
+      insetPadding: const EdgeInsets.symmetric(
+        horizontal: 20,
+        vertical: 24,
+      ),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(22),
+      ),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 400),
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 52,
+                height: 52,
+                decoration: const BoxDecoration(
+                  color: _corErroFundo,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.person_remove_outlined,
+                  color: _corErro,
+                  size: 26,
+                ),
+              ),
+
+              const SizedBox(height: 16),
+
+              const Text(
+                'Excluir cliente?',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: _corTexto,
+                ),
+              ),
+
+              const SizedBox(height: 8),
+
+              Text(
+                'Tem certeza que deseja excluir "${cliente.nome}"?',
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 14,
+                  color: _corSuave,
+                ),
+              ),
+
+              const SizedBox(height: 12),
+
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: _corErroFundo,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(
+                      Icons.info_outline,
+                      size: 18,
+                      color: _corErro,
+                    ),
+                    SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Se este cliente tiver agendamentos, '
+                        'o sistema não permitirá a exclusão.',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: _corErro,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 22),
+
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.pop(context, false),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: PainelCores.vinho,
+                        side: const BorderSide(color: _corBorda),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: const Text(
+                        'Cancelar',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(width: 12),
+
+                  Expanded(
+                    child: FilledButton(
+                      onPressed: () => Navigator.pop(context, true),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: _corErro,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: const Text(
+                        'Excluir cliente',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
         ),
       ),

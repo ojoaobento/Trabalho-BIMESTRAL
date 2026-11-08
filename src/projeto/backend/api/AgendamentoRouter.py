@@ -49,17 +49,12 @@ def criar(
     db: Session = Depends(get_db),
     service: AgendamentoService = Depends(get_service),
 ):
-    # Tem que vir ANTES de criar: depois, a cliente já existe no banco.
     ja_existia = cliente_ja_cadastrado(db, dados.cliente.email, dados.cliente.telefone)
 
     agendamento = service.criar(dados)
 
-    # Pydantic v1: use AgendamentoPublicoResponse.from_orm(agendamento).
-    # Se service.criar já devolver dict/schema pronto, remova esta linha
-    # e só atribua o token_acesso abaixo.
     resposta = AgendamentoPublicoResponse.model_validate(agendamento)
 
-    # Só cliente nova ganha token automático (e-mail não é verificado aqui).
     if not ja_existia:
         cliente = ClienteRepository(db).buscar_por_id(agendamento.cliente_id)
         if cliente is not None:

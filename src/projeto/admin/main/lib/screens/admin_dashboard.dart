@@ -28,7 +28,6 @@ class AdminDashboard extends StatefulWidget {
 }
 
 class _AdminDashboardState extends State<AdminDashboard> {
-  // Começa na Visão Geral
   int _selectedIndex = 0;
 
   static const Color vinho = Color(0xFF8E2348);

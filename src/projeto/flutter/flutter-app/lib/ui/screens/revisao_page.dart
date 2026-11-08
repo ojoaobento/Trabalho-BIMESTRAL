@@ -47,7 +47,6 @@ class _RevisaoPageState extends State<RevisaoPage> {
   }
 
   /// Primeira vez: o servidor devolve um token e a cliente já fica "logada"
-  /// neste aparelho. Falhar aqui não pode estragar o agendamento já criado.
   Future<void> _guardarSessao(String? token) async {
     if (token == null || token.isEmpty) return;
 
