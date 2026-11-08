@@ -448,7 +448,6 @@ class _HomePageState extends State<HomePage> {
     final proximo = _proximoHoje;
 
     final String titulo;
-    String? janela;
 
     if (!_hojeCarregado) {
       titulo = 'Buscando horários...';
@@ -498,11 +497,6 @@ class _HomePageState extends State<HomePage> {
               fontWeight: FontWeight.bold,
             ),
           ),
-          if (janela != null)
-            Text(
-              janela,
-              style: const TextStyle(color: Colors.white70),
-            ),
           const SizedBox(height: 16),
           FilledButton.icon(
             onPressed: proximo == null ? null : _escolherProximoHorario,
@@ -649,7 +643,7 @@ class _HomePageState extends State<HomePage> {
                               color: selecionado
                                   ? Colors.white
                                   : (feriado
-                                      ? corPrincipal.withOpacity(0.7)
+                                      ? corPrincipal.withValues(alpha: 0.8)
                                       : const Color(0xFF9A8A90)),
                             ),
                           ),
@@ -662,7 +656,7 @@ class _HomePageState extends State<HomePage> {
                               color: selecionado
                                   ? Colors.white
                                   : (feriado
-                                      ? corPrincipal.withOpacity(0.8)
+                                      ? corPrincipal.withValues(alpha: 0.8)
                                       : corTexto),
                             ),
                           ),
@@ -715,8 +709,7 @@ class _HomePageState extends State<HomePage> {
               onSurface: corTexto,
             ),
           ),
-          child: child!,
-        );
+        child: child ?? const SizedBox.shrink(),        );
       },
     );
 
@@ -791,7 +784,7 @@ class _HomePageState extends State<HomePage> {
             textAlign: TextAlign.center,
             style: const TextStyle(color: corTexto),
           ),
-          if (acao != null) acao,
+          ?acao,
         ],
       ),
     );
