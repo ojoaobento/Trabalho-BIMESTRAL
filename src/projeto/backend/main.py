@@ -12,6 +12,7 @@ from api.ServicoRouter import router as servico_router
 from api.ClienteRouter import router as cliente_router
 from api.dashboard import router as dashboard_router
 from api.MeusAgendamentos import router as meus_agendamentos_router
+from api.BloqueioRouter import router as bloqueio_router
 app = FastAPI(
     title="API de Agendamento - Studio Cleusa",
     version="0.1.0"
@@ -35,3 +36,4 @@ app.include_router(servico_router)
 app.include_router(cliente_router)
 app.include_router(dashboard_router)
 app.include_router(meus_agendamentos_router)
+app.include_router(bloqueio_router)

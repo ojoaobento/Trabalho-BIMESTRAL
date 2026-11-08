@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:main/data/agendamento_repository.dart';
 import 'package:main/data/api_service.dart';
 import 'package:main/models/horario_livre.dart';
+import 'package:main/utils/feriados_utils.dart';
 import 'meus_agendamentos.dart';
 import 'package:main/ui/screens/servicos_page.dart';
 
@@ -46,7 +47,12 @@ class _HomePageState extends State<HomePage> {
   void initState() {
     super.initState();
 
-    dataSelecionada = DateUtils.dateOnly(DateTime.now());
+    final hoje = DateUtils.dateOnly(DateTime.now());
+    var inicial = hoje;
+    while (FeriadosUtils.ehFeriado(inicial)) {
+      inicial = inicial.add(const Duration(days: 1));
+    }
+    dataSelecionada = inicial;
 
     _carregarHorarios();
   }
@@ -572,19 +578,23 @@ class _HomePageState extends State<HomePage> {
             );
 
             final passado = dia.isBefore(hojeData);
+            final feriado = FeriadosUtils.ehFeriado(dia);
+            final desabilitado = passado || feriado;
 
             return Expanded(
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 3),
                 child: Opacity(
-                  opacity: passado ? .4 : 1,
+                  opacity: desabilitado ? .35 : 1,
                   child: InkWell(
                     borderRadius: BorderRadius.circular(14),
-                    onTap: passado ? null : () => _selecionarData(dia),
+                    onTap: desabilitado ? null : () => _selecionarData(dia),
                     child: Ink(
                       height: 70,
                       decoration: BoxDecoration(
-                        color: selecionado ? corPrincipal : Colors.white,
+                        color: selecionado
+                            ? corPrincipal
+                            : (feriado ? const Color(0xFFF9ECEF) : Colors.white),
                         borderRadius: BorderRadius.circular(14),
                         border: Border.all(
                           color: selecionado ? corPrincipal : corBorda,
@@ -601,7 +611,9 @@ class _HomePageState extends State<HomePage> {
                               fontWeight: FontWeight.bold,
                               color: selecionado
                                   ? Colors.white
-                                  : const Color(0xFF9A8A90),
+                                  : (feriado
+                                      ? corPrincipal.withOpacity(0.7)
+                                      : const Color(0xFF9A8A90)),
                             ),
                           ),
                           const SizedBox(height: 2),
@@ -610,14 +622,21 @@ class _HomePageState extends State<HomePage> {
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
-                              color: selecionado ? Colors.white : corTexto,
+                              color: selecionado
+                                  ? Colors.white
+                                  : (feriado
+                                      ? corPrincipal.withOpacity(0.8)
+                                      : corTexto),
                             ),
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            ehHoje ? 'Hoje' : '',
+                            feriado ? 'Feriado' : (ehHoje ? 'Hoje' : ''),
                             style: TextStyle(
-                              fontSize: 8,
+                              fontSize: 7.5,
+                              fontWeight: feriado
+                                  ? FontWeight.bold
+                                  : FontWeight.normal,
                               color: selecionado
                                   ? Colors.white
                                   : corPrincipal,
@@ -647,6 +666,7 @@ class _HomePageState extends State<HomePage> {
       initialDate: dataInicial,
       firstDate: hoje,
       lastDate: hoje.add(const Duration(days: 365)),
+      selectableDayPredicate: (dia) => !FeriadosUtils.ehFeriado(dia),
       locale: const Locale('pt', 'BR'),
       builder: (context, child) {
         return Theme(
@@ -690,6 +710,12 @@ class _HomePageState extends State<HomePage> {
     }
 
     if (_horarios.isEmpty) {
+      if (FeriadosUtils.ehFeriado(dataSelecionada)) {
+        final nome = FeriadosUtils.nomeFeriado(dataSelecionada);
+        return _cartaoMensagem(
+          'Hoje é feriado (${nome ?? "Feriado"}). Não há expediente para agendamentos.',
+        );
+      }
       return _cartaoMensagem(
         'Não há horários livres neste dia. Escolha outra data.',
       );

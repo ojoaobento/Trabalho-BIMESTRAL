@@ -7,6 +7,7 @@ from core.database import get_db
 from repositories.AgendamentoRepository import AgendamentoRepository
 from repositories.ClienteRepository import ClienteRepository
 from repositories.DisponibilidadeRepository import DisponibilidadeRepository
+from repositories.BloqueioHorarioRepository import BloqueioHorarioRepository
 from repositories.LembreteRepository import LembreteRepository
 from repositories.ServicoRepository import ServicoRepository
 from schemas.AgendamentoSchema import (
@@ -22,6 +23,8 @@ from services.ClienteService import ClienteService
 from services.LembreteService import LembreteService
 from models.Usuario import Usuario
 from datetime import date, time
+from core.feriados import listar_feriados_ano
+
 router = APIRouter(prefix="/agendamentos", tags=["Agendamentos"])
 
 
@@ -34,6 +37,7 @@ def get_service(db: Session = Depends(get_db)) -> AgendamentoService:
         servico_repository,
         DisponibilidadeRepository(db),
         LembreteService(LembreteRepository(db), agendamento_repository, servico_repository),
+        BloqueioHorarioRepository(db),
     )
 
 
@@ -56,6 +60,10 @@ def listar(
         return service.listar_por_periodo(inicio, fim)
     return service.listar()
  
+@router.get("/feriados", response_model=dict[str, str])
+def feriados(ano: int = date.today().year):
+    return listar_feriados_ano(ano)
+
 @router.get("/horarios-livres", response_model=list[HorarioLivreResponse])
 def horarios_livres(data: date, service: AgendamentoService = Depends(get_service)):
     return service.horarios_livres(data)

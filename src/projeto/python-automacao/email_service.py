@@ -27,18 +27,37 @@ else:
 
 CAMINHO_LOGO_CIRCLE = Path(__file__).resolve().parent / "assets" / "logo_cleusa_circle.png"
 CAMINHO_LOGO = CAMINHO_LOGO_CIRCLE if CAMINHO_LOGO_CIRCLE.exists() else Path(__file__).resolve().parent / "assets" / "logo_cleusa.png"
-CAMINHO_LOGO_SVG = Path(__file__).resolve().parent / "assets" / "logo_cleusa.svg"
 
 
-def obter_logo_svg() -> str:
-    """Carrega o SVG da logo para injeção direta no HTML de preview."""
-    if CAMINHO_LOGO_SVG.exists():
-        try:
-            with open(CAMINHO_LOGO_SVG, "r", encoding="utf-8") as f:
-                return f.read().strip()
-        except Exception:
-            pass
-    return ""
+def gerar_marca_studio_html() -> str:
+    """Gera a marca visual do Studio Cleusa exclusivamente com HTML e CSS inline.
+    
+    Substitui imagens e anexos CID, evitando problemas de bloqueio de imagem ou
+    anexos indesejados quando o e-mail cai na caixa de spam do destinatário.
+    """
+    return """
+    <table role="presentation" align="center" cellpadding="0" cellspacing="0" style="margin: 0 auto 14px auto;">
+      <tr>
+        <td align="center">
+          <table role="presentation" cellpadding="0" cellspacing="0" style="width: 78px; height: 78px; background: linear-gradient(145deg, #FFF5F8 0%, #FBEBF1 100%); border: 2px solid #8E2348; border-radius: 50%; box-shadow: 0 2px 8px rgba(142,35,72,0.12); text-align: center;">
+            <tr>
+              <td align="center" valign="middle" style="height: 74px; width: 74px; padding: 0;">
+                <table role="presentation" cellpadding="0" cellspacing="0" style="margin: 0 auto; width: 62px; height: 62px; border: 1px dashed rgba(142,35,72,0.45); border-radius: 50%;">
+                  <tr>
+                    <td align="center" valign="middle" style="font-family: 'Playfair Display', Didot, 'Bodoni MT', Georgia, serif; font-size: 26px; font-weight: 700; color: #8E2348; letter-spacing: 1px; line-height: 1;">
+                      SC
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+    <h1 style="margin: 0; font-family: 'Playfair Display', Georgia, serif; font-size: 21px; font-weight: 700; color: #8E2348; letter-spacing: 1.5px; text-transform: uppercase;">Studio Cleusa</h1>
+    <p style="margin: 3px 0 0 0; font-size: 10px; font-weight: 600; color: #A45C74; letter-spacing: 2.5px; text-transform: uppercase;">Beleza &bull; Est&eacute;tica</p>
+    """.strip()
 
 
 def obter_logo_bytes() -> bytes | None:
@@ -78,14 +97,6 @@ def gerar_template_confirmacao(
     valor_formatado: str,
     observacoes: str | None = None,
 ) -> tuple[str, str]:
-    obs_linha_txt = f"\nObservações: {observacoes}" if observacoes else ""
-    obs_linha_html = f"""
-      <tr>
-        <td style="padding: 8px 0; color: #6b6b6b; font-size: 14px;">Observações</td>
-        <td style="padding: 8px 0; color: #222222; font-size: 14px;">{observacoes}</td>
-      </tr>
-    """ if observacoes else ""
-
     corpo_texto = f"""
 Olá, {nome_cliente}.
 
@@ -96,12 +107,14 @@ Detalhes do atendimento:
 - Data: {data_formatada}
 - Horário: {hora_inicio} às {hora_fim}
 - Valor: R$ {valor_formatado}
-- Local: Studio Cleusa{obs_linha_txt}
+- Local: Studio Cleusa
 
 Caso precise remarcar ou cancelar, pedimos que nos avise com antecedência.
 
 Studio Cleusa
 """.strip()
+
+    marca_html = gerar_marca_studio_html()
 
     corpo_html = f"""<!DOCTYPE html>
 <html lang="pt-BR">
@@ -115,16 +128,9 @@ Studio Cleusa
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width: 520px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; border: 1px solid #e8e4e1; overflow: hidden;">
     
     <tr>
-      <td style="padding: 28px 24px 18px 24px; text-align: center; border-bottom: 1px solid #f0ece9;">
-        <table role="presentation" align="center" cellpadding="0" cellspacing="0" style="margin: 0 auto 12px auto;">
-          <tr>
-            <td align="center">
-              <img src="cid:logo_studio" alt="Studio Cleusa" width="110" height="110" style="width: 110px; height: 110px; border-radius: 50%; display: block; border: 0; outline: none; text-decoration: none;">
-            </td>
-          </tr>
-        </table>
-        <h1 style="margin: 0; font-size: 20px; font-weight: 600; color: #8E2348;">Studio Cleusa</h1>
-        <p style="margin: 4px 0 0 0; font-size: 13px; color: #777777;">Confirmação de Agendamento</p>
+      <td style="padding: 28px 24px 20px 24px; text-align: center; border-bottom: 1px solid #f0ece9;">
+        {marca_html}
+        <p style="margin: 6px 0 0 0; font-size: 13px; color: #777777;">Confirmação de Agendamento</p>
       </td>
     </tr>
 
@@ -158,7 +164,6 @@ Studio Cleusa
             <td style="padding: 8px 0; color: #6b6b6b; font-size: 14px;">Local</td>
             <td style="padding: 8px 0; color: #222222; font-size: 14px;">Studio Cleusa</td>
           </tr>
-          {obs_linha_html}
         </table>
 
         <p style="margin: 0 0 16px 0; font-size: 13px; color: #666666;">
@@ -211,6 +216,8 @@ Recomendamos chegar com alguns minutos de antecedência.
 Studio Cleusa
 """.strip()
 
+    marca_html = gerar_marca_studio_html()
+
     corpo_html = f"""<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -223,16 +230,9 @@ Studio Cleusa
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width: 520px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; border: 1px solid #e8e4e1; overflow: hidden;">
     
     <tr>
-      <td style="padding: 26px 24px 16px 24px; text-align: center; border-bottom: 1px solid #f0ece9;">
-        <table role="presentation" align="center" cellpadding="0" cellspacing="0" style="margin: 0 auto 10px auto;">
-          <tr>
-            <td align="center">
-              <img src="cid:logo_studio" alt="Studio Cleusa" width="100" height="100" style="width: 100px; height: 100px; border-radius: 50%; display: block; border: 0; outline: none; text-decoration: none;">
-            </td>
-          </tr>
-        </table>
-        <h1 style="margin: 0; font-size: 19px; font-weight: 600; color: #8E2348;">Studio Cleusa</h1>
-        <p style="margin: 4px 0 0 0; font-size: 13px; color: #777777;">Lembrete de Horário</p>
+      <td style="padding: 26px 24px 18px 24px; text-align: center; border-bottom: 1px solid #f0ece9;">
+        {marca_html}
+        <p style="margin: 6px 0 0 0; font-size: 13px; color: #777777;">Lembrete de Horário</p>
       </td>
     </tr>
 
@@ -294,18 +294,11 @@ def salvar_preview_html(corpo_html: str, destino: str, assunto: str) -> str:
     pasta_preview = Path(__file__).resolve().parent
     caminho_arquivo = pasta_preview / "preview_email_agendamento.html"
     
-    # Para visualização no navegador/preview, usamos a logo em base64 direto no img
-    logo_b64 = obter_logo_base64()
-    if logo_b64:
-        corpo_render = corpo_html.replace('src="cid:logo_studio"', f'src="data:image/png;base64,{logo_b64}"')
-    else:
-        corpo_render = corpo_html
-
     html_com_metadados = f"""
     <div style="background:#8E2348; color:#ffffff; padding:8px 14px; font-family:-apple-system, sans-serif; font-size:12px;">
       Prévia &bull; Para: {destino} &bull; Assunto: {assunto}
     </div>
-    {corpo_render}
+    {corpo_html}
     """
     
     with open(caminho_arquivo, "w", encoding="utf-8") as f:
@@ -341,39 +334,15 @@ def enviar_email(
             print(corpo_texto)
         return True
 
-    # Mensagem principal (multipart/related para suporte nativo a imagens embutidas via CID)
-    msg_raiz = MIMEMultipart("related")
-    msg_raiz["From"] = f"{config['remetente_nome']} <{config['usuario']}>"
-    msg_raiz["To"] = destino
-    msg_raiz["Subject"] = assunto
-    msg_raiz["Date"] = email.utils.formatdate(localtime=True)
-    msg_raiz["Message-ID"] = email.utils.make_msgid(domain="gmail.com")
-    msg_raiz["Reply-To"] = config["usuario"]
-    msg_raiz["Auto-Submitted"] = "auto-generated"
-
-    # Alternativa texto puro / HTML
-    msg_alt = MIMEMultipart("alternative")
-    msg_alt.attach(MIMEText(corpo_texto, "plain", "utf-8"))
-
-    if corpo_html:
-        msg_alt.attach(MIMEText(corpo_html, "html", "utf-8"))
-
-    msg_raiz.attach(msg_alt)
-
-    # Anexa a logo inline com Content-ID para renderizar em qualquer leitor de e-mail (Gmail, Outlook, celular)
-    logo_bytes = obter_logo_bytes()
-    if logo_bytes and corpo_html and "cid:logo_studio" in corpo_html:
-        try:
-            img = MIMEImage(logo_bytes, _subtype="png")
-            img.add_header("Content-ID", "<logo_studio>")
-            img.add_header("X-Attachment-Id", "logo_studio")
-            img.add_header("Content-Disposition", "inline", filename="logo_cleusa.png")
-            msg_raiz.attach(img)
-        except Exception:
-            pass
-
-    # Anexo adicional se houver
+    # Mensagem principal (multipart/alternative padrão sem anexos de imagem)
     if caminho_anexo and os.path.exists(caminho_anexo):
+        msg_raiz = MIMEMultipart("mixed")
+        msg_conteudo = MIMEMultipart("alternative")
+        msg_conteudo.attach(MIMEText(corpo_texto, "plain", "utf-8"))
+        if corpo_html:
+            msg_conteudo.attach(MIMEText(corpo_html, "html", "utf-8"))
+        msg_raiz.attach(msg_conteudo)
+
         try:
             with open(caminho_anexo, "rb") as anexo:
                 part = MIMEBase("application", "octet-stream")
@@ -384,6 +353,19 @@ def enviar_email(
                 msg_raiz.attach(part)
         except Exception:
             pass
+    else:
+        msg_raiz = MIMEMultipart("alternative")
+        msg_raiz.attach(MIMEText(corpo_texto, "plain", "utf-8"))
+        if corpo_html:
+            msg_raiz.attach(MIMEText(corpo_html, "html", "utf-8"))
+
+    msg_raiz["From"] = f"{config['remetente_nome']} <{config['usuario']}>"
+    msg_raiz["To"] = destino
+    msg_raiz["Subject"] = assunto
+    msg_raiz["Date"] = email.utils.formatdate(localtime=True)
+    msg_raiz["Message-ID"] = email.utils.make_msgid(domain="gmail.com")
+    msg_raiz["Reply-To"] = config["usuario"]
+    msg_raiz["Auto-Submitted"] = "auto-generated"
 
     try:
         server = smtplib.SMTP(config["host"], config["port"], timeout=20)

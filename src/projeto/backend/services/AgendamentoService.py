@@ -7,10 +7,12 @@ from models.Agendamento import Agendamento, StatusAgendamento
 from models.Servico import Servico
 from repositories.AgendamentoRepository import AgendamentoRepository
 from repositories.DisponibilidadeRepository import DisponibilidadeRepository
+from repositories.BloqueioHorarioRepository import BloqueioHorarioRepository
 from repositories.ServicoRepository import ServicoRepository
 from schemas.AgendamentoSchema import AgendamentoAtualizarRequest, AgendamentoRequest, HorarioLivreResponse
 from services.ClienteService import ClienteService
 from services.LembreteService import LembreteService
+from core.feriados import eh_feriado, nome_feriado
 
 FUSO = ZoneInfo("America/Sao_Paulo")
  
@@ -35,12 +37,14 @@ class AgendamentoService:
         servico_repository: ServicoRepository,
         disponibilidade_repository: DisponibilidadeRepository,
         lembrete_service: LembreteService,
+        bloqueio_repository: BloqueioHorarioRepository | None = None,
     ):
         self.repository = repository
         self.cliente_service = cliente_service
         self.servico_repository = servico_repository
         self.disponibilidade_repository = disponibilidade_repository
         self.lembrete_service = lembrete_service
+        self.bloqueio_repository = bloqueio_repository
 
     def listar(self):
         return self.repository.listar()
@@ -96,6 +100,9 @@ class AgendamentoService:
         if local_inicio.date() != local_fim.date():
             return False 
 
+        if eh_feriado(local_inicio.date()):
+            return False
+
         dia_semana = local_inicio.weekday()
         blocos = self.disponibilidade_repository.listar_por_dia_semana(dia_semana)
         
@@ -119,6 +126,15 @@ class AgendamentoService:
                 detail="O horário escolhido já passou.",
             )
  
+        local_inicio = (inicio.replace(tzinfo=timezone.utc) if inicio.tzinfo is None else inicio).astimezone(FUSO)
+        if eh_feriado(local_inicio.date()):
+            nome = nome_feriado(local_inicio.date())
+            detalhe = f"Não há atendimento em feriados ({nome})." if nome else "Não há atendimento em feriados."
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=detalhe,
+            )
+
         fim = inicio + timedelta(minutes=servico.duracao_minutos)
  
         if not self._dentro_do_expediente(inicio, fim):
@@ -141,6 +157,13 @@ class AgendamentoService:
                 status_code=status.HTTP_409_CONFLICT,
                 detail="Esse horário acabou de ser ocupado. Escolha outro.",
             )
+
+        if self.bloqueio_repository and self.bloqueio_repository.buscar_conflitos(inicio, fim):
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Esse horário foi bloqueado para atendimento. Escolha outro.",
+            )
+
         return fim
 
     def criar(self, dados: AgendamentoRequest) -> Agendamento:
@@ -263,6 +286,9 @@ class AgendamentoService:
         return dt.astimezone(FUSO)
 
     def horarios_livres(self, dia: date) -> list[HorarioLivreResponse]:
+        if eh_feriado(dia):
+            return []
+
         agora = datetime.now(timezone.utc)
         inicio_dia = datetime.combine(dia, time.min, tzinfo=FUSO)
         fim_dia = inicio_dia + timedelta(days=1)
@@ -279,6 +305,10 @@ class AgendamentoService:
             if reserva_vencida:                   
                 continue
             ocupados.append((self._como_local(a.dt_inicio), self._como_local(a.dt_fim)))
+
+        if self.bloqueio_repository:
+            for b in self.bloqueio_repository.buscar_conflitos(inicio_dia, fim_dia):
+                ocupados.append((self._como_local(b.dt_inicio), self._como_local(b.dt_fim)))
 
         horarios: dict[str, int] = {}
         for bloco in self.disponibilidade_repository.listar_por_dia_semana(dia.weekday()):
