@@ -902,7 +902,7 @@ class _FormularioServicoState extends State<_FormularioServico> {
                         ),
                         const SizedBox(height: 16),
                         _rotulado(
-                          'Descrição (opcional)',
+                          'Descrição',
                           TextFormField(
                             controller: _descricaoController,
                             enabled: !_salvando,

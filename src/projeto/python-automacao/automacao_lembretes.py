@@ -21,10 +21,21 @@ from email_service import (
     enviar_email,
     gerar_template_confirmacao,
     gerar_template_lembrete_1h,
+    gerar_template_lembrete_24h,
     obter_config_smtp,
 )
 
 FUSO_SP = ZoneInfo("America/Sao_Paulo")
+
+DIAS_SEMANA = [
+    "Segunda-feira",
+    "Terça-feira",
+    "Quarta-feira",
+    "Quinta-feira",
+    "Sexta-feira",
+    "Sábado",
+    "Domingo",
+]
 
 
 def formatar_data_hora(dt: datetime) -> tuple[str, str]:
@@ -32,6 +43,14 @@ def formatar_data_hora(dt: datetime) -> tuple[str, str]:
         dt = dt.replace(tzinfo=timezone.utc)
     dt_local = dt.astimezone(FUSO_SP)
     return dt_local.strftime("%d/%m/%Y"), dt_local.strftime("%H:%M")
+
+
+def obter_dia_semana(dt: datetime) -> str:
+    """Retorna o dia da semana em português (ex.: 'Quinta-feira'), no horário de São Paulo."""
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    dt_local = dt.astimezone(FUSO_SP)
+    return DIAS_SEMANA[dt_local.weekday()]
 
 
 def carregar_modelos():
@@ -109,6 +128,7 @@ def processar_fila_lembretes(simular: bool = False) -> int:
 
             data_str, hora_inicio_str = formatar_data_hora(agendamento.dt_inicio)
             _, hora_fim_str = formatar_data_hora(agendamento.dt_fim)
+            dia_semana_str = obter_dia_semana(agendamento.dt_inicio)
             valor_str = f"{agendamento.valor_cobrado:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
             nome_servico = (
                 lembrete.servico.nome if lembrete.servico 
@@ -127,6 +147,17 @@ def processar_fila_lembretes(simular: bool = False) -> int:
                     observacoes=agendamento.observacoes,
                 )
                 tipo_desc = "Confirmação"
+            elif lembrete.tipo == TipoLembrete.LEMBRETE_24H:
+                assunto = f"Lembrete de Horário: {nome_servico} - Studio Cleusa"
+                corpo_txt, corpo_html = gerar_template_lembrete_24h(
+                    nome_cliente=cliente.nome,
+                    nome_servico=nome_servico,
+                    data_formatada=data_str,
+                    hora_inicio=hora_inicio_str,
+                    valor_formatado=valor_str,
+                    dia_semana=dia_semana_str,
+                )
+                tipo_desc = "Lembrete 24h"
             else:
                 assunto = f"Lembrete de Horário: {nome_servico} - Studio Cleusa"
                 corpo_txt, corpo_html = gerar_template_lembrete_1h(
@@ -163,7 +194,10 @@ def processar_fila_lembretes(simular: bool = False) -> int:
 
 
 def disparar_manual(agendamento_id: int, tipo: str, simular: bool = False):
-    """Dispara manualmente um e-mail de confirmação ou lembrete para um agendamento específico."""
+    """Dispara manualmente um e-mail de confirmação ou lembrete para um agendamento específico.
+
+    tipo: "confirmacao", "lembrete24h" ou "lembrete" (1h).
+    """
     carregar_modelos()
     from core.database import SessionLocal
     from models.Agendamento import Agendamento
@@ -183,6 +217,7 @@ def disparar_manual(agendamento_id: int, tipo: str, simular: bool = False):
 
         data_str, hora_inicio_str = formatar_data_hora(agendamento.dt_inicio)
         _, hora_fim_str = formatar_data_hora(agendamento.dt_fim)
+        dia_semana_str = obter_dia_semana(agendamento.dt_inicio)
         valor_str = f"{agendamento.valor_cobrado:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
         nome_servico = servico.nome if servico else "Atendimento Estético"
 
@@ -196,6 +231,16 @@ def disparar_manual(agendamento_id: int, tipo: str, simular: bool = False):
                 hora_fim=hora_fim_str,
                 valor_formatado=valor_str,
                 observacoes=agendamento.observacoes,
+            )
+        elif tipo == "lembrete24h":
+            assunto = f"Lembrete de Horário: {nome_servico} - Studio Cleusa"
+            corpo_txt, corpo_html = gerar_template_lembrete_24h(
+                nome_cliente=cliente.nome,
+                nome_servico=nome_servico,
+                data_formatada=data_str,
+                hora_inicio=hora_inicio_str,
+                valor_formatado=valor_str,
+                dia_semana=dia_semana_str,
             )
         else:
             assunto = f"Lembrete de Horário: {nome_servico} - Studio Cleusa"
@@ -290,6 +335,9 @@ def main():
         "--disparar-lembrete", type=int, metavar="AGENDAMENTO_ID", help="Dispara imediatamente o e-mail de lembrete (1h) para o ID informado."
     )
     parser.add_argument(
+        "--disparar-lembrete-24h", type=int, metavar="AGENDAMENTO_ID", help="Dispara imediatamente o e-mail de lembrete (24h, com dia da semana) para o ID informado."
+    )
+    parser.add_argument(
         "--test-email", type=str, metavar="EMAIL", help="Dispara um e-mail de teste rápido para o endereço especificado."
     )
     parser.add_argument(
@@ -302,6 +350,8 @@ def main():
         enviar_teste_rapido(args.test_email, simular=args.simular)
     elif args.disparar_confirmacao:
         disparar_manual(args.disparar_confirmacao, tipo="confirmacao", simular=args.simular)
+    elif args.disparar_lembrete_24h:
+        disparar_manual(args.disparar_lembrete_24h, tipo="lembrete24h", simular=args.simular)
     elif args.disparar_lembrete:
         disparar_manual(args.disparar_lembrete, tipo="lembrete", simular=args.simular)
     elif args.loop:

@@ -212,6 +212,106 @@ Studio Cleusa
     return corpo_texto, corpo_html
 
 
+def gerar_template_lembrete_24h(
+    nome_cliente: str,
+    nome_servico: str,
+    data_formatada: str,
+    hora_inicio: str,
+    valor_formatado: str,
+    dia_semana: str,
+) -> tuple[str, str]:
+    """Lembrete enviado com antecedência (24h): mostra o dia da semana em vez de "Hoje"."""
+    corpo_texto = f"""
+Olá, {nome_cliente}.
+
+Lembramos do seu atendimento no Studio Cleusa: {dia_semana}, {data_formatada}, às {hora_inicio}.
+
+Detalhes:
+- Serviço: {nome_servico}
+- Dia: {dia_semana}, {data_formatada}
+- Horário: {hora_inicio}
+- Valor: R$ {valor_formatado}
+- Local: Studio Cleusa
+
+Recomendamos chegar com 5 a 10 minutos de antecedência.
+
+Studio Cleusa
+""".strip()
+
+    marca_html = gerar_marca_studio_html()
+
+    corpo_html = f"""<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lembrete de Agendamento</title>
+</head>
+<body style="margin: 0; padding: 24px 12px; background-color: #f7f6f5; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; color: #222222; line-height: 1.5;">
+
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width: 520px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; border: 1px solid #e8e4e1; overflow: hidden;">
+    
+    <tr>
+      <td style="padding: 26px 24px 18px 24px; text-align: center; border-bottom: 1px solid #f0ece9;">
+        {marca_html}
+        <p style="margin: 6px 0 0 0; font-size: 13px; color: #777777;">Lembrete de Horário</p>
+      </td>
+    </tr>
+
+    <tr>
+      <td style="padding: 24px;">
+        <p style="margin: 0 0 14px 0; font-size: 15px;">
+          Olá, <strong>{nome_cliente}</strong>.
+        </p>
+        <p style="margin: 0 0 18px 0; font-size: 14px; color: #444444;">
+          Lembramos do seu horário no Studio Cleusa:
+        </p>
+
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color: #faf9f8; border: 1px solid #ede8e5; border-radius: 8px; padding: 12px 16px; margin-bottom: 18px;">
+          <tr style="border-bottom: 1px solid #f0eae7;">
+            <td style="padding: 8px 0; color: #6b6b6b; font-size: 14px; width: 32%;">Serviço</td>
+            <td style="padding: 8px 0; color: #222222; font-size: 14px; font-weight: 600;">{nome_servico}</td>
+          </tr>
+          <tr style="border-bottom: 1px solid #f0eae7;">
+            <td style="padding: 8px 0; color: #6b6b6b; font-size: 14px;">Horário</td>
+            <td style="padding: 8px 0; color: #8E2348; font-size: 15px; font-weight: 600;">{hora_inicio} <span style="font-size: 13px; font-weight: normal; color: #666666;">({dia_semana})</span></td>
+          </tr>
+          <tr style="border-bottom: 1px solid #f0eae7;">
+            <td style="padding: 8px 0; color: #6b6b6b; font-size: 14px;">Valor</td>
+            <td style="padding: 8px 0; color: #222222; font-size: 14px;">R$ {valor_formatado}</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px 0; color: #6b6b6b; font-size: 14px;">Local</td>
+            <td style="padding: 8px 0; color: #222222; font-size: 14px;">Studio Cleusa</td>
+          </tr>
+        </table>
+
+        <p style="margin: 0 0 16px 0; font-size: 13px; color: #666666;">
+          Recomendamos chegar com 5 a 10 minutos de antecedência.
+        </p>
+
+        <p style="margin: 0; font-size: 14px; color: #333333;">
+          Aguardamos você,
+        </p>
+        <p style="margin: 4px 0 0 0; font-size: 14px; font-weight: 600; color: #8E2348;">
+          Studio Cleusa
+        </p>
+      </td>
+    </tr>
+
+    <tr>
+      <td style="padding: 14px 20px; text-align: center; background-color: #faf8f7; border-top: 1px solid #f0eae7; font-size: 11px; color: #888888;">
+        Studio Cleusa &bull; Lembrete enviado conforme solicitado
+      </td>
+    </tr>
+
+  </table>
+
+</body>
+</html>"""
+    return corpo_texto, corpo_html
+
+
 def gerar_template_lembrete_1h(
     nome_cliente: str,
     nome_servico: str,

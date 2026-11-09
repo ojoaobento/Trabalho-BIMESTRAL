@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:main/models/servico.dart';
 import 'package:main/data/agendamento_repository.dart';
 import 'package:main/data/api_service.dart';
@@ -42,6 +43,38 @@ class _RevisaoPageState extends State<RevisaoPage> {
 
   bool _enviando = false;
 
+  // Dados editáveis (começam com o que veio da etapa anterior).
+  late String _nome;
+  late String _whatsApp;
+
+  // Indica se há cliente logada neste aparelho. Nesse caso a etapa 3
+  // (Seus dados) é pulada, então o "Editar" precisa abrir a edição aqui.
+  bool _logada = false;
+
+  @override
+  void initState() {
+    super.initState();
+
+    _nome = widget.nome;
+    _whatsApp = widget.whatsApp;
+
+    _verificarSessao();
+  }
+
+  Future<void> _verificarSessao() async {
+    try {
+      final sessao = await SessaoCliente.carregar();
+
+      if (!mounted) return;
+
+      setState(() {
+        _logada = sessao != null;
+      });
+    } catch (e) {
+      debugPrint('Erro ao verificar sessão: $e');
+    }
+  }
+
   String _formatarPreco(num valor) {
     return 'R\$ ${valor.toStringAsFixed(2).replaceAll('.', ',')}';
   }
@@ -59,12 +92,38 @@ class _RevisaoPageState extends State<RevisaoPage> {
       await SessaoCliente(
         token: token,
         email: widget.email.trim(),
-        telefone: widget.whatsApp.replaceAll(RegExp(r'\D'), ''),
-        nome: widget.nome.trim(),
+        telefone: _whatsApp.replaceAll(RegExp(r'\D'), ''),
+        nome: _nome.trim(),
       ).salvar();
     } catch (e) {
       debugPrint('Erro ao guardar sessão: $e');
     }
+  }
+
+  /// Logada: abre a tela de edição dos dados.
+  /// Não logada: volta para a etapa 3 (Seus dados), como antes.
+  Future<void> _editarDados() async {
+    if (!_logada) {
+      Navigator.pop(context);
+      return;
+    }
+
+    final resultado = await Navigator.of(context).push<_DadosEditados>(
+      MaterialPageRoute(
+        builder: (_) => _EditarDadosPage(
+          nome: _nome,
+          whatsApp: _whatsApp,
+          email: widget.email,
+        ),
+      ),
+    );
+
+    if (!mounted || resultado == null) return;
+
+    setState(() {
+      _nome = resultado.nome;
+      _whatsApp = resultado.whatsApp;
+    });
   }
 
   Future<void> _confirmar() async {
@@ -79,8 +138,8 @@ class _RevisaoPageState extends State<RevisaoPage> {
         servicoId: widget.servico.id,
         data: widget.data,
         hora: widget.horario,
-        nome: widget.nome,
-        whatsApp: widget.whatsApp,
+        nome: _nome,
+        whatsApp: _whatsApp,
         email: widget.email,
         aceitaLembretes: widget.aceitaLembretes,
         consentimento: widget.consentimento,
@@ -97,7 +156,7 @@ class _RevisaoPageState extends State<RevisaoPage> {
         MaterialPageRoute(
           builder: (_) => SolicitacaoConfirmadaPage(
             agendamento: criado,
-            whatsApp: widget.whatsApp,
+            whatsApp: _whatsApp,
             email: widget.email,
           ),
         ),
@@ -432,7 +491,7 @@ class _RevisaoPageState extends State<RevisaoPage> {
                 ),
                 const SizedBox(height: 3),
                 Text(
-                  widget.nome,
+                  _nome,
                   style: const TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.bold,
@@ -441,7 +500,7 @@ class _RevisaoPageState extends State<RevisaoPage> {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  _formatarTelefone(widget.whatsApp),
+                  _formatarTelefone(_whatsApp),
                   style: const TextStyle(fontSize: 9, color: Color(0xFF976D7B)),
                 ),
                 const SizedBox(height: 2),
@@ -453,7 +512,7 @@ class _RevisaoPageState extends State<RevisaoPage> {
             ),
           ),
           TextButton(
-            onPressed: _enviando ? null : () => Navigator.pop(context),
+            onPressed: _enviando ? null : _editarDados,
             style: TextButton.styleFrom(
               padding: EdgeInsets.zero,
               foregroundColor: _corPrincipal,
@@ -554,5 +613,218 @@ class _RevisaoPageState extends State<RevisaoPage> {
     return '(${digitos.substring(0, 2)}) '
         '${digitos.substring(2, 7)}-'
         '${digitos.substring(7)}';
+  }
+}
+
+// ----------------------------------------------------------------------
+// TELA DE EDIÇÃO DOS DADOS (usada quando a cliente está logada)
+// ----------------------------------------------------------------------
+
+class _DadosEditados {
+  const _DadosEditados({required this.nome, required this.whatsApp});
+
+  final String nome;
+  final String whatsApp;
+}
+
+class _EditarDadosPage extends StatefulWidget {
+  const _EditarDadosPage({
+    required this.nome,
+    required this.whatsApp,
+    required this.email,
+  });
+
+  final String nome;
+  final String whatsApp;
+  final String email;
+
+  @override
+  State<_EditarDadosPage> createState() => _EditarDadosPageState();
+}
+
+class _EditarDadosPageState extends State<_EditarDadosPage> {
+  static const _corPrincipal = Color(0xFF8E2348);
+  static const _corFundo = Color(0xFFFFF8FA);
+  static const _corTexto = Color(0xFF4A1026);
+  static const _corBorda = Color(0xFFF1DDE5);
+
+  final _formKey = GlobalKey<FormState>();
+
+  late final TextEditingController _nomeController;
+  late final TextEditingController _whatsAppController;
+
+  @override
+  void initState() {
+    super.initState();
+
+    _nomeController = TextEditingController(text: widget.nome);
+    _whatsAppController = TextEditingController(
+      text: widget.whatsApp.replaceAll(RegExp(r'\D'), ''),
+    );
+  }
+
+  @override
+  void dispose() {
+    _nomeController.dispose();
+    _whatsAppController.dispose();
+    super.dispose();
+  }
+
+  void _salvar() {
+    if (!(_formKey.currentState?.validate() ?? false)) return;
+
+    Navigator.of(context).pop(
+      _DadosEditados(
+        nome: _nomeController.text.trim(),
+        whatsApp: _whatsAppController.text.replaceAll(RegExp(r'\D'), ''),
+      ),
+    );
+  }
+
+  InputDecoration _decoracao(String rotulo, IconData icone) {
+    return InputDecoration(
+      labelText: rotulo,
+      prefixIcon: Icon(icone, color: _corPrincipal),
+      filled: true,
+      fillColor: Colors.white,
+      labelStyle: const TextStyle(color: Color(0xFF976D7B)),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: _corBorda),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: _corPrincipal, width: 2),
+      ),
+      errorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: Colors.red),
+      ),
+      focusedErrorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: Colors.red, width: 2),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: _corFundo,
+      body: SafeArea(
+        child: Column(
+          children: [
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 18),
+                children: [
+                  Row(
+                    children: [
+                      IconButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        style: IconButton.styleFrom(
+                          backgroundColor: Colors.white,
+                          side: const BorderSide(color: _corBorda),
+                        ),
+                        icon: const Icon(Icons.chevron_left, size: 18),
+                        color: _corTexto,
+                      ),
+                      const SizedBox(width: 8),
+                      const Text(
+                        'EDITAR MEUS DADOS',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          color: _corPrincipal,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  Form(
+                    key: _formKey,
+                    child: Column(
+                      children: [
+                        TextFormField(
+                          controller: _nomeController,
+                          textCapitalization: TextCapitalization.words,
+                          textInputAction: TextInputAction.next,
+                          decoration: _decoracao(
+                            'Nome completo',
+                            Icons.person_outline,
+                          ),
+                          validator: (valor) {
+                            final texto = (valor ?? '').trim();
+
+                            if (texto.length < 3) {
+                              return 'Informe seu nome.';
+                            }
+
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 14),
+                        TextFormField(
+                          controller: _whatsAppController,
+                          keyboardType: TextInputType.phone,
+                          textInputAction: TextInputAction.done,
+                          inputFormatters: [
+                            FilteringTextInputFormatter.digitsOnly,
+                            LengthLimitingTextInputFormatter(11),
+                          ],
+                          decoration: _decoracao(
+                            'WhatsApp (com DDD)',
+                            Icons.phone_outlined,
+                          ),
+                          validator: (valor) {
+                            final digitos = (valor ?? '').replaceAll(
+                              RegExp(r'\D'),
+                              '',
+                            );
+
+                            if (digitos.length < 10 || digitos.length > 11) {
+                              return 'Informe um telefone válido com DDD.';
+                            }
+
+                            return null;
+                          },
+                          onFieldSubmitted: (_) => _salvar(),
+                        ),
+                        const SizedBox(height: 14),
+                        // E-mail é a identificação da cliente: só leitura.
+                        TextFormField(
+                          initialValue: widget.email,
+                          enabled: false,
+                          decoration: _decoracao(
+                            'E-mail (não pode ser alterado)',
+                            Icons.mail_outline,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Container(
+              color: Colors.white,
+              padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
+              child: SizedBox(
+                width: double.infinity,
+                child: FilledButton.icon(
+                  onPressed: _salvar,
+                  style: FilledButton.styleFrom(
+                    backgroundColor: _corPrincipal,
+                    padding: const EdgeInsets.symmetric(vertical: 15),
+                  ),
+                  icon: const Icon(Icons.check, size: 16),
+                  label: const Text('Salvar e voltar'),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
