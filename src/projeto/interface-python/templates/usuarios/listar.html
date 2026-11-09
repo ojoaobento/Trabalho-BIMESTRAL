@@ -1,0 +1,334 @@
+{% extends "base.html" %}
+
+{% block extra_css %}
+<style>
+    .btn-olho-modal {
+        position: absolute;
+        right: 6px;
+        width: 34px;
+        height: 34px;
+        background: transparent;
+        border: none;
+        color: var(--cor-suave);
+        cursor: pointer;
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0;
+        transition: background-color 0.15s;
+    }
+    .btn-olho-modal:hover {
+        background-color: var(--cor-rosa-claro);
+    }
+    .btn-olho-modal .icone-olho-usuario {
+        font-size: 20px;
+        width: 20px;
+        height: 20px;
+        line-height: 20px;
+        overflow: hidden;
+        display: inline-block;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+{% if erro %}
+<div class="estado-erro">
+    <span class="material-icons">error_outline</span>
+    <p>{{ erro }}</p>
+    <a href="{{ url_for('listar_usuarios') }}" class="btn-vinho">
+        <span class="material-icons">refresh</span>
+        <span>Tentar novamente</span>
+    </a>
+</div>
+{% else %}
+    <!-- BarraTopoComBusca -->
+    <div class="barra-topo">
+        <div class="campo-busca-wrapper">
+            <span class="material-icons icone-busca">search</span>
+            <input type="text" id="inputBusca" class="campo-busca-input" placeholder="Buscar por nome ou e-mail" oninput="filtrarTabela()">
+            <button type="button" id="btnLimparBusca" class="btn-limpar-busca" onclick="limparBusca()" title="Limpar busca">
+                <span class="material-icons" style="font-size: 18px;">close</span>
+            </button>
+        </div>
+        <div class="linha-contador-acao">
+            <span class="texto-contador" id="contadorItens">{{ usuarios | length }} usuário(s)</span>
+            <button type="button" class="btn-vinho" onclick="abrirModalNovoUsuario()">
+                <span class="material-icons">add</span>
+                <span>Novo usuário</span>
+            </button>
+        </div>
+    </div>
+
+    {% if usuarios | length == 0 %}
+    <div style="flex: 1; display: flex; align-items: center; justify-content: center; color: #616161;">
+        Nenhum usuário cadastrado.
+    </div>
+    {% else %}
+    <div class="tabela-container">
+        <table class="data-table" id="tabelaUsuarios">
+            <thead>
+                <tr>
+                    <th>Nome</th>
+                    <th>E-mail</th>
+                    <th>Status</th>
+                    <th>Cadastro</th>
+                    <th>Ações</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for u in usuarios %}
+                <tr class="linha-item" data-busca="{{ (u.nome ~ ' ' ~ u.email) | lower }}">
+                    <td style="font-weight: 600;">{{ u.nome }}</td>
+                    <td>{{ u.email }}</td>
+                    <td>
+                        <div class="celula-status">
+                            <form method="POST" action="{{ url_for('alternar_ativo_usuario', usuario_id=u.id) }}" style="display: inline-flex;">
+                                <input type="hidden" name="ativo" value="{{ 'false' if u.ativo else 'true' }}">
+                                <label class="m3-switch" title="Alternar status">
+                                    <input type="checkbox" {% if u.ativo %}checked{% endif %} onchange="this.form.submit()">
+                                    <span class="m3-slider"></span>
+                                </label>
+                            </form>
+                            <span class="status-chip {{ 'ativo' if u.ativo else 'inativo' }}">
+                                {{ 'Ativo' if u.ativo else 'Inativo' }}
+                            </span>
+                        </div>
+                    </td>
+                    <td>{{ u.dt_cadastro | data_br }}</td>
+                    <td>
+                        <div class="acoes-celula">
+                            <button type="button" class="btn-icone" title="Editar"
+                                data-id="{{ u.id }}"
+                                data-nome="{{ u.nome }}"
+                                data-email="{{ u.email }}"
+                                data-ativo="{{ 'true' if u.ativo else 'false' }}"
+                                onclick="abrirModalEditarUsuario(this)">
+                                <span class="material-icons-outlined">edit</span>
+                            </button>
+                            <button type="button" class="btn-icone excluir" title="Excluir"
+                                data-id="{{ u.id }}"
+                                data-nome="{{ u.nome }}"
+                                onclick="abrirModalExcluirUsuario(this)">
+                                <span class="material-icons">delete_outline</span>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <div id="msgSemResultados" style="display: none; text-align: center; padding: 40px; color: #616161;">
+            Nenhum usuário encontrado para a busca.
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Modal: Criar / Editar Usuário (_FormularioUsuario) -->
+    <div class="modal-backdrop" id="modalFormularioUsuario">
+        <div class="dialogo-padrao">
+            <div class="dialogo-cabecalho">
+                <div class="dialogo-icone-box">
+                    <span class="material-icons-outlined" id="iconeModalUsuario">person_add</span>
+                </div>
+                <div class="dialogo-titulos">
+                    <h3 id="tituloModalUsuario">Novo usuário</h3>
+                    <p id="subtituloModalUsuario">Conceda acesso ao painel administrativo.</p>
+                </div>
+                <button type="button" class="btn-fechar-dialogo" onclick="fecharModal('modalFormularioUsuario')" title="Fechar">
+                    <span class="material-icons">close</span>
+                </button>
+            </div>
+            <form method="POST" action="{{ url_for('salvar_usuario') }}" onsubmit="return validarFormularioUsuario()">
+                <input type="hidden" name="usuario_id" id="formUsuarioId">
+                <div class="dialogo-corpo">
+                    <div class="form-grupo-modal">
+                        <label class="form-label-modal" for="formNomeUsuario">Nome</label>
+                        <div class="campo-modal-wrapper">
+                            <span class="material-icons icone-campo">person_outline</span>
+                            <input type="text" name="nome" id="formNomeUsuario" class="input-modal com-icone" placeholder="Ex.: Ana Souza" minlength="2" maxlength="100" required>
+                        </div>
+                    </div>
+
+                    <div class="form-grupo-modal">
+                        <label class="form-label-modal" for="formEmailUsuario">E-mail</label>
+                        <div class="campo-modal-wrapper">
+                            <span class="material-icons icone-campo">mail_outline</span>
+                            <input type="email" name="email" id="formEmailUsuario" class="input-modal com-icone" placeholder="usuario@studiocleusa.com" required>
+                        </div>
+                    </div>
+
+                    <div class="form-grupo-modal" style="margin-bottom: 0;">
+                        <label class="form-label-modal" for="formSenhaUsuario" id="labelSenhaUsuario">Senha</label>
+                        <div class="campo-modal-wrapper">
+                            <span class="material-icons icone-campo">lock_outline</span>
+                            <input type="password" name="senha" id="formSenhaUsuario" class="input-modal com-icone" style="padding-right: 44px;" placeholder="Mínimo de 8 caracteres">
+                            <button type="button" class="btn-olho-modal" id="btnOlhoUsuario" onclick="alternarVisibilidadeSenhaUsuario()" title="Mostrar senha">
+                                <span class="material-icons-outlined icone-olho-usuario" id="iconeOlhoUsuario">visibility</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="blocoSwitchAtivoUsuario" style="display: none; margin-top: 16px;">
+                        <div class="bloco-switch-modal">
+                            <div class="bloco-switch-textos">
+                                <h4>Usuário ativo</h4>
+                                <p>Permite que esta conta acesse o painel.</p>
+                            </div>
+                            <label class="m3-switch">
+                                <input type="checkbox" name="ativo" id="formAtivoUsuario" checked>
+                                <span class="m3-slider"></span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div id="erroFormUsuario" class="aviso-exclusao-box" style="display: none; margin-top: 14px; margin-bottom: 0;">
+                        <span class="material-icons">error_outline</span>
+                        <span id="textoErroFormUsuario"></span>
+                    </div>
+                </div>
+                <div class="dialogo-rodape">
+                    <button type="button" class="btn-modal-cancelar" onclick="fecharModal('modalFormularioUsuario')">Cancelar</button>
+                    <button type="submit" class="btn-modal-salvar" id="btnSalvarUsuario">Criar usuário</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Excluir Usuário (_DialogExcluirUsuario) -->
+    <div class="modal-backdrop" id="modalExcluirUsuario">
+        <div class="dialogo-exclusao">
+            <div class="circulo-icone-erro">
+                <span class="material-icons-outlined">person_remove</span>
+            </div>
+            <h3>Excluir usuário?</h3>
+            <p class="sub" id="textoConfirmarExclusaoUsuario">Tem certeza que deseja excluir este usuário?</p>
+            <div class="aviso-exclusao-box">
+                <span class="material-icons">info_outline</span>
+                <span>Esta conta perderá imediatamente o acesso ao painel administrativo.</span>
+            </div>
+            <form method="POST" id="formExcluirUsuario" style="display: flex; gap: 12px;">
+                <button type="button" class="btn-modal-cancelar" onclick="fecharModal('modalExcluirUsuario')">Cancelar</button>
+                <button type="submit" class="btn-modal-excluir">Excluir</button>
+            </form>
+        </div>
+    </div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function filtrarTabela() {
+        const input = document.getElementById('inputBusca');
+        const btnLimpar = document.getElementById('btnLimparBusca');
+        const termo = (input.value || '').trim().toLowerCase();
+        btnLimpar.style.display = termo ? 'inline-flex' : 'none';
+
+        const linhas = document.querySelectorAll('#tabelaUsuarios tbody .linha-item');
+        let visiveis = 0;
+        linhas.forEach(tr => {
+            const texto = tr.getAttribute('data-busca') || '';
+            if (!termo || texto.includes(termo)) {
+                tr.style.display = '';
+                visiveis++;
+            } else {
+                tr.style.display = 'none';
+            }
+        });
+        document.getElementById('contadorItens').textContent = `${visiveis} usuário(s)`;
+        const msg = document.getElementById('msgSemResultados');
+        if (msg) msg.style.display = (visiveis === 0 && linhas.length > 0) ? 'block' : 'none';
+    }
+
+    function limparBusca() {
+        document.getElementById('inputBusca').value = '';
+        filtrarTabela();
+    }
+
+    function alternarVisibilidadeSenhaUsuario() {
+        const input = document.getElementById('formSenhaUsuario');
+        const icone = document.getElementById('iconeOlhoUsuario');
+        const btn = document.getElementById('btnOlhoUsuario');
+        if (input.type === 'password') {
+            input.type = 'text';
+            icone.textContent = 'visibility_off';
+            btn.title = 'Ocultar senha';
+        } else {
+            input.type = 'password';
+            icone.textContent = 'visibility';
+            btn.title = 'Mostrar senha';
+        }
+    }
+
+    function abrirModalNovoUsuario() {
+        document.getElementById('formUsuarioId').value = '';
+        document.getElementById('iconeModalUsuario').textContent = 'person_add';
+        document.getElementById('tituloModalUsuario').textContent = 'Novo usuário';
+        document.getElementById('subtituloModalUsuario').textContent = 'Conceda acesso ao painel administrativo.';
+        document.getElementById('btnSalvarUsuario').textContent = 'Criar usuário';
+        document.getElementById('formNomeUsuario').value = '';
+        document.getElementById('formEmailUsuario').value = '';
+        document.getElementById('formSenhaUsuario').value = '';
+        document.getElementById('formSenhaUsuario').type = 'password';
+        document.getElementById('iconeOlhoUsuario').textContent = 'visibility';
+        document.getElementById('formSenhaUsuario').placeholder = 'Mínimo de 8 caracteres';
+        document.getElementById('labelSenhaUsuario').textContent = 'Senha';
+        document.getElementById('blocoSwitchAtivoUsuario').style.display = 'none';
+        document.getElementById('erroFormUsuario').style.display = 'none';
+        abrirModal('modalFormularioUsuario');
+    }
+
+    function abrirModalEditarUsuario(btn) {
+        document.getElementById('formUsuarioId').value = btn.getAttribute('data-id');
+        document.getElementById('iconeModalUsuario').textContent = 'manage_accounts';
+        document.getElementById('tituloModalUsuario').textContent = 'Editar usuário';
+        document.getElementById('subtituloModalUsuario').textContent = 'Atualize os dados de acesso deste usuário.';
+        document.getElementById('btnSalvarUsuario').textContent = 'Salvar alterações';
+        document.getElementById('formNomeUsuario').value = btn.getAttribute('data-nome');
+        document.getElementById('formEmailUsuario').value = btn.getAttribute('data-email');
+        document.getElementById('formSenhaUsuario').value = '';
+        document.getElementById('formSenhaUsuario').type = 'password';
+        document.getElementById('iconeOlhoUsuario').textContent = 'visibility';
+        document.getElementById('formSenhaUsuario').placeholder = 'Em branco mantém a atual';
+        document.getElementById('labelSenhaUsuario').textContent = 'Nova senha (opcional)';
+        document.getElementById('formAtivoUsuario').checked = btn.getAttribute('data-ativo') === 'true';
+        document.getElementById('blocoSwitchAtivoUsuario').style.display = 'block';
+        document.getElementById('erroFormUsuario').style.display = 'none';
+        abrirModal('modalFormularioUsuario');
+    }
+
+    function validarFormularioUsuario() {
+        const editando = !!document.getElementById('formUsuarioId').value;
+        const nome = document.getElementById('formNomeUsuario').value.trim();
+        const senha = document.getElementById('formSenhaUsuario').value;
+        const boxErro = document.getElementById('erroFormUsuario');
+        const txtErro = document.getElementById('textoErroFormUsuario');
+
+        if (nome.length < 2) {
+            txtErro.textContent = 'Mínimo de 2 caracteres no nome.';
+            boxErro.style.display = 'flex';
+            return false;
+        }
+        if (!editando && senha.length < 8) {
+            txtErro.textContent = 'A senha deve ter no mínimo 8 caracteres.';
+            boxErro.style.display = 'flex';
+            return false;
+        }
+        if (editando && senha.length > 0 && senha.length < 8) {
+            txtErro.textContent = 'A nova senha deve ter no mínimo 8 caracteres.';
+            boxErro.style.display = 'flex';
+            return false;
+        }
+        return true;
+    }
+
+    function abrirModalExcluirUsuario(btn) {
+        const id = btn.getAttribute('data-id');
+        const nome = btn.getAttribute('data-nome');
+        document.getElementById('textoConfirmarExclusaoUsuario').textContent = `Tem certeza que deseja excluir "${nome}"?`;
+        document.getElementById('formExcluirUsuario').action = `/usuarios/${id}/excluir`;
+        abrirModal('modalExcluirUsuario');
+    }
+</script>
+{% endblock %}

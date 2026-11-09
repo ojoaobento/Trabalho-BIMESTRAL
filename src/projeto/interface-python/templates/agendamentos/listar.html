@@ -1,0 +1,372 @@
+{% extends "base.html" %}
+
+{% block extra_css %}
+<style>
+    .barra-filtros-ag {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-bottom: 16px;
+        flex-shrink: 0;
+    }
+    .controles-filtros-ag {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+    .select-filtro-status {
+        height: 40px;
+        padding: 0 12px;
+        border: 1px solid #BDBDBD;
+        border-radius: 10px;
+        font-size: 14px;
+        font-family: inherit;
+        color: var(--cor-texto);
+        background: #FFFFFF;
+        outline: none;
+        cursor: pointer;
+    }
+    .select-filtro-status:focus {
+        border-color: var(--cor-vinho);
+    }
+
+    /* Chip de Status do Agendamento */
+    .chip-ag-status {
+        display: inline-block;
+        padding: 4px 10px;
+        border-radius: 12px;
+        font-size: 12px;
+        font-weight: 700;
+        white-space: nowrap;
+    }
+    .chip-ag-status.reservado { background-color: #EDE7F6; color: #5E35B1; }
+    .chip-ag-status.pendente { background-color: #FFF3E0; color: #E65100; }
+    .chip-ag-status.confirmado { background-color: #E3F2FD; color: #1565C0; }
+    .chip-ag-status.concluido { background-color: #E8F5E9; color: #2E7D32; }
+    .chip-ag-status.cancelado { background-color: #FFEBEE; color: #C62828; }
+    .chip-ag-status.faltou { background-color: #EEEEEE; color: #424242; }
+
+    /* Menu Popup de Alterar Status */
+    .dropdown-status-wrapper {
+        position: relative;
+        display: inline-block;
+    }
+    .menu-popup-status {
+        display: none;
+        position: absolute;
+        right: 0;
+        top: 100%;
+        background: #FFFFFF;
+        border: 1px solid #E0E0E0;
+        border-radius: 10px;
+        box-shadow: 0 6px 18px rgba(0,0,0,0.15);
+        z-index: 200;
+        min-width: 150px;
+        padding: 6px 0;
+    }
+    .menu-popup-status.aberto {
+        display: block;
+    }
+    .menu-popup-item {
+        width: 100%;
+        text-align: left;
+        background: transparent;
+        border: none;
+        padding: 9px 16px;
+        font-size: 14px;
+        font-family: inherit;
+        color: #212121;
+        cursor: pointer;
+        display: block;
+    }
+    .menu-popup-item:hover {
+        background-color: var(--cor-rosa-claro);
+        color: var(--cor-vinho);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Barra de Filtros -->
+<div class="barra-filtros-ag">
+    <span class="texto-contador" id="contadorAgendamentos">{{ agendamentos | length }} agendamento(s)</span>
+
+    <div class="controles-filtros-ag">
+        <!-- Botão Filtrar Período -->
+        <button type="button" class="btn-outlined-vinho" onclick="abrirModal('modalFiltroPeriodo')">
+            <span class="material-icons" style="font-size: 18px;">date_range</span>
+            <span>
+                {% if inicio and fim %}
+                    {{ inicio[8:10] }}/{{ inicio[5:7] }}/{{ inicio[0:4] }} - {{ fim[8:10] }}/{{ fim[5:7] }}/{{ fim[0:4] }}
+                {% else %}
+                    Filtrar período
+                {% endif %}
+            </span>
+        </button>
+
+        {% if inicio or fim %}
+        <a href="{{ url_for('listar_agendamentos', status=status_filtro) }}" class="btn-icone" title="Limpar período">
+            <span class="material-icons">close</span>
+        </a>
+        {% endif %}
+
+        <!-- Dropdown de Status -->
+        <form method="GET" action="{{ url_for('listar_agendamentos') }}" id="formFiltroStatus" style="display: inline-flex; align-items: center; gap: 8px;">
+            {% if inicio %}<input type="hidden" name="inicio" value="{{ inicio }}">{% endif %}
+            {% if fim %}<input type="hidden" name="fim" value="{{ fim }}">{% endif %}
+            <select name="status" id="selectFiltroStatus" class="select-filtro-status" onchange="this.form.submit()">
+                <option value="" {% if not status_filtro %}selected{% endif %}>Todos os status</option>
+                {% for valor, rotulo in status_opcoes %}
+                <option value="{{ valor }}" {% if status_filtro == valor %}selected{% endif %}>{{ rotulo }}</option>
+                {% endfor %}
+            </select>
+        </form>
+
+        <!-- Botão Atualizar -->
+        <a href="{{ url_for('listar_agendamentos', inicio=inicio, fim=fim, status=status_filtro) }}" class="btn-icone" title="Atualizar">
+            <span class="material-icons">refresh</span>
+        </a>
+    </div>
+</div>
+
+{% if erro %}
+<div class="estado-erro">
+    <span class="material-icons">error_outline</span>
+    <p>{{ erro }}</p>
+    <a href="{{ url_for('listar_agendamentos', inicio=inicio, fim=fim, status=status_filtro) }}" class="btn-vinho">
+        <span class="material-icons">refresh</span>
+        <span>Tentar novamente</span>
+    </a>
+</div>
+{% elif agendamentos | length == 0 %}
+<div style="flex: 1; display: flex; align-items: center; justify-content: center; color: #616161;">
+    Nenhum agendamento encontrado.
+</div>
+{% else %}
+<div class="tabela-container">
+    <table class="data-table" id="tabelaAgendamentos">
+        <thead>
+            <tr>
+                <th>Data</th>
+                <th>Horário</th>
+                <th>Cliente</th>
+                <th>Serviço</th>
+                <th>Valor</th>
+                <th>Status</th>
+                <th>Ações</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for a in agendamentos %}
+            <tr class="linha-agendamento" data-status="{{ a.status }}">
+                <td>{{ a.dt_inicio | data_br }}</td>
+                <td>{{ a.dt_inicio | hora_br }} - {{ a.dt_fim | hora_br }}</td>
+                <td>
+                    <div style="font-weight: 600;">{{ a.cliente.nome if a.cliente else '—' }}</div>
+                    {% if a.cliente and a.cliente.telefone %}
+                    <div style="font-size: 12px; color: #757575;">{{ a.cliente.telefone | telefone_br }}</div>
+                    {% endif %}
+                </td>
+                <td>{{ a.servico.nome if a.servico else '—' }}</td>
+                <td>{{ a.valor_cobrado | moeda }}</td>
+                <td>
+                    <span class="chip-ag-status {{ a.status }}">{{ a.status_rotulo }}</span>
+                </td>
+                <td>
+                    <div class="acoes-celula">
+                        {% if a.proximos_status | length > 0 %}
+                        <div class="dropdown-status-wrapper">
+                            <button type="button" class="btn-icone" title="Alterar status" onclick="alternarMenuStatus(event, 'menuStatus{{ a.id }}')">
+                                <span class="material-icons">swap_horiz</span>
+                            </button>
+                            <div class="menu-popup-status" id="menuStatus{{ a.id }}">
+                                {% for st_val, st_rotulo in a.proximos_status %}
+                                <form method="POST" action="{{ url_for('alterar_status_agendamento', agendamento_id=a.id) }}">
+                                    <input type="hidden" name="status" value="{{ st_val }}">
+                                    <input type="hidden" name="filtro_inicio" value="{{ inicio }}">
+                                    <input type="hidden" name="filtro_fim" value="{{ fim }}">
+                                    <input type="hidden" name="filtro_status" value="{{ status_filtro }}">
+                                    <button type="submit" class="menu-popup-item">{{ st_rotulo }}</button>
+                                </form>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        {% if a.pode_remarcar %}
+                        <button type="button" class="btn-icone" title="Remarcar"
+                            data-id="{{ a.id }}"
+                            data-cliente="{{ a.cliente.nome if a.cliente else 'Cliente' }}"
+                            data-servico="{{ a.servico.nome if a.servico else 'Serviço' }}"
+                            data-data="{{ a.dt_inicio | data_iso_input }}"
+                            data-hora="{{ a.dt_inicio | hora_br }}"
+                            data-obs="{{ a.observacoes or '' }}"
+                            onclick="abrirModalRemarcar(this)">
+                            <span class="material-icons-outlined">edit_calendar</span>
+                        </button>
+                        {% endif %}
+
+                        <button type="button" class="btn-icone excluir" title="Excluir"
+                            data-id="{{ a.id }}"
+                            data-cliente="{{ a.cliente.nome if a.cliente else 'Cliente' }}"
+                            data-data="{{ a.dt_inicio | data_br }}"
+                            data-hora="{{ a.dt_inicio | hora_br }}"
+                            onclick="abrirModalExcluirAgendamento(this)">
+                            <span class="material-icons">delete_outline</span>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+
+<!-- Modal: Filtrar Período -->
+<div class="modal-backdrop" id="modalFiltroPeriodo">
+    <div class="dialogo-padrao" style="max-width: 400px;">
+        <div class="dialogo-cabecalho">
+            <div class="dialogo-icone-box">
+                <span class="material-icons">date_range</span>
+            </div>
+            <div class="dialogo-titulos">
+                <h3>Filtrar período</h3>
+                <p>Selecione a data inicial e final.</p>
+            </div>
+            <button type="button" class="btn-fechar-dialogo" onclick="fecharModal('modalFiltroPeriodo')">
+                <span class="material-icons">close</span>
+            </button>
+        </div>
+        <form method="GET" action="{{ url_for('listar_agendamentos') }}">
+            {% if status_filtro %}<input type="hidden" name="status" value="{{ status_filtro }}">{% endif %}
+            <div class="dialogo-corpo">
+                <div class="form-grupo-modal">
+                    <label class="form-label-modal" for="filtroInicioInput">Data inicial</label>
+                    <input type="date" name="inicio" id="filtroInicioInput" value="{{ inicio }}" class="input-modal" required>
+                </div>
+                <div class="form-grupo-modal" style="margin-bottom: 0;">
+                    <label class="form-label-modal" for="filtroFimInput">Data final</label>
+                    <input type="date" name="fim" id="filtroFimInput" value="{{ fim }}" class="input-modal" required>
+                </div>
+            </div>
+            <div class="dialogo-rodape">
+                <button type="button" class="btn-modal-cancelar" onclick="fecharModal('modalFiltroPeriodo')">Cancelar</button>
+                <button type="submit" class="btn-modal-salvar">Aplicar filtro</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal: Remarcar Agendamento (_DialogoRemarcar) -->
+<div class="modal-backdrop" id="modalRemarcarAgendamento">
+    <div class="dialogo-padrao" style="max-width: 440px;">
+        <div class="dialogo-cabecalho">
+            <div class="dialogo-icone-box">
+                <span class="material-icons-outlined">edit_calendar</span>
+            </div>
+            <div class="dialogo-titulos">
+                <h3>Remarcar agendamento</h3>
+                <p id="subtituloRemarcar">Cliente • Serviço</p>
+            </div>
+            <button type="button" class="btn-fechar-dialogo" onclick="fecharModal('modalRemarcarAgendamento')">
+                <span class="material-icons">close</span>
+            </button>
+        </div>
+        <form method="POST" id="formRemarcarAgendamento">
+            <input type="hidden" name="filtro_inicio" value="{{ inicio }}">
+            <input type="hidden" name="filtro_fim" value="{{ fim }}">
+            <input type="hidden" name="filtro_status" value="{{ status_filtro }}">
+            <div class="dialogo-corpo">
+                <div class="form-grupo-modal">
+                    <label class="form-label-modal" for="remarcarData">Nova data</label>
+                    <div class="campo-modal-wrapper">
+                        <span class="material-icons-outlined icone-campo">calendar_today</span>
+                        <input type="date" name="data" id="remarcarData" class="input-modal com-icone" required>
+                    </div>
+                </div>
+                <div class="form-grupo-modal">
+                    <label class="form-label-modal" for="remarcarHora">Novo horário</label>
+                    <div class="campo-modal-wrapper">
+                        <span class="material-icons-outlined icone-campo">access_time</span>
+                        <input type="time" name="hora" id="remarcarHora" class="input-modal com-icone" required>
+                    </div>
+                </div>
+                <div class="form-grupo-modal" style="margin-bottom: 0;">
+                    <label class="form-label-modal" for="remarcarObs">Observações</label>
+                    <textarea name="observacoes" id="remarcarObs" rows="3" maxlength="500" class="textarea-modal" placeholder="Opcional"></textarea>
+                </div>
+            </div>
+            <div class="dialogo-rodape">
+                <button type="button" class="btn-modal-cancelar" onclick="fecharModal('modalRemarcarAgendamento')">Cancelar</button>
+                <button type="submit" class="btn-modal-salvar">Salvar</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal: Excluir Agendamento -->
+<div class="modal-backdrop" id="modalExcluirAgendamento">
+    <div class="dialogo-exclusao">
+        <div class="circulo-icone-erro">
+            <span class="material-icons">delete_outline</span>
+        </div>
+        <h3>Excluir agendamento?</h3>
+        <p class="sub" id="textoConfirmarExclusaoAgendamento">Tem certeza que deseja excluir este agendamento?</p>
+        <div class="aviso-exclusao-box">
+            <span class="material-icons">info_outline</span>
+            <span>Esta ação removerá o agendamento permanentemente e não pode ser desfeita.</span>
+        </div>
+        <form method="POST" id="formExcluirAgendamento" style="display: flex; gap: 12px;">
+            <input type="hidden" name="filtro_inicio" value="{{ inicio }}">
+            <input type="hidden" name="filtro_fim" value="{{ fim }}">
+            <input type="hidden" name="filtro_status" value="{{ status_filtro }}">
+            <button type="button" class="btn-modal-cancelar" onclick="fecharModal('modalExcluirAgendamento')">Cancelar</button>
+            <button type="submit" class="btn-modal-excluir">Excluir</button>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function alternarMenuStatus(e, id) {
+        e.stopPropagation();
+        document.querySelectorAll('.menu-popup-status').forEach(m => {
+            if (m.id !== id) m.classList.remove('aberto');
+        });
+        const menu = document.getElementById(id);
+        if (menu) menu.classList.toggle('aberto');
+    }
+
+    document.addEventListener('click', () => {
+        document.querySelectorAll('.menu-popup-status').forEach(m => m.classList.remove('aberto'));
+    });
+
+    function abrirModalRemarcar(btn) {
+        const id = btn.getAttribute('data-id');
+        const cliente = btn.getAttribute('data-cliente');
+        const servico = btn.getAttribute('data-servico');
+        document.getElementById('subtituloRemarcar').textContent = `${cliente} • ${servico}`;
+        document.getElementById('remarcarData').value = btn.getAttribute('data-data');
+        document.getElementById('remarcarHora').value = btn.getAttribute('data-hora');
+        document.getElementById('remarcarObs').value = btn.getAttribute('data-obs');
+        document.getElementById('formRemarcarAgendamento').action = `/agendamentos/${id}/remarcar`;
+        abrirModal('modalRemarcarAgendamento');
+    }
+
+    function abrirModalExcluirAgendamento(btn) {
+        const id = btn.getAttribute('data-id');
+        const cliente = btn.getAttribute('data-cliente');
+        const data = btn.getAttribute('data-data');
+        const hora = btn.getAttribute('data-hora');
+        document.getElementById('textoConfirmarExclusaoAgendamento').textContent =
+            `Tem certeza que deseja excluir o agendamento de "${cliente}" em ${data} às ${hora}?`;
+        document.getElementById('formExcluirAgendamento').action = `/agendamentos/${id}/excluir`;
+        abrirModal('modalExcluirAgendamento');
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,312 @@
+{% extends "base.html" %}
+
+{% block extra_css %}
+<style>
+    .barra-topo-lembretes {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        margin-bottom: 16px;
+        flex-shrink: 0;
+    }
+    .filtros-lembretes-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        align-items: center;
+    }
+    .select-lembrete {
+        width: 220px;
+        height: 44px;
+        padding: 0 12px;
+        border: 1px solid #BDBDBD;
+        border-radius: 10px;
+        font-size: 14px;
+        font-family: inherit;
+        color: var(--cor-texto);
+        background: #FFFFFF;
+        outline: none;
+    }
+    .select-lembrete:focus {
+        border-color: var(--cor-vinho);
+    }
+    .resumo-lembretes-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 12px;
+    }
+    .badges-lembretes {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+    }
+    .badge-resumo-lembrete {
+        padding: 4px 10px;
+        border-radius: 12px;
+        font-size: 12px;
+        font-weight: 600;
+    }
+    .badge-resumo-lembrete.enviado {
+        background-color: #E8F5E9;
+        color: #1B5E20;
+    }
+    .badge-resumo-lembrete.fila {
+        background-color: #FFF3E0;
+        color: #E65100;
+    }
+    .badge-resumo-lembrete.agendado {
+        background-color: #E3F2FD;
+        color: #0D47A1;
+    }
+
+    /* Chip Situação Lembrete */
+    .chip-situacao-lembrete {
+        display: inline-block;
+        padding: 4px 10px;
+        border-radius: 12px;
+        font-size: 12px;
+        font-weight: 700;
+        white-space: nowrap;
+    }
+    .chip-situacao-lembrete.enviado { background-color: #E8F5E9; color: #2E7D32; }
+    .chip-situacao-lembrete.fila { background-color: #FFF3E0; color: #E65100; }
+    .chip-situacao-lembrete.agendado { background-color: #E3F2FD; color: #1565C0; }
+
+    @media (max-width: 599px) {
+        .select-lembrete {
+            width: 100%;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="barra-topo-lembretes">
+    <div class="filtros-lembretes-row">
+        <select id="filtroSituacao" class="select-lembrete" onchange="filtrarLembretes()">
+            <option value="todos">Todas as situações</option>
+            <option value="agendado">Agendado</option>
+            <option value="fila">Na fila</option>
+            <option value="enviado">Enviado</option>
+        </select>
+
+        <select id="filtroTipo" class="select-lembrete" onchange="filtrarLembretes()">
+            <option value="todos">Todos os tipos</option>
+            <option value="confirmacao">Confirmação</option>
+            <option value="lembrete_24h">Lembrete 24h</option>
+        </select>
+    </div>
+
+    <div class="resumo-lembretes-row">
+        <div class="badges-lembretes">
+            <span class="badge-resumo-lembrete enviado">Enviados: {{ total_enviados }}</span>
+            <span class="badge-resumo-lembrete fila">Na fila: {{ total_fila }}</span>
+            <span class="badge-resumo-lembrete agendado">Agendados: {{ total_agendados }}</span>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 8px;">
+            <span class="texto-contador" id="contadorLembretes">{{ lembretes | length }} lembrete(s)</span>
+            <a href="{{ url_for('listar_lembretes') }}" class="btn-icone" title="Atualizar">
+                <span class="material-icons">refresh</span>
+            </a>
+        </div>
+    </div>
+</div>
+
+{% if erro %}
+<div class="estado-erro">
+    <span class="material-icons">error_outline</span>
+    <p>{{ erro }}</p>
+    <a href="{{ url_for('listar_lembretes') }}" class="btn-vinho">
+        <span class="material-icons">refresh</span>
+        <span>Tentar novamente</span>
+    </a>
+</div>
+{% elif lembretes | length == 0 %}
+<div style="flex: 1; display: flex; align-items: center; justify-content: center; color: #616161;">
+    Nenhum lembrete encontrado.
+</div>
+{% else %}
+<div class="tabela-container">
+    <table class="data-table" id="tabelaLembretes">
+        <thead>
+            <tr>
+                <th>Envio programado</th>
+                <th>Tipo</th>
+                <th>Agendamento</th>
+                <th>Serviço</th>
+                <th>Situação</th>
+                <th>Enviado em</th>
+                <th>Ações</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for l in lembretes %}
+            <tr class="linha-lembrete" data-situacao="{{ l.situacao_calc }}" data-tipo="{{ l.tipo }}">
+                <td>{{ l.enviar_em | data_hora_br }}</td>
+                <td>{{ 'Confirmação' if l.tipo == 'confirmacao' else 'Lembrete 24h' }}</td>
+                <td>#{{ l.agendamento_id }}</td>
+                <td>{{ '#' ~ l.servico_id if l.servico_id else '—' }}</td>
+                <td>
+                    {% if l.situacao_calc == 'enviado' %}
+                        <span class="chip-situacao-lembrete enviado">Enviado</span>
+                    {% elif l.situacao_calc == 'fila' %}
+                        <span class="chip-situacao-lembrete fila">Na fila</span>
+                    {% else %}
+                        <span class="chip-situacao-lembrete agendado">Agendado</span>
+                    {% endif %}
+                </td>
+                <td>{{ (l.enviado_em | data_hora_br) if l.enviado_em else '—' }}</td>
+                <td>
+                    <div class="acoes-celula">
+                        {% if not l.enviado %}
+                        <form method="POST" action="{{ url_for('marcar_lembrete_enviado', lembrete_id=l.id) }}" style="display: inline;">
+                            <button type="submit" class="btn-icone" style="color: #2E7D32;" title="Marcar como enviado">
+                                <span class="material-icons">check_circle_outline</span>
+                            </button>
+                        </form>
+                        <button type="button" class="btn-icone" title="Editar"
+                            data-id="{{ l.id }}"
+                            data-agendamento="{{ l.agendamento_id }}"
+                            data-tipo="{{ l.tipo }}"
+                            data-data="{{ l.data_input }}"
+                            data-hora="{{ l.hora_input }}"
+                            onclick="abrirModalEditarLembrete(this)">
+                            <span class="material-icons-outlined">edit</span>
+                        </button>
+                        {% endif %}
+                        <button type="button" class="btn-icone excluir" title="Excluir"
+                            data-id="{{ l.id }}"
+                            data-agendamento="{{ l.agendamento_id }}"
+                            onclick="abrirModalExcluirLembrete(this)">
+                            <span class="material-icons">delete_outline</span>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <div id="msgSemLembretes" style="display: none; text-align: center; padding: 40px; color: #616161;">
+        Nenhum lembrete encontrado.
+    </div>
+</div>
+{% endif %}
+
+<!-- Modal: Editar Lembrete (_FormularioLembrete) -->
+<div class="modal-backdrop" id="modalEditarLembrete">
+    <div class="dialogo-padrao" style="max-width: 400px;">
+        <div class="dialogo-cabecalho">
+            <div class="dialogo-icone-box">
+                <span class="material-icons-outlined">notifications</span>
+            </div>
+            <div class="dialogo-titulos">
+                <h3>Editar lembrete</h3>
+                <p id="subtituloEditarLembrete">Lembrete #0 • Agendamento #0</p>
+            </div>
+            <button type="button" class="btn-fechar-dialogo" onclick="fecharModal('modalEditarLembrete')">
+                <span class="material-icons">close</span>
+            </button>
+        </div>
+        <form method="POST" id="formEditarLembrete">
+            <div class="dialogo-corpo">
+                <div class="form-grupo-modal">
+                    <label class="form-label-modal" for="lembreteTipo">Tipo</label>
+                    <select name="tipo" id="lembreteTipo" class="select-modal" required>
+                        <option value="confirmacao">Confirmação</option>
+                        <option value="lembrete_24h">Lembrete 24h</option>
+                    </select>
+                </div>
+                <div class="form-grupo-modal">
+                    <label class="form-label-modal" for="lembreteData">Data de envio</label>
+                    <div class="campo-modal-wrapper">
+                        <span class="material-icons-outlined icone-campo">calendar_today</span>
+                        <input type="date" name="data" id="lembreteData" class="input-modal com-icone" required>
+                    </div>
+                </div>
+                <div class="form-grupo-modal" style="margin-bottom: 0;">
+                    <label class="form-label-modal" for="lembreteHora">Horário de envio</label>
+                    <div class="campo-modal-wrapper">
+                        <span class="material-icons-outlined icone-campo">access_time</span>
+                        <input type="time" name="hora" id="lembreteHora" class="input-modal com-icone" required>
+                    </div>
+                </div>
+            </div>
+            <div class="dialogo-rodape">
+                <button type="button" class="btn-modal-cancelar" onclick="fecharModal('modalEditarLembrete')">Cancelar</button>
+                <button type="submit" class="btn-modal-salvar">Salvar</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal: Excluir Lembrete -->
+<div class="modal-backdrop" id="modalExcluirLembrete">
+    <div class="dialogo-exclusao">
+        <div class="circulo-icone-erro">
+            <span class="material-icons">delete_outline</span>
+        </div>
+        <h3>Excluir lembrete?</h3>
+        <p class="sub" id="textoConfirmarExclusaoLembrete">Tem certeza que deseja excluir este lembrete?</p>
+        <div class="aviso-exclusao-box">
+            <span class="material-icons">info_outline</span>
+            <span>Esta ação removerá o lembrete programado e não pode ser desfeita.</span>
+        </div>
+        <form method="POST" id="formExcluirLembrete" style="display: flex; gap: 12px;">
+            <button type="button" class="btn-modal-cancelar" onclick="fecharModal('modalExcluirLembrete')">Cancelar</button>
+            <button type="submit" class="btn-modal-excluir">Excluir</button>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function filtrarLembretes() {
+        const sit = document.getElementById('filtroSituacao').value;
+        const tipo = document.getElementById('filtroTipo').value;
+        const linhas = document.querySelectorAll('#tabelaLembretes tbody .linha-lembrete');
+        let visiveis = 0;
+
+        linhas.forEach(tr => {
+            const trSit = tr.getAttribute('data-situacao');
+            const trTipo = tr.getAttribute('data-tipo');
+            const okSit = (sit === 'todos' || trSit === sit);
+            const okTipo = (tipo === 'todos' || trTipo === tipo);
+
+            if (okSit && okTipo) {
+                tr.style.display = '';
+                visiveis++;
+            } else {
+                tr.style.display = 'none';
+            }
+        });
+
+        document.getElementById('contadorLembretes').textContent = `${visiveis} lembrete(s)`;
+        const msg = document.getElementById('msgSemLembretes');
+        if (msg) msg.style.display = (visiveis === 0 && linhas.length > 0) ? 'block' : 'none';
+    }
+
+    function abrirModalEditarLembrete(btn) {
+        const id = btn.getAttribute('data-id');
+        const ag = btn.getAttribute('data-agendamento');
+        document.getElementById('subtituloEditarLembrete').textContent = `Lembrete #${id} • Agendamento #${ag}`;
+        document.getElementById('lembreteTipo').value = btn.getAttribute('data-tipo');
+        document.getElementById('lembreteData').value = btn.getAttribute('data-data');
+        document.getElementById('lembreteHora').value = btn.getAttribute('data-hora');
+        document.getElementById('formEditarLembrete').action = `/lembretes/${id}/editar`;
+        abrirModal('modalEditarLembrete');
+    }
+
+    function abrirModalExcluirLembrete(btn) {
+        const id = btn.getAttribute('data-id');
+        const ag = btn.getAttribute('data-agendamento');
+        document.getElementById('textoConfirmarExclusaoLembrete').textContent =
+            `Tem certeza que deseja excluir o lembrete #${id} (agendamento #${ag})?`;
+        document.getElementById('formExcluirLembrete').action = `/lembretes/${id}/excluir`;
+        abrirModal('modalExcluirLembrete');
+    }
+</script>
+{% endblock %}

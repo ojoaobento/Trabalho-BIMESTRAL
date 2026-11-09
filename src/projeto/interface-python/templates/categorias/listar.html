@@ -1,0 +1,239 @@
+{% extends "base.html" %}
+
+{% block content %}
+{% if erro %}
+<div class="estado-erro">
+    <span class="material-icons">error_outline</span>
+    <p>{{ erro }}</p>
+    <a href="{{ url_for('listar_categorias') }}" class="btn-vinho">
+        <span class="material-icons">refresh</span>
+        <span>Tentar novamente</span>
+    </a>
+</div>
+{% else %}
+    <!-- BarraTopoComBusca -->
+    <div class="barra-topo">
+        <div class="campo-busca-wrapper">
+            <span class="material-icons icone-busca">search</span>
+            <input type="text" id="inputBusca" class="campo-busca-input" placeholder="Buscar por nome" oninput="filtrarTabela()">
+            <button type="button" id="btnLimparBusca" class="btn-limpar-busca" onclick="limparBusca()" title="Limpar busca">
+                <span class="material-icons" style="font-size: 18px;">close</span>
+            </button>
+        </div>
+        <div class="linha-contador-acao">
+            <span class="texto-contador" id="contadorItens">{{ categorias | length }} categoria(s)</span>
+            <button type="button" class="btn-vinho" onclick="abrirModalNovaCategoria()">
+                <span class="material-icons">add</span>
+                <span>Nova categoria</span>
+            </button>
+        </div>
+    </div>
+
+    {% if categorias | length == 0 %}
+    <div style="flex: 1; display: flex; align-items: center; justify-content: center; color: #616161;">
+        Nenhuma categoria cadastrada.
+    </div>
+    {% else %}
+    <div class="tabela-container">
+        <table class="data-table" id="tabelaCategorias">
+            <thead>
+                <tr>
+                    <th>Nome</th>
+                    <th>Status</th>
+                    <th>Ações</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for c in categorias %}
+                <tr class="linha-item" data-busca="{{ c.nome | lower }}">
+                    <td style="font-weight: 600;">{{ c.nome }}</td>
+                    <td>
+                        <div class="celula-status">
+                            <form method="POST" action="{{ url_for('alternar_ativo_categoria', categoria_id=c.id) }}" style="display: inline-flex;">
+                                <input type="hidden" name="ativo" value="{{ 'false' if c.ativo else 'true' }}">
+                                <label class="m3-switch" title="Alternar status">
+                                    <input type="checkbox" {% if c.ativo %}checked{% endif %} onchange="this.form.submit()">
+                                    <span class="m3-slider"></span>
+                                </label>
+                            </form>
+                            <span class="status-chip {{ 'ativo' if c.ativo else 'inativo' }}">
+                                {{ 'Ativo' if c.ativo else 'Inativo' }}
+                            </span>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="acoes-celula">
+                            <button type="button" class="btn-icone" title="Editar"
+                                data-id="{{ c.id }}"
+                                data-nome="{{ c.nome }}"
+                                data-ativo="{{ 'true' if c.ativo else 'false' }}"
+                                onclick="abrirModalEditarCategoria(this)">
+                                <span class="material-icons-outlined">edit</span>
+                            </button>
+                            <button type="button" class="btn-icone excluir" title="Excluir"
+                                data-id="{{ c.id }}"
+                                data-nome="{{ c.nome }}"
+                                onclick="abrirModalExcluirCategoria(this)">
+                                <span class="material-icons">delete_outline</span>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <div id="msgSemResultados" style="display: none; text-align: center; padding: 40px; color: #616161;">
+            Nenhuma categoria encontrada para a busca.
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Modal: Criar / Editar Categoria (_FormularioCategoria) -->
+    <div class="modal-backdrop" id="modalFormularioCategoria">
+        <div class="dialogo-padrao" style="max-width: 440px;">
+            <div class="dialogo-cabecalho">
+                <div class="dialogo-icone-box">
+                    <span class="material-icons-outlined" id="iconeModalCategoria">category</span>
+                </div>
+                <div class="dialogo-titulos">
+                    <h3 id="tituloModalCategoria">Nova categoria</h3>
+                    <p id="subtituloModalCategoria">Agrupe os serviços do studio por tipo.</p>
+                </div>
+                <button type="button" class="btn-fechar-dialogo" onclick="fecharModal('modalFormularioCategoria')" title="Fechar">
+                    <span class="material-icons">close</span>
+                </button>
+            </div>
+            <form method="POST" action="{{ url_for('salvar_categoria') }}" onsubmit="return validarFormularioCategoria()">
+                <input type="hidden" name="categoria_id" id="formCategoriaId">
+                <div class="dialogo-corpo">
+                    <div class="form-grupo-modal" style="margin-bottom: 0;">
+                        <label class="form-label-modal" for="formNomeCategoria">Nome da categoria</label>
+                        <div class="campo-modal-wrapper">
+                            <span class="material-icons-outlined icone-campo">label</span>
+                            <input type="text" name="nome" id="formNomeCategoria" class="input-modal com-icone" placeholder="Ex.: Estética facial" minlength="2" maxlength="100" required>
+                        </div>
+                    </div>
+
+                    <div id="blocoSwitchAtivoCategoria" style="display: none; margin-top: 16px;">
+                        <div class="bloco-switch-modal">
+                            <div class="bloco-switch-textos">
+                                <h4>Categoria ativa</h4>
+                                <p>Disponível ao cadastrar serviços.</p>
+                            </div>
+                            <label class="m3-switch">
+                                <input type="checkbox" name="ativo" id="formAtivoCategoria" checked>
+                                <span class="m3-slider"></span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div id="erroFormCategoria" class="aviso-exclusao-box" style="display: none; margin-top: 14px; margin-bottom: 0;">
+                        <span class="material-icons">error_outline</span>
+                        <span id="textoErroFormCategoria"></span>
+                    </div>
+                </div>
+                <div class="dialogo-rodape">
+                    <button type="button" class="btn-modal-cancelar" onclick="fecharModal('modalFormularioCategoria')">Cancelar</button>
+                    <button type="submit" class="btn-modal-salvar" id="btnSalvarCategoria">Criar categoria</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Excluir Categoria (_DialogExcluirCategoria) -->
+    <div class="modal-backdrop" id="modalExcluirCategoria">
+        <div class="dialogo-exclusao">
+            <div class="circulo-icone-erro">
+                <span class="material-icons">delete_outline</span>
+            </div>
+            <h3>Excluir categoria?</h3>
+            <p class="sub" id="textoConfirmarExclusaoCategoria">Tem certeza que deseja excluir esta categoria?</p>
+            <div class="aviso-exclusao-box">
+                <span class="material-icons">info_outline</span>
+                <span>Se esta categoria tiver serviços vinculados, o sistema não permitirá a exclusão.</span>
+            </div>
+            <form method="POST" id="formExcluirCategoria" style="display: flex; gap: 12px;">
+                <button type="button" class="btn-modal-cancelar" onclick="fecharModal('modalExcluirCategoria')">Cancelar</button>
+                <button type="submit" class="btn-modal-excluir">Excluir</button>
+            </form>
+        </div>
+    </div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function filtrarTabela() {
+        const input = document.getElementById('inputBusca');
+        const btnLimpar = document.getElementById('btnLimparBusca');
+        const termo = (input.value || '').trim().toLowerCase();
+        btnLimpar.style.display = termo ? 'inline-flex' : 'none';
+
+        const linhas = document.querySelectorAll('#tabelaCategorias tbody .linha-item');
+        let visiveis = 0;
+        linhas.forEach(tr => {
+            const texto = tr.getAttribute('data-busca') || '';
+            if (!termo || texto.includes(termo)) {
+                tr.style.display = '';
+                visiveis++;
+            } else {
+                tr.style.display = 'none';
+            }
+        });
+        document.getElementById('contadorItens').textContent = `${visiveis} categoria(s)`;
+        const msg = document.getElementById('msgSemResultados');
+        if (msg) msg.style.display = (visiveis === 0 && linhas.length > 0) ? 'block' : 'none';
+    }
+
+    function limparBusca() {
+        document.getElementById('inputBusca').value = '';
+        filtrarTabela();
+    }
+
+    function abrirModalNovaCategoria() {
+        document.getElementById('formCategoriaId').value = '';
+        document.getElementById('iconeModalCategoria').textContent = 'category';
+        document.getElementById('tituloModalCategoria').textContent = 'Nova categoria';
+        document.getElementById('subtituloModalCategoria').textContent = 'Agrupe os serviços do studio por tipo.';
+        document.getElementById('btnSalvarCategoria').textContent = 'Criar categoria';
+        document.getElementById('formNomeCategoria').value = '';
+        document.getElementById('blocoSwitchAtivoCategoria').style.display = 'none';
+        document.getElementById('erroFormCategoria').style.display = 'none';
+        abrirModal('modalFormularioCategoria');
+    }
+
+    function abrirModalEditarCategoria(btn) {
+        document.getElementById('formCategoriaId').value = btn.getAttribute('data-id');
+        document.getElementById('iconeModalCategoria').textContent = 'edit';
+        document.getElementById('tituloModalCategoria').textContent = 'Editar categoria';
+        document.getElementById('subtituloModalCategoria').textContent = 'Atualize o nome ou o status desta categoria.';
+        document.getElementById('btnSalvarCategoria').textContent = 'Salvar alterações';
+        document.getElementById('formNomeCategoria').value = btn.getAttribute('data-nome');
+        document.getElementById('formAtivoCategoria').checked = btn.getAttribute('data-ativo') === 'true';
+        document.getElementById('blocoSwitchAtivoCategoria').style.display = 'block';
+        document.getElementById('erroFormCategoria').style.display = 'none';
+        abrirModal('modalFormularioCategoria');
+    }
+
+    function validarFormularioCategoria() {
+        const nome = document.getElementById('formNomeCategoria').value.trim();
+        const boxErro = document.getElementById('erroFormCategoria');
+        const txtErro = document.getElementById('textoErroFormCategoria');
+
+        if (nome.length < 2) {
+            txtErro.textContent = 'Mínimo de 2 caracteres no nome.';
+            boxErro.style.display = 'flex';
+            return false;
+        }
+        return true;
+    }
+
+    function abrirModalExcluirCategoria(btn) {
+        const id = btn.getAttribute('data-id');
+        const nome = btn.getAttribute('data-nome');
+        document.getElementById('textoConfirmarExclusaoCategoria').textContent = `Tem certeza que deseja excluir "${nome}"?`;
+        document.getElementById('formExcluirCategoria').action = `/categorias/${id}/excluir`;
+        abrirModal('modalExcluirCategoria');
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,360 @@
+{% extends "base.html" %}
+
+{% block extra_css %}
+<style>
+    .bloco-opcoes-cliente {
+        background-color: var(--cor-fundo);
+        border: 1px solid var(--cor-borda-rosa);
+        border-radius: 12px;
+        overflow: hidden;
+    }
+    .linha-opcao-switch {
+        padding: 10px 14px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+    }
+    .divisor-opcoes {
+        height: 1px;
+        background-color: var(--cor-borda-rosa);
+        border: none;
+    }
+    .linha-consentimento {
+        padding: 12px 14px;
+        display: flex;
+        align-items: flex-start;
+        gap: 10px;
+        cursor: pointer;
+    }
+    .linha-consentimento input[type="checkbox"] {
+        width: 18px;
+        height: 18px;
+        accent-color: var(--cor-vinho);
+        margin-top: 2px;
+        cursor: pointer;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+{% if erro %}
+<div class="estado-erro">
+    <span class="material-icons">error_outline</span>
+    <p>{{ erro }}</p>
+    <a href="{{ url_for('listar_clientes') }}" class="btn-vinho">
+        <span class="material-icons">refresh</span>
+        <span>Tentar novamente</span>
+    </a>
+</div>
+{% else %}
+    <!-- BarraTopoComBusca -->
+    <div class="barra-topo">
+        <div class="campo-busca-wrapper">
+            <span class="material-icons icone-busca">search</span>
+            <input type="text" id="inputBusca" class="campo-busca-input" placeholder="Buscar por nome, telefone ou e-mail" oninput="filtrarTabela()">
+            <button type="button" id="btnLimparBusca" class="btn-limpar-busca" onclick="limparBusca()" title="Limpar busca">
+                <span class="material-icons" style="font-size: 18px;">close</span>
+            </button>
+        </div>
+        <div class="linha-contador-acao">
+            <span class="texto-contador" id="contadorItens">{{ clientes | length }} cliente(s)</span>
+            <button type="button" class="btn-vinho" onclick="abrirModalNovoCliente()">
+                <span class="material-icons">add</span>
+                <span>Novo cliente</span>
+            </button>
+        </div>
+    </div>
+
+    {% if clientes | length == 0 %}
+    <div style="flex: 1; display: flex; align-items: center; justify-content: center; color: #616161;">
+        Nenhum cliente cadastrado.
+    </div>
+    {% else %}
+    <div class="tabela-container">
+        <table class="data-table" id="tabelaClientes">
+            <thead>
+                <tr>
+                    <th>Nome</th>
+                    <th>Telefone</th>
+                    <th>E-mail</th>
+                    <th>Lembretes</th>
+                    <th>Cadastro</th>
+                    <th>Ações</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for c in clientes %}
+                <tr class="linha-item" data-busca="{{ (c.nome ~ ' ' ~ (c.telefone or '') ~ ' ' ~ (c.email or '')) | lower }}">
+                    <td style="font-weight: 600;">{{ c.nome }}</td>
+                    <td>{{ c.telefone | telefone_br }}</td>
+                    <td>{{ c.email or '—' }}</td>
+                    <td>
+                        <div class="celula-status">
+                            <form method="POST" action="{{ url_for('alternar_lembretes_cliente', cliente_id=c.id) }}" style="display: inline-flex;">
+                                <input type="hidden" name="aceita_lembretes" value="{{ 'false' if c.aceita_lembretes else 'true' }}">
+                                <label class="m3-switch" title="Alternar lembretes">
+                                    <input type="checkbox" {% if c.aceita_lembretes %}checked{% endif %} onchange="this.form.submit()">
+                                    <span class="m3-slider"></span>
+                                </label>
+                            </form>
+                            <span class="status-chip {{ 'ativo' if c.aceita_lembretes else 'inativo' }}">
+                                {{ 'Ativo' if c.aceita_lembretes else 'Inativo' }}
+                            </span>
+                        </div>
+                    </td>
+                    <td>{{ c.dt_cadastro | data_br }}</td>
+                    <td>
+                        <div class="acoes-celula">
+                            <button type="button" class="btn-icone" title="Editar"
+                                data-id="{{ c.id }}"
+                                data-nome="{{ c.nome }}"
+                                data-telefone="{{ c.telefone | telefone_br }}"
+                                data-email="{{ c.email or '' }}"
+                                data-lembretes="{{ 'true' if c.aceita_lembretes else 'false' }}"
+                                onclick="abrirModalEditarCliente(this)">
+                                <span class="material-icons-outlined">edit</span>
+                            </button>
+                            <button type="button" class="btn-icone excluir" title="Excluir"
+                                data-id="{{ c.id }}"
+                                data-nome="{{ c.nome }}"
+                                onclick="abrirModalExcluirCliente(this)">
+                                <span class="material-icons">delete_outline</span>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <div id="msgSemResultados" style="display: none; text-align: center; padding: 40px; color: #616161;">
+            Nenhum cliente encontrado para a busca.
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Modal: Criar / Editar Cliente (_FormularioCliente) -->
+    <div class="modal-backdrop" id="modalFormularioCliente">
+        <div class="dialogo-padrao">
+            <div class="dialogo-cabecalho">
+                <div class="dialogo-icone-box">
+                    <span class="material-icons-outlined" id="iconeModalCliente">person_add</span>
+                </div>
+                <div class="dialogo-titulos">
+                    <h3 id="tituloModalCliente">Novo cliente</h3>
+                    <p id="subtituloModalCliente">Cadastre os dados de contato do cliente.</p>
+                </div>
+                <button type="button" class="btn-fechar-dialogo" onclick="fecharModal('modalFormularioCliente')" title="Fechar">
+                    <span class="material-icons">close</span>
+                </button>
+            </div>
+            <form method="POST" action="{{ url_for('salvar_cliente') }}" onsubmit="return validarFormularioCliente()" novalidate>
+                <input type="hidden" name="cliente_id" id="formClienteId">
+                <div class="dialogo-corpo">
+                    <div class="form-grupo-modal">
+                        <label class="form-label-modal" for="formNomeCliente">Nome completo</label>
+                        <div class="campo-modal-wrapper">
+                            <span class="material-icons icone-campo">person_outline</span>
+                            <input type="text" name="nome" id="formNomeCliente" class="input-modal com-icone" placeholder="Ex.: Maria Silva" minlength="2" maxlength="100" required>
+                        </div>
+                    </div>
+
+                    <div class="form-grupo-modal">
+                        <label class="form-label-modal" for="formTelefoneCliente">Telefone / WhatsApp</label>
+                        <div class="campo-modal-wrapper">
+                            <span class="material-icons-outlined icone-campo">phone</span>
+                            <input type="text" name="telefone" id="formTelefoneCliente" class="input-modal com-icone" placeholder="(44) 90000-0000" maxlength="15" required oninput="mascaraTelefone(this)">
+                        </div>
+                    </div>
+
+                    <div class="form-grupo-modal">
+                        <label class="form-label-modal" for="formEmailCliente">E-mail <span style="color: var(--cor-vinho);">*</span></label>
+                        <div class="campo-modal-wrapper">
+                            <span class="material-icons icone-campo">mail_outline</span>
+                            <input type="email" name="email" id="formEmailCliente" class="input-modal com-icone" placeholder="cliente@email.com" required>
+                        </div>
+                    </div>
+
+                    <div class="bloco-opcoes-cliente">
+                        <div class="linha-opcao-switch">
+                            <div class="bloco-switch-textos">
+                                <h4>Aceita lembretes</h4>
+                                <p>Envia avisos automáticos dos agendamentos.</p>
+                            </div>
+                            <label class="m3-switch">
+                                <input type="checkbox" name="aceita_lembretes" id="formLembretesCliente" checked>
+                                <span class="m3-slider"></span>
+                            </label>
+                        </div>
+                        <div id="blocoConsentimentoCliente">
+                            <hr class="divisor-opcoes">
+                            <label class="linha-consentimento">
+                                <input type="checkbox" id="formConsentimentoCliente" checked>
+                                <div class="bloco-switch-textos">
+                                    <h4>O cliente consentiu com o tratamento dos seus dados</h4>
+                                    <p>Obrigatório para concluir o cadastro (LGPD).</p>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div id="erroFormCliente" class="aviso-exclusao-box" style="display: none; margin-top: 14px; margin-bottom: 0;">
+                        <span class="material-icons">error_outline</span>
+                        <span id="textoErroFormCliente"></span>
+                    </div>
+                </div>
+                <div class="dialogo-rodape">
+                    <button type="button" class="btn-modal-cancelar" onclick="fecharModal('modalFormularioCliente')">Cancelar</button>
+                    <button type="submit" class="btn-modal-salvar" id="btnSalvarCliente">Cadastrar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Excluir Cliente (_DialogExcluirCliente) -->
+    <div class="modal-backdrop" id="modalExcluirCliente">
+        <div class="dialogo-exclusao">
+            <div class="circulo-icone-erro">
+                <span class="material-icons-outlined">person_remove</span>
+            </div>
+            <h3>Excluir cliente?</h3>
+            <p class="sub" id="textoConfirmarExclusaoCliente">Tem certeza que deseja excluir este cliente?</p>
+            <div class="aviso-exclusao-box">
+                <span class="material-icons">info_outline</span>
+                <span>Se este cliente tiver agendamentos vinculados, o sistema não permitirá a exclusão.</span>
+            </div>
+            <form method="POST" id="formExcluirCliente" style="display: flex; gap: 12px;">
+                <button type="button" class="btn-modal-cancelar" onclick="fecharModal('modalExcluirCliente')">Cancelar</button>
+                <button type="submit" class="btn-modal-excluir">Excluir</button>
+            </form>
+        </div>
+    </div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function filtrarTabela() {
+        const input = document.getElementById('inputBusca');
+        const btnLimpar = document.getElementById('btnLimparBusca');
+        const termo = (input.value || '').trim().toLowerCase();
+        const digitos = termo.replace(/\D/g, '');
+        btnLimpar.style.display = termo ? 'inline-flex' : 'none';
+
+        const linhas = document.querySelectorAll('#tabelaClientes tbody .linha-item');
+        let visiveis = 0;
+        linhas.forEach(tr => {
+            const texto = tr.getAttribute('data-busca') || '';
+            if (!termo || texto.includes(termo) || (digitos && texto.includes(digitos))) {
+                tr.style.display = '';
+                visiveis++;
+            } else {
+                tr.style.display = 'none';
+            }
+        });
+        document.getElementById('contadorItens').textContent = `${visiveis} cliente(s)`;
+        const msg = document.getElementById('msgSemResultados');
+        if (msg) msg.style.display = (visiveis === 0 && linhas.length > 0) ? 'block' : 'none';
+    }
+
+    function limparBusca() {
+        document.getElementById('inputBusca').value = '';
+        filtrarTabela();
+    }
+
+    function mascaraTelefone(input) {
+        let d = input.value.replace(/\D/g, '').slice(0, 11);
+        let fmt = '';
+        if (d.length > 0) {
+            const ddd = d.slice(0, Math.min(2, d.length));
+            fmt = d.length <= 2 ? `(${ddd}` : `(${ddd}) `;
+            if (d.length > 2) {
+                const resto = d.slice(2);
+                if (resto.length <= 5) {
+                    fmt += resto;
+                } else {
+                    fmt += `${resto.slice(0, 5)}-${resto.slice(5)}`;
+                }
+            }
+        }
+        input.value = fmt;
+    }
+
+    function abrirModalNovoCliente() {
+        document.getElementById('formClienteId').value = '';
+        document.getElementById('iconeModalCliente').textContent = 'person_add';
+        document.getElementById('tituloModalCliente').textContent = 'Novo cliente';
+        document.getElementById('subtituloModalCliente').textContent = 'Cadastre os dados de contato do cliente.';
+        document.getElementById('btnSalvarCliente').textContent = 'Cadastrar';
+        document.getElementById('formNomeCliente').value = '';
+        document.getElementById('formTelefoneCliente').value = '';
+        document.getElementById('formEmailCliente').value = '';
+        document.getElementById('formLembretesCliente').checked = true;
+        document.getElementById('formConsentimentoCliente').checked = true;
+        document.getElementById('blocoConsentimentoCliente').style.display = 'block';
+        document.getElementById('erroFormCliente').style.display = 'none';
+        abrirModal('modalFormularioCliente');
+    }
+
+    function abrirModalEditarCliente(btn) {
+        document.getElementById('formClienteId').value = btn.getAttribute('data-id');
+        document.getElementById('iconeModalCliente').textContent = 'edit';
+        document.getElementById('tituloModalCliente').textContent = 'Editar cliente';
+        document.getElementById('subtituloModalCliente').textContent = 'Atualize as informações deste cliente.';
+        document.getElementById('btnSalvarCliente').textContent = 'Salvar alterações';
+        document.getElementById('formNomeCliente').value = btn.getAttribute('data-nome');
+        document.getElementById('formTelefoneCliente').value = btn.getAttribute('data-telefone');
+        document.getElementById('formEmailCliente').value = btn.getAttribute('data-email');
+        document.getElementById('formLembretesCliente').checked = btn.getAttribute('data-lembretes') === 'true';
+        document.getElementById('blocoConsentimentoCliente').style.display = 'none';
+        document.getElementById('erroFormCliente').style.display = 'none';
+        abrirModal('modalFormularioCliente');
+    }
+
+    function validarFormularioCliente() {
+        const editando = !!document.getElementById('formClienteId').value;
+        const nome = document.getElementById('formNomeCliente').value.trim();
+        const digitos = document.getElementById('formTelefoneCliente').value.replace(/\D/g, '');
+        const email = document.getElementById('formEmailCliente').value.trim();
+        const consentiu = document.getElementById('formConsentimentoCliente').checked;
+        const boxErro = document.getElementById('erroFormCliente');
+        const txtErro = document.getElementById('textoErroFormCliente');
+        const regexEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+        if (nome.length < 2) {
+            txtErro.textContent = 'Informe pelo menos 2 caracteres no nome.';
+            boxErro.style.display = 'flex';
+            return false;
+        }
+        if (digitos.length !== 11 || parseInt(digitos.slice(0, 2), 10) < 11 || digitos[2] !== '9') {
+            txtErro.textContent = 'Use DDD válido + 9 dígitos começando com 9.';
+            boxErro.style.display = 'flex';
+            return false;
+        }
+        if (!email) {
+            txtErro.textContent = 'O e-mail do cliente é obrigatório.';
+            boxErro.style.display = 'flex';
+            return false;
+        }
+        if (!regexEmail.test(email)) {
+            txtErro.textContent = 'Informe um endereço de e-mail válido (ex.: cliente@email.com).';
+            boxErro.style.display = 'flex';
+            return false;
+        }
+        if (!editando && !consentiu) {
+            txtErro.textContent = 'Confirme o consentimento do cliente para continuar.';
+            boxErro.style.display = 'flex';
+            return false;
+        }
+        return true;
+    }
+
+    function abrirModalExcluirCliente(btn) {
+        const id = btn.getAttribute('data-id');
+        const nome = btn.getAttribute('data-nome');
+        document.getElementById('textoConfirmarExclusaoCliente').textContent = `Tem certeza que deseja excluir "${nome}"?`;
+        document.getElementById('formExcluirCliente').action = `/clientes/${id}/excluir`;
+        abrirModal('modalExcluirCliente');
+    }
+</script>
+{% endblock %}

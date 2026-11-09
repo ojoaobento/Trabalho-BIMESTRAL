@@ -1,0 +1,912 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ titulo_pagina or 'Painel Administrativo' }} - Studio Cleusa</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons|Material+Icons+Outlined" rel="stylesheet">
+    <style>
+        :root {
+            --cor-vinho: #8E2348;
+            --cor-vinho-escuro: #5E1230;
+            --cor-rosa-claro: #FFEEF3;
+            --cor-borda-rosa: #F1DDE5;
+            --cor-fundo: #FFF8FA;
+            --cor-texto: #4A1026;
+            --cor-suave: #976D7B;
+            --cor-erro: #B3261E;
+            --cor-erro-fundo: #FDE7E9;
+        }
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: #FFFFFF;
+            color: var(--cor-texto);
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Top AppBar */
+        .app-bar {
+            height: 56px;
+            min-height: 56px;
+            background-color: var(--cor-vinho);
+            color: #FFFFFF;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 16px;
+            z-index: 100;
+        }
+        .app-bar-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .btn-menu-mobile {
+            display: none;
+            background: transparent;
+            border: none;
+            color: #FFFFFF;
+            cursor: pointer;
+            padding: 6px;
+            border-radius: 50%;
+        }
+        .app-bar-title {
+            font-size: 20px;
+            font-weight: 500;
+            letter-spacing: 0.15px;
+        }
+        .btn-sair {
+            background: transparent;
+            border: none;
+            color: #FFFFFF;
+            cursor: pointer;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-decoration: none;
+            transition: background-color 0.15s;
+        }
+        .btn-sair:hover {
+            background-color: rgba(255, 255, 255, 0.12);
+        }
+
+        /* Shell Principal */
+        .painel-shell {
+            flex: 1;
+            display: flex;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* Menu Lateral (Sidebar) */
+        .menu-lateral {
+            width: 260px;
+            min-width: 260px;
+            background-color: var(--cor-rosa-claro);
+            border-right: 1px solid var(--cor-borda-rosa);
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+        }
+        .menu-cabecalho {
+            padding: 20px 16px;
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--cor-vinho);
+            border-bottom: 1px solid var(--cor-borda-rosa);
+        }
+        .menu-lista {
+            list-style: none;
+            padding: 4px 0;
+        }
+        .menu-item a {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 12px 16px;
+            text-decoration: none;
+            font-size: 14px;
+            color: #616161;
+            font-weight: 400;
+            transition: background-color 0.12s;
+        }
+        .menu-item a .material-icons,
+        .menu-item a .material-icons-outlined {
+            font-size: 22px;
+            color: #757575;
+        }
+        .menu-item a:hover {
+            background-color: rgba(142, 35, 72, 0.06);
+        }
+        .menu-item.selecionado a {
+            background-color: rgba(142, 35, 72, 0.12);
+            color: var(--cor-vinho);
+            font-weight: 700;
+        }
+        .menu-item.selecionado a .material-icons,
+        .menu-item.selecionado a .material-icons-outlined {
+            color: var(--cor-vinho);
+        }
+
+        /* Área de Conteúdo */
+        .conteudo-principal {
+            flex: 1;
+            background-color: #FFFFFF;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .pagina-titulo {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--cor-texto);
+            margin-bottom: 16px;
+            flex-shrink: 0;
+        }
+        .pagina-divisor {
+            height: 1px;
+            background-color: #E0E0E0;
+            border: none;
+            margin-bottom: 16px;
+            flex-shrink: 0;
+        }
+        .pagina-corpo {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+
+        /* Componentes Comuns (PainelWidgets) */
+        .barra-topo {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-bottom: 16px;
+            flex-shrink: 0;
+        }
+        .campo-busca-wrapper {
+            position: relative;
+            width: 100%;
+        }
+        .campo-busca-wrapper .icone-busca {
+            position: absolute;
+            left: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #757575;
+            font-size: 20px;
+            pointer-events: none;
+        }
+        .campo-busca-input {
+            width: 100%;
+            height: 44px;
+            padding: 0 40px 0 44px;
+            border: 1px solid #BDBDBD;
+            border-radius: 10px;
+            font-size: 14px;
+            font-family: inherit;
+            color: var(--cor-texto);
+            outline: none;
+            transition: border-color 0.15s;
+        }
+        .campo-busca-input:focus {
+            border-color: var(--cor-vinho);
+            border-width: 1.5px;
+        }
+        .btn-limpar-busca {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: transparent;
+            border: none;
+            color: #757575;
+            cursor: pointer;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 4px;
+            border-radius: 50%;
+        }
+        .linha-contador-acao {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+        .texto-contador {
+            color: #616161;
+            font-size: 14px;
+        }
+
+        /* Botões Padrão Flutter */
+        .btn-vinho {
+            background-color: var(--cor-vinho);
+            color: #FFFFFF;
+            border: none;
+            border-radius: 20px;
+            padding: 10px 18px;
+            font-size: 14px;
+            font-weight: 500;
+            font-family: inherit;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            text-decoration: none;
+            transition: background-color 0.15s, box-shadow 0.15s;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+        }
+        .btn-vinho:hover {
+            background-color: #771C3B;
+        }
+        .btn-vinho .material-icons,
+        .btn-vinho .material-icons-outlined {
+            font-size: 18px;
+        }
+        .btn-outlined-vinho {
+            background-color: #FFFFFF;
+            color: var(--cor-vinho);
+            border: 1px solid var(--cor-borda-rosa);
+            border-radius: 20px;
+            padding: 9px 16px;
+            font-size: 14px;
+            font-weight: 500;
+            font-family: inherit;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            text-decoration: none;
+            transition: background-color 0.15s;
+        }
+        .btn-outlined-vinho:hover {
+            background-color: var(--cor-rosa-claro);
+        }
+        .btn-outlined-vermelho {
+            background-color: #FFFFFF;
+            color: #D32F2F;
+            border: 1px solid #E57373;
+            border-radius: 20px;
+            padding: 9px 16px;
+            font-size: 14px;
+            font-weight: 500;
+            font-family: inherit;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            text-decoration: none;
+        }
+        .btn-outlined-vermelho:hover {
+            background-color: #FFEBEE;
+        }
+
+        /* Tabelas DataTable do Flutter */
+        .tabela-container {
+            width: 100%;
+            overflow-x: auto;
+            flex: 1;
+        }
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+            font-size: 14px;
+        }
+        .data-table thead th {
+            padding: 14px 16px;
+            font-weight: 700;
+            color: var(--cor-vinho);
+            border-bottom: 1px solid #E0E0E0;
+            white-space: nowrap;
+        }
+        .data-table tbody tr {
+            border-bottom: 1px solid #EEEEEE;
+            transition: background-color 0.1s;
+        }
+        .data-table tbody tr:hover {
+            background-color: rgba(255, 238, 243, 0.35);
+        }
+        .data-table tbody td {
+            padding: 10px 16px;
+            vertical-align: middle;
+            color: #212121;
+        }
+
+        /* Switch Material 3 */
+        .celula-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .m3-switch {
+            position: relative;
+            display: inline-block;
+            width: 46px;
+            height: 26px;
+            flex-shrink: 0;
+        }
+        .m3-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        .m3-slider {
+            position: absolute;
+            cursor: pointer;
+            inset: 0;
+            background-color: #E0E0E0;
+            border-radius: 26px;
+            transition: 0.2s;
+        }
+        .m3-slider:before {
+            position: absolute;
+            content: "";
+            height: 20px;
+            width: 20px;
+            left: 3px;
+            bottom: 3px;
+            background-color: #FFFFFF;
+            border-radius: 50%;
+            transition: 0.2s;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.25);
+        }
+        .m3-switch input:checked + .m3-slider {
+            background-color: var(--cor-vinho);
+        }
+        .m3-switch input:checked + .m3-slider:before {
+            transform: translateX(20px);
+        }
+
+        /* StatusChip */
+        .status-chip {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 700;
+            line-height: 1.2;
+            white-space: nowrap;
+        }
+        .status-chip.ativo {
+            background-color: #E8F5E9;
+            color: #2E7D32;
+        }
+        .status-chip.inativo {
+            background-color: #EEEEEE;
+            color: #616161;
+        }
+
+        /* Botões de ícone nas tabelas */
+        .acoes-celula {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .btn-icone {
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            color: #424242;
+            transition: background-color 0.15s;
+        }
+        .btn-icone:hover {
+            background-color: rgba(0, 0, 0, 0.06);
+        }
+        .btn-icone.excluir {
+            color: #D32F2F;
+        }
+        .btn-icone.excluir:hover {
+            background-color: rgba(211, 47, 47, 0.08);
+        }
+        .btn-icone .material-icons,
+        .btn-icone .material-icons-outlined {
+            font-size: 20px;
+            width: 20px;
+            height: 20px;
+            line-height: 20px;
+            overflow: hidden;
+        }
+
+        /* EstadoErro */
+        .estado-erro {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 32px;
+        }
+        .estado-erro .material-icons,
+        .estado-erro .material-icons-outlined {
+            font-size: 48px;
+            color: #EF5350;
+            margin-bottom: 12px;
+        }
+        .estado-erro p {
+            font-size: 14px;
+            color: var(--cor-texto);
+            margin-bottom: 16px;
+        }
+
+        /* Modais Padrão Flutter (_DialogoPadrao) */
+        .modal-backdrop {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background-color: rgba(0, 0, 0, 0.45);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+        }
+        .modal-backdrop.aberto {
+            display: flex;
+        }
+        .dialogo-padrao {
+            background: #FFFFFF;
+            border-radius: 22px;
+            width: 100%;
+            max-width: 480px;
+            max-height: 92vh;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 20px 45px rgba(0, 0, 0, 0.22);
+            overflow: hidden;
+            animation: surgirModal 0.15s ease-out;
+        }
+        @keyframes surgirModal {
+            from { transform: scale(0.96); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+        .dialogo-cabecalho {
+            padding: 20px 16px 16px 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            border-bottom: 1px solid var(--cor-borda-rosa);
+        }
+        .dialogo-icone-box {
+            width: 42px;
+            height: 42px;
+            border-radius: 12px;
+            background-color: var(--cor-rosa-claro);
+            color: var(--cor-vinho);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        .dialogo-icone-box .material-icons,
+        .dialogo-icone-box .material-icons-outlined {
+            font-size: 22px;
+            width: 22px;
+            height: 22px;
+            line-height: 22px;
+            overflow: hidden;
+        }
+        .dialogo-icone-box.erro {
+            background-color: var(--cor-erro-fundo);
+            color: var(--cor-erro);
+        }
+        .dialogo-titulos {
+            flex: 1;
+            min-width: 0;
+        }
+        .dialogo-titulos h3 {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--cor-texto);
+        }
+        .dialogo-titulos p {
+            margin-top: 2px;
+            font-size: 12px;
+            color: var(--cor-suave);
+        }
+        .btn-fechar-dialogo {
+            background: transparent;
+            border: none;
+            color: var(--cor-suave);
+            cursor: pointer;
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        .btn-fechar-dialogo:hover {
+            background-color: var(--cor-rosa-claro);
+        }
+        .dialogo-corpo {
+            padding: 18px 20px;
+            overflow-y: auto;
+        }
+        .dialogo-rodape {
+            padding: 12px 20px 20px 20px;
+            display: flex;
+            gap: 12px;
+        }
+        .btn-modal-cancelar {
+            flex: 1;
+            padding: 13px 16px;
+            background: #FFFFFF;
+            color: var(--cor-vinho);
+            border: 1px solid var(--cor-borda-rosa);
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 500;
+            font-family: inherit;
+            cursor: pointer;
+        }
+        .btn-modal-cancelar:hover {
+            background-color: var(--cor-fundo);
+        }
+        .btn-modal-salvar {
+            flex: 2;
+            padding: 13px 16px;
+            background: var(--cor-vinho);
+            color: #FFFFFF;
+            border: none;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 700;
+            font-family: inherit;
+            cursor: pointer;
+        }
+        .btn-modal-salvar:hover {
+            background-color: #771C3B;
+        }
+        .btn-modal-excluir {
+            flex: 1;
+            padding: 13px 16px;
+            background: var(--cor-erro);
+            color: #FFFFFF;
+            border: none;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 700;
+            font-family: inherit;
+            cursor: pointer;
+        }
+
+        /* Campos dentro dos Modais Flutter */
+        .form-grupo-modal {
+            margin-bottom: 16px;
+        }
+        .form-label-modal {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--cor-texto);
+            margin-bottom: 6px;
+        }
+        .campo-modal-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+        .campo-modal-wrapper .icone-campo {
+            position: absolute;
+            left: 12px;
+            font-size: 20px;
+            width: 20px;
+            height: 20px;
+            line-height: 20px;
+            color: var(--cor-vinho);
+            pointer-events: none;
+            overflow: hidden;
+        }
+        .input-modal, .select-modal, .textarea-modal {
+            width: 100%;
+            padding: 13px 14px;
+            font-size: 14px;
+            font-family: inherit;
+            color: var(--cor-texto);
+            background-color: var(--cor-fundo);
+            border: 1px solid var(--cor-borda-rosa);
+            border-radius: 12px;
+            outline: none;
+            transition: border-color 0.15s;
+        }
+        .input-modal.com-icone, .select-modal.com-icone {
+            padding-left: 42px;
+        }
+        .input-modal:focus, .select-modal:focus, .textarea-modal:focus {
+            border-color: var(--cor-vinho);
+            border-width: 1.5px;
+        }
+        .bloco-switch-modal {
+            padding: 10px 14px;
+            background-color: var(--cor-fundo);
+            border: 1px solid var(--cor-borda-rosa);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+        }
+        .bloco-switch-textos h4 {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--cor-texto);
+        }
+        .bloco-switch-textos p {
+            font-size: 12px;
+            color: var(--cor-suave);
+            margin-top: 2px;
+        }
+
+        /* Diálogo de Confirmação de Exclusão (_DialogExcluir...) */
+        .dialogo-exclusao {
+            background: #FFFFFF;
+            border-radius: 22px;
+            width: 100%;
+            max-width: 400px;
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 20px 45px rgba(0, 0, 0, 0.22);
+        }
+        .circulo-icone-erro {
+            width: 52px;
+            height: 52px;
+            border-radius: 50%;
+            background-color: var(--cor-erro-fundo);
+            color: var(--cor-erro);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 16px auto;
+        }
+        .circulo-icone-erro .material-icons,
+        .circulo-icone-erro .material-icons-outlined {
+            font-size: 26px;
+            width: 26px;
+            height: 26px;
+            line-height: 26px;
+            overflow: hidden;
+        }
+        .dialogo-exclusao h3 {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--cor-texto);
+            margin-bottom: 8px;
+        }
+        .dialogo-exclusao p.sub {
+            font-size: 14px;
+            line-height: 1.45;
+            color: var(--cor-suave);
+            margin-bottom: 12px;
+            word-break: break-word;
+        }
+        .aviso-exclusao-box {
+            width: 100%;
+            background-color: var(--cor-erro-fundo);
+            border-radius: 12px;
+            padding: 12px 14px;
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            text-align: left;
+            color: var(--cor-erro);
+            font-size: 12.5px;
+            line-height: 1.45;
+            margin-bottom: 22px;
+        }
+        .aviso-exclusao-box .material-icons,
+        .aviso-exclusao-box .material-icons-outlined {
+            font-size: 18px;
+            width: 18px;
+            height: 18px;
+            line-height: 18px;
+            flex-shrink: 0;
+            margin-top: 1px;
+            overflow: hidden;
+        }
+        .aviso-exclusao-box > span:last-child {
+            flex: 1;
+            min-width: 0;
+            word-break: break-word;
+        }
+
+        /* SnackBar Flutuante (mostrarMensagem) */
+        .snackbar-container {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 2000;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            min-width: 300px;
+            max-width: 90vw;
+        }
+        .snackbar {
+            padding: 14px 20px;
+            border-radius: 8px;
+            color: #FFFFFF;
+            font-size: 14px;
+            font-weight: 500;
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.25);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            animation: subirSnack 0.25s ease-out;
+        }
+        .snackbar.sucesso {
+            background-color: var(--cor-vinho);
+        }
+        .snackbar.erro {
+            background-color: #D32F2F;
+        }
+        @keyframes subirSnack {
+            from { transform: translateY(20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        @media (max-width: 799px) {
+            .btn-menu-mobile {
+                display: inline-flex;
+            }
+            .menu-lateral {
+                position: fixed;
+                top: 56px;
+                bottom: 0;
+                left: -270px;
+                z-index: 500;
+                transition: left 0.2s ease;
+                box-shadow: 4px 0 16px rgba(0,0,0,0.15);
+            }
+            .menu-lateral.aberto {
+                left: 0;
+            }
+            .conteudo-principal {
+                padding: 16px;
+            }
+            .pagina-titulo {
+                font-size: 20px;
+            }
+        }
+    </style>
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <!-- Top AppBar -->
+    <header class="app-bar">
+        <div class="app-bar-left">
+            <button type="button" class="btn-menu-mobile" onclick="document.getElementById('menuLateral').classList.toggle('aberto')">
+                <span class="material-icons">menu</span>
+            </button>
+            <span class="app-bar-title">Painel Administrativo</span>
+        </div>
+        <a href="{{ url_for('logout') }}" class="btn-sair" title="Sair">
+            <span class="material-icons">logout</span>
+        </a>
+    </header>
+
+    <!-- Corpo Principal: Sidebar + Conteúdo -->
+    <div class="painel-shell">
+        <aside class="menu-lateral" id="menuLateral">
+            <div class="menu-cabecalho">Menu Principal</div>
+            <ul class="menu-lista">
+                <li class="menu-item {% if pagina_ativa == 'visao_geral' %}selecionado{% endif %}">
+                    <a href="{{ url_for('visao_geral') }}">
+                        <span class="material-icons">dashboard</span>
+                        <span>Visão Geral</span>
+                    </a>
+                </li>
+                <li class="menu-item {% if pagina_ativa == 'servicos' %}selecionado{% endif %}">
+                    <a href="{{ url_for('listar_servicos') }}">
+                        <span class="material-icons">room_service</span>
+                        <span>Serviços</span>
+                    </a>
+                </li>
+                <li class="menu-item {% if pagina_ativa == 'usuarios' %}selecionado{% endif %}">
+                    <a href="{{ url_for('listar_usuarios') }}">
+                        <span class="material-icons">people</span>
+                        <span>Usuários</span>
+                    </a>
+                </li>
+                <li class="menu-item {% if pagina_ativa == 'agendamentos' %}selecionado{% endif %}">
+                    <a href="{{ url_for('listar_agendamentos') }}">
+                        <span class="material-icons">calendar_month</span>
+                        <span>Agendamentos</span>
+                    </a>
+                </li>
+                <li class="menu-item {% if pagina_ativa == 'clientes' %}selecionado{% endif %}">
+                    <a href="{{ url_for('listar_clientes') }}">
+                        <span class="material-icons">badge</span>
+                        <span>Clientes</span>
+                    </a>
+                </li>
+                <li class="menu-item {% if pagina_ativa == 'categorias' %}selecionado{% endif %}">
+                    <a href="{{ url_for('listar_categorias') }}">
+                        <span class="material-icons">category</span>
+                        <span>Categorias</span>
+                    </a>
+                </li>
+                <li class="menu-item {% if pagina_ativa == 'lembretes' %}selecionado{% endif %}">
+                    <a href="{{ url_for('listar_lembretes') }}">
+                        <span class="material-icons">notifications</span>
+                        <span>Lembretes</span>
+                    </a>
+                </li>
+                <li class="menu-item {% if pagina_ativa == 'disponibilidades' %}selecionado{% endif %}">
+                    <a href="{{ url_for('listar_disponibilidades') }}">
+                        <span class="material-icons">access_time</span>
+                        <span>Disponibilidades</span>
+                    </a>
+                </li>
+            </ul>
+        </aside>
+
+        <main class="conteudo-principal">
+            <h1 class="pagina-titulo">{{ titulo_pagina }}</h1>
+            <hr class="pagina-divisor">
+            <div class="pagina-corpo">
+                {% block content %}{% endblock %}
+            </div>
+        </main>
+    </div>
+
+    <!-- SnackBars Flutuantes -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        <div class="snackbar-container" id="snackbarContainer">
+            {% for category, message in messages %}
+            <div class="snackbar {{ 'erro' if category in ('erro', 'danger', 'warning') else 'sucesso' }}">
+                <span>{{ message }}</span>
+            </div>
+            {% endfor %}
+        </div>
+        <script>
+            setTimeout(() => {
+                const el = document.getElementById('snackbarContainer');
+                if (el) el.style.display = 'none';
+            }, 4000);
+        </script>
+        {% endif %}
+    {% endwith %}
+
+    <script>
+        function abrirModal(id) {
+            const modal = document.getElementById(id);
+            if (modal) modal.classList.add('aberto');
+        }
+        function fecharModal(id) {
+            const modal = document.getElementById(id);
+            if (modal) modal.classList.remove('aberto');
+        }
+    </script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,233 @@
+{% extends "base.html" %}
+
+{% block extra_css %}
+<style>
+    .grid-resumo-topo {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 16px;
+        margin-bottom: 24px;
+    }
+    .card-resumo {
+        background: #FFFFFF;
+        border: 1px solid #EEEEEE;
+        border-radius: 12px;
+        padding: 16px;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+    }
+    .card-resumo-topo {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 12px;
+    }
+    .card-resumo-titulo {
+        font-size: 13px;
+        font-weight: 700;
+        color: #757575;
+    }
+    .card-resumo-valor {
+        font-size: 24px;
+        font-weight: 700;
+        color: #212121;
+    }
+
+    .grid-paineis-baixo {
+        display: flex;
+        gap: 16px;
+        align-items: stretch;
+    }
+    .painel-grafico {
+        flex: 2;
+        background: #FFFFFF;
+        border: 1px solid #EEEEEE;
+        border-radius: 12px;
+        padding: 20px;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+    }
+    .painel-status-mes {
+        flex: 1;
+        background: #FFFFFF;
+        border: 1px solid #EEEEEE;
+        border-radius: 12px;
+        padding: 20px;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+    }
+    .painel-subtitulo {
+        font-size: 16px;
+        font-weight: 700;
+        color: var(--cor-vinho);
+        margin-bottom: 24px;
+    }
+    .barras-semana {
+        height: 180px;
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-evenly;
+    }
+    .coluna-dia {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: flex-end;
+        height: 100%;
+    }
+    .coluna-dia .qtd {
+        font-size: 11px;
+        color: #757575;
+        margin-bottom: 4px;
+    }
+    .coluna-dia .barra {
+        width: 28px;
+        background-color: var(--cor-vinho);
+        border-radius: 6px;
+        transition: height 0.3s ease;
+    }
+    .coluna-dia .dia-label {
+        margin-top: 8px;
+        font-size: 12px;
+        font-weight: 700;
+        color: #212121;
+    }
+
+    .lista-status-mes {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+    .linha-status-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+    .linha-status-esq {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 14px;
+        color: #212121;
+    }
+    .bolinha-status {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+    }
+    .linha-status-qtd {
+        font-size: 16px;
+        font-weight: 700;
+        color: #212121;
+    }
+
+    @media (max-width: 799px) {
+        .grid-resumo-topo {
+            grid-template-columns: 1fr;
+        }
+        .grid-paineis-baixo {
+            flex-direction: column;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+{% if erro %}
+<div class="estado-erro">
+    <span class="material-icons">error_outline</span>
+    <p>{{ erro }}</p>
+    <a href="{{ url_for('visao_geral') }}" class="btn-vinho">
+        <span class="material-icons">refresh</span>
+        <span>Tentar novamente</span>
+    </a>
+</div>
+{% else %}
+    <!-- 3 Cards de Resumo -->
+    <div class="grid-resumo-topo">
+        <div class="card-resumo">
+            <div class="card-resumo-topo">
+                <span class="card-resumo-titulo">Agendamentos Hoje</span>
+                <span class="material-icons" style="color: #1E88E5;">today</span>
+            </div>
+            <div class="card-resumo-valor">{{ dados.get('agendamentos_hoje', 0) }}</div>
+        </div>
+
+        <div class="card-resumo">
+            <div class="card-resumo-topo">
+                <span class="card-resumo-titulo">Clientes</span>
+                <span class="material-icons" style="color: #8E24AA;">people</span>
+            </div>
+            <div class="card-resumo-valor">{{ dados.get('total_clientes', 0) }}</div>
+        </div>
+
+        <div class="card-resumo">
+            <div class="card-resumo-topo">
+                <span class="card-resumo-titulo">Serviços Ativos</span>
+                <span class="material-icons" style="color: #E91E63;" title="Studio Cleusa">spa</span>
+            </div>
+            <div class="card-resumo-valor">{{ dados.get('total_servicos_ativos', 0) }}</div>
+        </div>
+    </div>
+
+    <!-- Gráfico Semanal + Agendamentos do Mês -->
+    {% set valores_semana = dados.get('desempenho_semanal', [0, 0, 0, 0, 0, 0, 0]) %}
+    {% set maior_valor = (valores_semana | max) if (valores_semana and (valores_semana | max) > 0) else 1 %}
+    {% set nomes_dias = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'] %}
+
+    <div class="grid-paineis-baixo">
+        <div class="painel-grafico">
+            <div class="painel-subtitulo">Desempenho Semanal</div>
+            <div class="barras-semana">
+                {% for i in range(7) %}
+                    {% set v = valores_semana[i] if i < (valores_semana | length) else 0 %}
+                    {% set altura = 10 + (110 * (v / maior_valor)) %}
+                    <div class="coluna-dia">
+                        <span class="qtd">{{ v }}</span>
+                        <div class="barra" style="height: {{ altura | round(1) }}px;"></div>
+                        <span class="dia-label">{{ nomes_dias[i] }}</span>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="painel-status-mes">
+            <div class="painel-subtitulo" style="margin-bottom: 16px;">Agendamentos do Mês</div>
+            <div class="lista-status-mes">
+                <div class="linha-status-item">
+                    <div class="linha-status-esq">
+                        <span class="bolinha-status" style="background-color: #FB8C00;"></span>
+                        <span>Pendentes</span>
+                    </div>
+                    <span class="linha-status-qtd">{{ dados.get('agendamentos_pendentes', 0) }}</span>
+                </div>
+                <div class="linha-status-item">
+                    <div class="linha-status-esq">
+                        <span class="bolinha-status" style="background-color: #1E88E5;"></span>
+                        <span>Confirmados</span>
+                    </div>
+                    <span class="linha-status-qtd">{{ dados.get('agendamentos_confirmados', 0) }}</span>
+                </div>
+                <div class="linha-status-item">
+                    <div class="linha-status-esq">
+                        <span class="bolinha-status" style="background-color: #43A047;"></span>
+                        <span>Concluídos</span>
+                    </div>
+                    <span class="linha-status-qtd">{{ dados.get('agendamentos_concluidos', 0) }}</span>
+                </div>
+                <div class="linha-status-item">
+                    <div class="linha-status-esq">
+                        <span class="bolinha-status" style="background-color: #E53935;"></span>
+                        <span>Cancelados</span>
+                    </div>
+                    <span class="linha-status-qtd">{{ dados.get('agendamentos_cancelados', 0) }}</span>
+                </div>
+                <div class="linha-status-item">
+                    <div class="linha-status-esq">
+                        <span class="bolinha-status" style="background-color: #757575;"></span>
+                        <span>Faltas</span>
+                    </div>
+                    <span class="linha-status-qtd">{{ dados.get('agendamentos_faltas', 0) }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endif %}
+{% endblock %}

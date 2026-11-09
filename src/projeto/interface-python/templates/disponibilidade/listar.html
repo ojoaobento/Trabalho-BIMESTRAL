@@ -1,0 +1,562 @@
+{% extends "base.html" %}
+
+{% block extra_css %}
+<style>
+    .topo-disponibilidades {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 16px;
+        margin-bottom: 16px;
+        border-bottom: 1px solid #E0E0E0;
+        flex-shrink: 0;
+    }
+    .abas-nav {
+        display: flex;
+        gap: 8px;
+    }
+    .aba-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 12px 16px;
+        background: transparent;
+        border: none;
+        border-bottom: 2px solid transparent;
+        font-size: 14px;
+        font-weight: 500;
+        font-family: inherit;
+        color: #757575;
+        cursor: pointer;
+        transition: color 0.15s, border-color 0.15s;
+    }
+    .aba-btn:hover {
+        color: var(--cor-vinho);
+    }
+    .aba-btn.ativa {
+        color: var(--cor-vinho);
+        border-bottom-color: var(--cor-vinho);
+        font-weight: 700;
+    }
+    .botoes-topo-disp {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        padding-bottom: 8px;
+    }
+
+    /* Chips de Opção (Dias e Atalhos) */
+    .chips-opcoes {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+    .chip-opcao {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 8px 12px;
+        border-radius: 20px;
+        border: 1px solid var(--cor-borda-rosa);
+        background-color: #FFFFFF;
+        color: var(--cor-texto);
+        font-size: 12px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: 0.15s;
+    }
+    .chip-opcao.selecionado {
+        background-color: var(--cor-vinho);
+        border-color: var(--cor-vinho);
+        color: #FFFFFF;
+        font-weight: 700;
+    }
+    .grid-2-cols {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+    }
+    @media (max-width: 480px) {
+        .grid-2-cols {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Barra de Abas + Botões -->
+<div class="topo-disponibilidades">
+    <div class="abas-nav">
+        <button type="button" class="aba-btn {% if aba == 'semanais' %}ativa{% endif %}" id="btnAbaSemanais" onclick="trocarAba('semanais')">
+            <span class="material-icons" style="font-size: 18px;">calendar_view_week</span>
+            <span>Semanais ({{ blocos | length }})</span>
+        </button>
+        <button type="button" class="aba-btn {% if aba == 'bloqueados' %}ativa{% endif %}" id="btnAbaBloqueados" onclick="trocarAba('bloqueados')">
+            <span class="material-icons" style="font-size: 18px;">block</span>
+            <span>Bloqueados ({{ bloqueios | length }})</span>
+        </button>
+    </div>
+
+    <div class="botoes-topo-disp">
+        <button type="button" class="btn-outlined-vermelho" onclick="abrirModalNovoBloqueio()">
+            <span class="material-icons" style="font-size: 16px;">block</span>
+            <span>Bloquear Horário</span>
+        </button>
+        <button type="button" class="btn-vinho" onclick="abrirModalNovaDisponibilidade()">
+            <span class="material-icons" style="font-size: 16px;">add</span>
+            <span>Novo Bloco Semanal</span>
+        </button>
+    </div>
+</div>
+
+{% if erro %}
+<div class="estado-erro">
+    <span class="material-icons">error_outline</span>
+    <p>{{ erro }}</p>
+    <a href="{{ url_for('listar_disponibilidades', aba=aba) }}" class="btn-vinho">
+        <span class="material-icons">refresh</span>
+        <span>Tentar novamente</span>
+    </a>
+</div>
+{% else %}
+    <!-- CONTEÚDO ABA 1: SEMANAIS -->
+    <div id="conteudoAbaSemanais" style="display: {{ 'flex' if aba == 'semanais' else 'none' }}; flex-direction: column; flex: 1;">
+        {% if blocos | length == 0 %}
+        <div style="flex: 1; display: flex; align-items: center; justify-content: center; color: #616161;">
+            Nenhum horário semanal cadastrado.
+        </div>
+        {% else %}
+        <div class="tabela-container">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Dia</th>
+                        <th>Início</th>
+                        <th>Fim</th>
+                        <th>Status</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for b in blocos %}
+                    <tr>
+                        <td style="font-weight: 500;">{{ b.nome_dia }}</td>
+                        <td>{{ b.inicio_curto }}</td>
+                        <td>{{ b.fim_curto }}</td>
+                        <td>
+                            <div class="celula-status">
+                                <form method="POST" action="{{ url_for('alternar_ativo_disponibilidade', disp_id=b.id) }}" style="display: inline-flex;">
+                                    <input type="hidden" name="ativo" value="{{ 'false' if b.ativo else 'true' }}">
+                                    <label class="m3-switch" title="Alternar status">
+                                        <input type="checkbox" {% if b.ativo %}checked{% endif %} onchange="this.form.submit()">
+                                        <span class="m3-slider"></span>
+                                    </label>
+                                </form>
+                                <span class="status-chip {{ 'ativo' if b.ativo else 'inativo' }}">
+                                    {{ 'Ativo' if b.ativo else 'Inativo' }}
+                                </span>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="acoes-celula">
+                                <button type="button" class="btn-icone" title="Editar"
+                                    data-id="{{ b.id }}"
+                                    data-dia="{{ b.dia_semana }}"
+                                    data-inicio="{{ b.inicio_curto }}"
+                                    data-fim="{{ b.fim_curto }}"
+                                    data-ativo="{{ 'true' if b.ativo else 'false' }}"
+                                    onclick="abrirModalEditarDisponibilidade(this)">
+                                    <span class="material-icons-outlined">edit</span>
+                                </button>
+                                <button type="button" class="btn-icone excluir" title="Excluir"
+                                    data-id="{{ b.id }}"
+                                    data-dia="{{ b.nome_dia }}"
+                                    data-inicio="{{ b.inicio_curto }}"
+                                    data-fim="{{ b.fim_curto }}"
+                                    onclick="abrirModalExcluirDisponibilidade(this)">
+                                    <span class="material-icons">delete_outline</span>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- CONTEÚDO ABA 2: BLOQUEADOS -->
+    <div id="conteudoAbaBloqueados" style="display: {{ 'flex' if aba == 'bloqueados' else 'none' }}; flex-direction: column; flex: 1;">
+        {% if bloqueios | length == 0 %}
+        <div style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 24px;">
+            <span class="material-icons" style="font-size: 48px; color: #BDBDBD; margin-bottom: 12px;">check_circle_outline</span>
+            <p style="font-weight: 700; color: #212121; margin-bottom: 6px;">Nenhum horário bloqueado pontualmente.</p>
+            <p style="font-size: 13px; color: #757575;">Use o botão "Bloquear Horário" acima para cancelar ou fechar um horário específico do dia.</p>
+        </div>
+        {% else %}
+        <div class="tabela-container">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Data</th>
+                        <th>Horário</th>
+                        <th>Motivo</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for b in bloqueios %}
+                    <tr>
+                        <td style="font-weight: 500;">{{ b.dt_inicio | data_br }}</td>
+                        <td>{{ b.dt_inicio | hora_br }} às {{ b.dt_fim | hora_br }}</td>
+                        <td>{{ b.motivo or 'Bloqueio administrativo' }}</td>
+                        <td>
+                            <button type="button" class="btn-icone excluir" title="Desbloquear horário"
+                                data-id="{{ b.id }}"
+                                data-data="{{ b.dt_inicio | data_br }}"
+                                data-inicio="{{ b.dt_inicio | hora_br }}"
+                                data-fim="{{ b.dt_fim | hora_br }}"
+                                onclick="abrirModalExcluirBloqueio(this)">
+                                <span class="material-icons">delete_outline</span>
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Modal: Novo / Editar Bloco Semanal (_FormularioDisponibilidade) -->
+    <div class="modal-backdrop" id="modalFormularioDisponibilidade">
+        <div class="dialogo-padrao">
+            <div class="dialogo-cabecalho">
+                <div class="dialogo-icone-box">
+                    <span class="material-icons-outlined" id="iconeModalDisp">event_available</span>
+                </div>
+                <div class="dialogo-titulos">
+                    <h3 id="tituloModalDisp">Novo horário</h3>
+                    <p id="subtituloModalDisp">Defina um bloco de atendimento semanal.</p>
+                </div>
+                <button type="button" class="btn-fechar-dialogo" onclick="fecharModal('modalFormularioDisponibilidade')">
+                    <span class="material-icons">close</span>
+                </button>
+            </div>
+            <form method="POST" action="{{ url_for('salvar_disponibilidade') }}" onsubmit="return validarFormularioDisp()">
+                <input type="hidden" name="disp_id" id="formDispId">
+                <input type="hidden" name="dia_semana" id="formDiaSemana" value="0">
+                <div class="dialogo-corpo">
+                    <div class="form-grupo-modal">
+                        <label class="form-label-modal">Dia da semana</label>
+                        <div class="chips-opcoes" id="chipsDiasSemana">
+                            {% for i in range(7) %}
+                            <button type="button" class="chip-opcao chip-dia" data-dia="{{ i }}" onclick="selecionarDiaSemana({{ i }})">
+                                {{ dias_curtos[i] }}
+                            </button>
+                            {% endfor %}
+                        </div>
+                        <div id="nomeDiaSelecionado" style="font-size: 12px; color: var(--cor-suave); margin-top: 6px; padding-left: 2px;">
+                            Segunda-feira
+                        </div>
+                    </div>
+
+                    <div class="form-grupo-modal">
+                        <label class="form-label-modal">Atalhos</label>
+                        <div class="chips-opcoes">
+                            <button type="button" class="chip-opcao" onclick="aplicarAtalhoHorario('08:00', '12:00')">
+                                <span class="material-icons-outlined" style="font-size: 15px;">wb_sunny</span>
+                                <span>Manhã</span>
+                            </button>
+                            <button type="button" class="chip-opcao" onclick="aplicarAtalhoHorario('13:00', '18:00')">
+                                <span class="material-icons-outlined" style="font-size: 15px;">wb_twilight</span>
+                                <span>Tarde</span>
+                            </button>
+                            <button type="button" class="chip-opcao" onclick="aplicarAtalhoHorario('08:00', '18:00')">
+                                <span class="material-icons-outlined" style="font-size: 15px;">schedule</span>
+                                <span>Dia todo</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="grid-2-cols" style="margin-bottom: 16px;">
+                        <div>
+                            <label class="form-label-modal" for="formHoraInicioDisp">Início</label>
+                            <div class="campo-modal-wrapper">
+                                <span class="material-icons-outlined icone-campo">access_time</span>
+                                <input type="time" name="hora_inicio" id="formHoraInicioDisp" class="input-modal com-icone" value="08:00" required>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="form-label-modal" for="formHoraFimDisp">Fim</label>
+                            <div class="campo-modal-wrapper">
+                                <span class="material-icons-outlined icone-campo">access_time</span>
+                                <input type="time" name="hora_fim" id="formHoraFimDisp" class="input-modal com-icone" value="18:00" required>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bloco-switch-modal">
+                        <div class="bloco-switch-textos">
+                            <h4>Horário ativo</h4>
+                            <p>Disponível para as clientes agendarem.</p>
+                        </div>
+                        <label class="m3-switch">
+                            <input type="checkbox" name="ativo" id="formAtivoDisp" checked>
+                            <span class="m3-slider"></span>
+                        </label>
+                    </div>
+
+                    <div id="erroFormDisp" class="aviso-exclusao-box" style="display: none; margin-top: 14px; margin-bottom: 0;">
+                        <span class="material-icons">error_outline</span>
+                        <span id="textoErroFormDisp"></span>
+                    </div>
+                </div>
+                <div class="dialogo-rodape">
+                    <button type="button" class="btn-modal-cancelar" onclick="fecharModal('modalFormularioDisponibilidade')">Cancelar</button>
+                    <button type="submit" class="btn-modal-salvar" id="btnSalvarDisp">Criar horário</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Bloquear Horário (_FormularioBloqueio) -->
+    <div class="modal-backdrop" id="modalFormularioBloqueio">
+        <div class="dialogo-padrao">
+            <div class="dialogo-cabecalho">
+                <div class="dialogo-icone-box erro">
+                    <span class="material-icons">block</span>
+                </div>
+                <div class="dialogo-titulos">
+                    <h3>Bloquear horário</h3>
+                    <p>Clientes não poderão agendar nesse intervalo.</p>
+                </div>
+                <button type="button" class="btn-fechar-dialogo" onclick="fecharModal('modalFormularioBloqueio')">
+                    <span class="material-icons">close</span>
+                </button>
+            </div>
+            <form method="POST" action="{{ url_for('salvar_bloqueio') }}" onsubmit="return validarFormularioBloqueio()">
+                <div class="dialogo-corpo">
+                    <div class="form-grupo-modal">
+                        <label class="form-label-modal" for="bloqData">Data</label>
+                        <div class="campo-modal-wrapper">
+                            <span class="material-icons-outlined icone-campo">calendar_today</span>
+                            <input type="date" name="data" id="bloqData" value="{{ hoje_iso }}" min="{{ hoje_iso }}" class="input-modal com-icone" required>
+                        </div>
+                    </div>
+
+                    <div class="grid-2-cols" style="margin-bottom: 16px;">
+                        <div>
+                            <label class="form-label-modal" for="bloqInicio">Início</label>
+                            <div class="campo-modal-wrapper">
+                                <span class="material-icons-outlined icone-campo">access_time</span>
+                                <input type="time" name="hora_inicio" id="bloqInicio" value="14:00" class="input-modal com-icone" required>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="form-label-modal" for="bloqFim">Fim</label>
+                            <div class="campo-modal-wrapper">
+                                <span class="material-icons-outlined icone-campo">access_time</span>
+                                <input type="time" name="hora_fim" id="bloqFim" value="15:00" class="input-modal com-icone" required>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-grupo-modal" style="margin-bottom: 10px;">
+                        <label class="form-label-modal" for="bloqMotivo">Motivo / Observação</label>
+                        <div class="campo-modal-wrapper">
+                            <span class="material-icons-outlined icone-campo">edit_note</span>
+                            <input type="text" name="motivo" id="bloqMotivo" value="Indisponibilidade / Pausa" class="input-modal com-icone" placeholder="Ex.: Consulta médica">
+                        </div>
+                    </div>
+
+                    <div class="chips-opcoes">
+                        <button type="button" class="chip-opcao" onclick="document.getElementById('bloqMotivo').value='Almoço'">Almoço</button>
+                        <button type="button" class="chip-opcao" onclick="document.getElementById('bloqMotivo').value='Folga'">Folga</button>
+                        <button type="button" class="chip-opcao" onclick="document.getElementById('bloqMotivo').value='Compromisso'">Compromisso</button>
+                        <button type="button" class="chip-opcao" onclick="document.getElementById('bloqMotivo').value='Indisponibilidade / Pausa'">Indisponibilidade / Pausa</button>
+                    </div>
+
+                    <div id="erroFormBloqueio" class="aviso-exclusao-box" style="display: none; margin-top: 14px; margin-bottom: 0;">
+                        <span class="material-icons">error_outline</span>
+                        <span id="textoErroFormBloqueio"></span>
+                    </div>
+                </div>
+                <div class="dialogo-rodape">
+                    <button type="button" class="btn-modal-cancelar" onclick="fecharModal('modalFormularioBloqueio')">Cancelar</button>
+                    <button type="submit" class="btn-modal-salvar">Confirmar bloqueio</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Excluir Disponibilidade -->
+    <div class="modal-backdrop" id="modalExcluirDisponibilidade">
+        <div class="dialogo-exclusao">
+            <div class="circulo-icone-erro">
+                <span class="material-icons">delete_outline</span>
+            </div>
+            <h3>Excluir horário?</h3>
+            <p class="sub" id="textoConfirmarExclusaoDisp">Tem certeza que deseja excluir este horário?</p>
+            <div class="aviso-exclusao-box">
+                <span class="material-icons">info_outline</span>
+                <span>Clientes não poderão mais agendar neste bloco semanal.</span>
+            </div>
+            <form method="POST" id="formExcluirDisp" style="display: flex; gap: 12px;">
+                <button type="button" class="btn-modal-cancelar" onclick="fecharModal('modalExcluirDisponibilidade')">Cancelar</button>
+                <button type="submit" class="btn-modal-excluir">Excluir</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Desbloquear Horário -->
+    <div class="modal-backdrop" id="modalExcluirBloqueio">
+        <div class="dialogo-exclusao">
+            <div class="circulo-icone-erro">
+                <span class="material-icons-outlined">lock_open</span>
+            </div>
+            <h3>Desbloquear horário?</h3>
+            <p class="sub" id="textoConfirmarExclusaoBloqueio">Tem certeza que deseja remover este bloqueio?</p>
+            <div class="aviso-exclusao-box">
+                <span class="material-icons">info_outline</span>
+                <span>Este horário voltará a ficar disponível para agendamentos no aplicativo.</span>
+            </div>
+            <form method="POST" id="formExcluirBloqueio" style="display: flex; gap: 12px;">
+                <button type="button" class="btn-modal-cancelar" onclick="fecharModal('modalExcluirBloqueio')">Cancelar</button>
+                <button type="submit" class="btn-modal-excluir">Desbloquear</button>
+            </form>
+        </div>
+    </div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const NOMES_DIAS = [
+        'Segunda-feira',
+        'Terça-feira',
+        'Quarta-feira',
+        'Quinta-feira',
+        'Sexta-feira',
+        'Sábado',
+        'Domingo'
+    ];
+
+    function trocarAba(aba) {
+        const sem = document.getElementById('conteudoAbaSemanais');
+        const bloq = document.getElementById('conteudoAbaBloqueados');
+        const btnSem = document.getElementById('btnAbaSemanais');
+        const btnBloq = document.getElementById('btnAbaBloqueados');
+
+        if (aba === 'semanais') {
+            if (sem) sem.style.display = 'flex';
+            if (bloq) bloq.style.display = 'none';
+            btnSem.classList.add('ativa');
+            btnBloq.classList.remove('ativa');
+        } else {
+            if (sem) sem.style.display = 'none';
+            if (bloq) bloq.style.display = 'flex';
+            btnSem.classList.remove('ativa');
+            btnBloq.classList.add('ativa');
+        }
+    }
+
+    function selecionarDiaSemana(diaIdx) {
+        document.getElementById('formDiaSemana').value = diaIdx;
+        document.getElementById('nomeDiaSelecionado').textContent = NOMES_DIAS[diaIdx] || '';
+        document.querySelectorAll('.chip-dia').forEach(btn => {
+            const d = parseInt(btn.getAttribute('data-dia'), 10);
+            btn.classList.toggle('selecionado', d === diaIdx);
+        });
+    }
+
+    function aplicarAtalhoHorario(inicio, fim) {
+        document.getElementById('formHoraInicioDisp').value = inicio;
+        document.getElementById('formHoraFimDisp').value = fim;
+    }
+
+    function abrirModalNovaDisponibilidade() {
+        document.getElementById('formDispId').value = '';
+        document.getElementById('iconeModalDisp').textContent = 'event_available';
+        document.getElementById('tituloModalDisp').textContent = 'Novo horário';
+        document.getElementById('subtituloModalDisp').textContent = 'Defina um bloco de atendimento semanal.';
+        document.getElementById('btnSalvarDisp').textContent = 'Criar horário';
+        selecionarDiaSemana(0);
+        aplicarAtalhoHorario('08:00', '18:00');
+        document.getElementById('formAtivoDisp').checked = true;
+        document.getElementById('erroFormDisp').style.display = 'none';
+        abrirModal('modalFormularioDisponibilidade');
+    }
+
+    function abrirModalEditarDisponibilidade(btn) {
+        document.getElementById('formDispId').value = btn.getAttribute('data-id');
+        document.getElementById('iconeModalDisp').textContent = 'edit_calendar';
+        document.getElementById('tituloModalDisp').textContent = 'Editar horário';
+        document.getElementById('subtituloModalDisp').textContent = 'Atualize o bloco de atendimento semanal.';
+        document.getElementById('btnSalvarDisp').textContent = 'Salvar alterações';
+        selecionarDiaSemana(parseInt(btn.getAttribute('data-dia'), 10));
+        aplicarAtalhoHorario(btn.getAttribute('data-inicio'), btn.getAttribute('data-fim'));
+        document.getElementById('formAtivoDisp').checked = btn.getAttribute('data-ativo') === 'true';
+        document.getElementById('erroFormDisp').style.display = 'none';
+        abrirModal('modalFormularioDisponibilidade');
+    }
+
+    function validarFormularioDisp() {
+        const inicio = document.getElementById('formHoraInicioDisp').value;
+        const fim = document.getElementById('formHoraFimDisp').value;
+        const boxErro = document.getElementById('erroFormDisp');
+        const txtErro = document.getElementById('textoErroFormDisp');
+
+        if (!inicio || !fim || fim <= inicio) {
+            txtErro.textContent = 'O horário de fim deve ser posterior ao início.';
+            boxErro.style.display = 'flex';
+            return false;
+        }
+        return true;
+    }
+
+    function abrirModalNovoBloqueio() {
+        document.getElementById('erroFormBloqueio').style.display = 'none';
+        abrirModal('modalFormularioBloqueio');
+    }
+
+    function validarFormularioBloqueio() {
+        const inicio = document.getElementById('bloqInicio').value;
+        const fim = document.getElementById('bloqFim').value;
+        const boxErro = document.getElementById('erroFormBloqueio');
+        const txtErro = document.getElementById('textoErroFormBloqueio');
+
+        if (!inicio || !fim || fim <= inicio) {
+            txtErro.textContent = 'O horário de fim deve ser posterior ao início.';
+            boxErro.style.display = 'flex';
+            return false;
+        }
+        return true;
+    }
+
+    function abrirModalExcluirDisponibilidade(btn) {
+        const id = btn.getAttribute('data-id');
+        const dia = btn.getAttribute('data-dia');
+        const inicio = btn.getAttribute('data-inicio');
+        const fim = btn.getAttribute('data-fim');
+        document.getElementById('textoConfirmarExclusaoDisp').textContent =
+            `Tem certeza que deseja excluir o horário de ${dia} (${inicio} às ${fim})?`;
+        document.getElementById('formExcluirDisp').action = `/disponibilidades/${id}/excluir`;
+        abrirModal('modalExcluirDisponibilidade');
+    }
+
+    function abrirModalExcluirBloqueio(btn) {
+        const id = btn.getAttribute('data-id');
+        const data = btn.getAttribute('data-data');
+        const inicio = btn.getAttribute('data-inicio');
+        const fim = btn.getAttribute('data-fim');
+        document.getElementById('textoConfirmarExclusaoBloqueio').textContent =
+            `Deseja remover o bloqueio do dia ${data} (${inicio} às ${fim})?`;
+        document.getElementById('formExcluirBloqueio').action = `/bloqueios/${id}/excluir`;
+        abrirModal('modalExcluirBloqueio');
+    }
+</script>
+{% endblock %}

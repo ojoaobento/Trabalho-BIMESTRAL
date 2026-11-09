@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+
+{% block title %}Novo Agendamento - Studio Cleusa{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-7 col-lg-6">
+    <div class="card border-0 shadow-sm rounded-3">
+      <div class="card-header bg-white border-0 py-3">
+        <h5 class="fw-bold text-studio mb-0"><i class="bi bi-calendar-plus"></i> Agendar Novo Horário</h5>
+        <small class="text-muted">Cria o registro através do endpoint público <code>POST /agendamentos</code> da FastAPI.</small>
+      </div>
+      <div class="card-body p-4">
+        <form method="POST">
+          <h6 class="text-muted fw-bold small text-uppercase mb-3">1. Dados do Cliente</h6>
+          <div class="mb-3">
+            <label for="nome_cliente" class="form-label small fw-semibold">Nome Completo *</label>
+            <input type="text" class="form-control" id="nome_cliente" name="nome_cliente" placeholder="Ex: Maria dos Santos" required>
+          </div>
+
+          <div class="row g-3 mb-3">
+            <div class="col-md-6">
+              <label for="email_cliente" class="form-label small fw-semibold">E-mail *</label>
+              <input type="email" class="form-control" id="email_cliente" name="email_cliente" placeholder="maria@gmail.com" required>
+            </div>
+            <div class="col-md-6">
+              <label for="telefone_cliente" class="form-label small fw-semibold">Telefone / WhatsApp</label>
+              <input type="text" class="form-control" id="telefone_cliente" name="telefone_cliente" placeholder="41999998888">
+            </div>
+          </div>
+
+          <hr class="my-4 text-muted">
+          <h6 class="text-muted fw-bold small text-uppercase mb-3">2. Escolha do Serviço e Horário</h6>
+
+          <div class="mb-3">
+            <label for="servico_id" class="form-label small fw-semibold">Serviço Desejado *</label>
+            <select class="form-select" id="servico_id" name="servico_id" required>
+              <option value="" disabled selected>Selecione um serviço...</option>
+              {% for serv in servicos %}
+              <option value="{{ serv.id }}">
+                {{ serv.nome }} - R$ {{ "%.2f"|format(serv.preco)|replace('.', ',') }} ({{ serv.duracao_minutos }} min)
+              </option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="mb-4">
+            <label for="dt_inicio" class="form-label small fw-semibold">Data e Horário de Início *</label>
+            <input type="datetime-local" class="form-control" id="dt_inicio" name="dt_inicio" required>
+            <div class="form-text small">Horários disponíveis de Segunda a Sábado em dias úteis (não feriados).</div>
+          </div>
+
+          <div class="d-flex justify-content-between align-items-center">
+            <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary">Cancelar</a>
+            <button type="submit" class="btn btn-studio px-4">
+              <i class="bi bi-calendar-check"></i> Confirmar Agendamento
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+

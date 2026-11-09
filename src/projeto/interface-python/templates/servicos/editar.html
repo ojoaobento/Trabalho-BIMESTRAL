@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+
+{% block title %}Editar Serviço #{{ servico.id }} - Studio Cleusa{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-7 col-lg-6">
+    <div class="card border-0 shadow-sm rounded-3">
+      <div class="card-header bg-white border-0 py-3">
+        <h5 class="fw-bold text-studio mb-0"><i class="bi bi-pencil-square"></i> Editar Serviço #{{ servico.id }}</h5>
+        <small class="text-muted">Envia requisição <code>PUT /servicos/{{ servico.id }}</code> com autenticação JWT.</small>
+      </div>
+      <div class="card-body p-4">
+        <form method="POST">
+          <div class="mb-3">
+            <label for="nome" class="form-label small fw-semibold">Nome do Serviço *</label>
+            <input type="text" class="form-control" id="nome" name="nome" value="{{ servico.nome }}" required>
+          </div>
+
+          <div class="mb-3">
+            <label for="descricao" class="form-label small fw-semibold">Descrição</label>
+            <textarea class="form-control" id="descricao" name="descricao" rows="2">{{ servico.descricao or '' }}</textarea>
+          </div>
+
+          <div class="row g-3 mb-3">
+            <div class="col-md-6">
+              <label for="preco" class="form-label small fw-semibold">Preço (R$) *</label>
+              <input type="number" step="0.01" min="0" class="form-control" id="preco" name="preco" value="{{ servico.preco }}" required>
+            </div>
+            <div class="col-md-6">
+              <label for="duracao_minutos" class="form-label small fw-semibold">Duração (minutos) *</label>
+              <input type="number" step="5" min="5" class="form-control" id="duracao_minutos" name="duracao_minutos" value="{{ servico.duracao_minutos }}" required>
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label for="categoria_id" class="form-label small fw-semibold">Categoria *</label>
+            <select class="form-select" id="categoria_id" name="categoria_id" required>
+              {% for cat in categorias %}
+              <option value="{{ cat.id }}" {% if cat.id == servico.categoria_id %}selected{% endif %}>{{ cat.nome }}</option>
+              {% else %}
+              <option value="1">Geral</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="form-check form-switch mb-4">
+            <input class="form-check-input" type="checkbox" id="ativo" name="ativo" {% if servico.ativo %}checked{% endif %}>
+            <label class="form-check-label fw-semibold" for="ativo">Serviço Ativo para Agendamentos</label>
+          </div>
+
+          <div class="d-flex justify-content-between align-items-center">
+            <a href="{{ url_for('listar_servicos') }}" class="btn btn-outline-secondary">Voltar</a>
+            <button type="submit" class="btn btn-studio px-4"><i class="bi bi-save"></i> Atualizar Alterações</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+

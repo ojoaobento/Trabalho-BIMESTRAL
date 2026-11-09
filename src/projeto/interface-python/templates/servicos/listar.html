@@ -1,0 +1,371 @@
+{% extends "base.html" %}
+
+{% block extra_css %}
+<style>
+    .chips-duracao {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-top: 8px;
+    }
+    .chip-duracao {
+        padding: 6px 10px;
+        border-radius: 20px;
+        border: 1px solid var(--cor-borda-rosa);
+        background-color: #FFFFFF;
+        color: var(--cor-texto);
+        font-size: 12px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: 0.15s;
+    }
+    .chip-duracao.selecionado {
+        background-color: var(--cor-vinho);
+        border-color: var(--cor-vinho);
+        color: #FFFFFF;
+        font-weight: 700;
+    }
+    .grid-2-cols {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+    }
+    @media (max-width: 480px) {
+        .grid-2-cols {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+{% if erro %}
+<div class="estado-erro">
+    <span class="material-icons">error_outline</span>
+    <p>{{ erro }}</p>
+    <a href="{{ url_for('listar_servicos') }}" class="btn-vinho">
+        <span class="material-icons">refresh</span>
+        <span>Tentar novamente</span>
+    </a>
+</div>
+{% else %}
+    <!-- BarraTopoComBusca -->
+    <div class="barra-topo">
+        <div class="campo-busca-wrapper">
+            <span class="material-icons icone-busca">search</span>
+            <input type="text" id="inputBusca" class="campo-busca-input" placeholder="Buscar por nome, descrição ou categoria" oninput="filtrarTabela()">
+            <button type="button" id="btnLimparBusca" class="btn-limpar-busca" onclick="limparBusca()" title="Limpar busca">
+                <span class="material-icons" style="font-size: 18px;">close</span>
+            </button>
+        </div>
+        <div class="linha-contador-acao">
+            <span class="texto-contador" id="contadorItens">{{ servicos | length }} serviço(s)</span>
+            <button type="button" class="btn-vinho" onclick="abrirModalNovoServico()">
+                <span class="material-icons">add</span>
+                <span>Novo serviço</span>
+            </button>
+        </div>
+    </div>
+
+    {% if servicos | length == 0 %}
+    <div style="flex: 1; display: flex; align-items: center; justify-content: center; color: #616161;">
+        Nenhum serviço cadastrado.
+    </div>
+    {% else %}
+    <div class="tabela-container">
+        <table class="data-table" id="tabelaServicos">
+            <thead>
+                <tr>
+                    <th>Nome</th>
+                    <th>Categoria</th>
+                    <th>Preço</th>
+                    <th>Duração</th>
+                    <th>Status</th>
+                    <th>Ações</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for s in servicos %}
+                <tr class="linha-item" data-busca="{{ (s.nome ~ ' ' ~ (s.descricao or '') ~ ' ' ~ s.nome_categoria) | lower }}">
+                    <td>
+                        <div style="font-weight: 600;">{{ s.nome }}</div>
+                        {% if s.descricao %}
+                        <div style="font-size: 12px; color: #757575; max-width: 260px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                            {{ s.descricao }}
+                        </div>
+                        {% endif %}
+                    </td>
+                    <td>{{ s.nome_categoria }}</td>
+                    <td>{{ s.preco | moeda }}</td>
+                    <td>{{ s.duracao_minutos | duracao_texto }}</td>
+                    <td>
+                        <div class="celula-status">
+                            <form method="POST" action="{{ url_for('alternar_ativo_servico', servico_id=s.id) }}" style="display: inline-flex;">
+                                <input type="hidden" name="ativo" value="{{ 'false' if s.ativo else 'true' }}">
+                                <label class="m3-switch" title="Alternar status">
+                                    <input type="checkbox" {% if s.ativo %}checked{% endif %} onchange="this.form.submit()">
+                                    <span class="m3-slider"></span>
+                                </label>
+                            </form>
+                            <span class="status-chip {{ 'ativo' if s.ativo else 'inativo' }}">
+                                {{ 'Ativo' if s.ativo else 'Inativo' }}
+                            </span>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="acoes-celula">
+                            <button type="button" class="btn-icone" title="Editar"
+                                data-id="{{ s.id }}"
+                                data-categoria="{{ s.categoria_id_resolvido }}"
+                                data-nome="{{ s.nome }}"
+                                data-descricao="{{ s.descricao or '' }}"
+                                data-preco="{{ ('%.2f'|format(s.preco|float)).replace('.', ',') }}"
+                                data-duracao="{{ s.duracao_minutos }}"
+                                data-ativo="{{ 'true' if s.ativo else 'false' }}"
+                                onclick="abrirModalEditarServico(this)">
+                                <span class="material-icons-outlined">edit</span>
+                            </button>
+                            <button type="button" class="btn-icone excluir" title="Excluir"
+                                data-id="{{ s.id }}"
+                                data-nome="{{ s.nome }}"
+                                onclick="abrirModalExcluirServico(this)">
+                                <span class="material-icons">delete_outline</span>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <div id="msgSemResultados" style="display: none; text-align: center; padding: 40px; color: #616161;">
+            Nenhum serviço encontrado para a busca.
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Modal: Criar / Editar Serviço (_FormularioServico) -->
+    <div class="modal-backdrop" id="modalFormularioServico">
+        <div class="dialogo-padrao">
+            <div class="dialogo-cabecalho">
+                <div class="dialogo-icone-box">
+                    <span class="material-icons-outlined" id="iconeModalServico">add_circle</span>
+                </div>
+                <div class="dialogo-titulos">
+                    <h3 id="tituloModalServico">Novo serviço</h3>
+                    <p id="subtituloModalServico">Cadastre um serviço no catálogo do studio.</p>
+                </div>
+                <button type="button" class="btn-fechar-dialogo" onclick="fecharModal('modalFormularioServico')" title="Fechar">
+                    <span class="material-icons">close</span>
+                </button>
+            </div>
+            <form method="POST" action="{{ url_for('salvar_servico') }}" onsubmit="return validarFormularioServico()">
+                <input type="hidden" name="servico_id" id="formServicoId">
+                <div class="dialogo-corpo">
+                    <div class="form-grupo-modal">
+                        <label class="form-label-modal" for="formCategoriaId">Categoria</label>
+                        <div class="campo-modal-wrapper">
+                            <span class="material-icons-outlined icone-campo">category</span>
+                            <select name="categoria_id" id="formCategoriaId" class="select-modal com-icone" required>
+                                {% for c in categorias %}
+                                <option value="{{ c.id }}">{{ c.nome }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-grupo-modal">
+                        <label class="form-label-modal" for="formNomeServico">Nome do serviço</label>
+                        <div class="campo-modal-wrapper">
+                            <span class="material-icons-outlined icone-campo">spa</span>
+                            <input type="text" name="nome" id="formNomeServico" class="input-modal com-icone" placeholder="Ex.: Limpeza de pele" minlength="2" maxlength="100" required>
+                        </div>
+                    </div>
+
+                    <div class="form-grupo-modal">
+                        <label class="form-label-modal" for="formDescricaoServico">Descrição</label>
+                        <textarea name="descricao" id="formDescricaoServico" rows="3" maxlength="255" class="textarea-modal" placeholder="Conte o que está incluso no serviço"></textarea>
+                    </div>
+
+                    <div class="grid-2-cols">
+                        <div class="form-grupo-modal" style="margin-bottom: 0;">
+                            <label class="form-label-modal" for="formPrecoServico">Preço</label>
+                            <div class="campo-modal-wrapper">
+                                <span style="position: absolute; left: 14px; font-weight: 700; color: var(--cor-vinho); font-size: 14px;">R$</span>
+                                <input type="text" name="preco" id="formPrecoServico" class="input-modal com-icone" placeholder="0,00" required>
+                            </div>
+                        </div>
+
+                        <div class="form-grupo-modal" style="margin-bottom: 0;">
+                            <label class="form-label-modal" for="formDuracaoServico">Duração</label>
+                            <div class="campo-modal-wrapper">
+                                <span class="material-icons-outlined icone-campo">schedule</span>
+                                <input type="number" name="duracao_minutos" id="formDuracaoServico" class="input-modal com-icone" placeholder="60" min="5" max="720" required oninput="atualizarChipsDuracao()">
+                            </div>
+                            <div class="chips-duracao">
+                                <button type="button" class="chip-duracao" data-min="30" onclick="selecionarDuracao(30)">30 min</button>
+                                <button type="button" class="chip-duracao" data-min="45" onclick="selecionarDuracao(45)">45 min</button>
+                                <button type="button" class="chip-duracao" data-min="60" onclick="selecionarDuracao(60)">1h</button>
+                                <button type="button" class="chip-duracao" data-min="90" onclick="selecionarDuracao(90)">1h 30min</button>
+                                <button type="button" class="chip-duracao" data-min="120" onclick="selecionarDuracao(120)">2h</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="blocoSwitchAtivoServico" style="display: none; margin-top: 16px;">
+                        <div class="bloco-switch-modal">
+                            <div class="bloco-switch-textos">
+                                <h4>Serviço ativo</h4>
+                                <p>Aparece para as clientes agendarem.</p>
+                            </div>
+                            <label class="m3-switch">
+                                <input type="checkbox" name="ativo" id="formAtivoServico" checked>
+                                <span class="m3-slider"></span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div id="erroFormServico" class="aviso-exclusao-box" style="display: none; margin-top: 14px; margin-bottom: 0;">
+                        <span class="material-icons">error_outline</span>
+                        <span id="textoErroFormServico"></span>
+                    </div>
+                </div>
+                <div class="dialogo-rodape">
+                    <button type="button" class="btn-modal-cancelar" onclick="fecharModal('modalFormularioServico')">Cancelar</button>
+                    <button type="submit" class="btn-modal-salvar" id="btnSalvarServico">Criar serviço</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Excluir Serviço (_DialogExcluirServico) -->
+    <div class="modal-backdrop" id="modalExcluirServico">
+        <div class="dialogo-exclusao">
+            <div class="circulo-icone-erro">
+                <span class="material-icons">delete_outline</span>
+            </div>
+            <h3>Excluir serviço?</h3>
+            <p class="sub" id="textoConfirmarExclusaoServico">Tem certeza que deseja excluir este serviço?</p>
+            <div class="aviso-exclusao-box">
+                <span class="material-icons">info_outline</span>
+                <span>Se este serviço tiver agendamentos vinculados, o sistema não permitirá a exclusão.</span>
+            </div>
+            <form method="POST" id="formExcluirServico" style="display: flex; gap: 12px;">
+                <button type="button" class="btn-modal-cancelar" onclick="fecharModal('modalExcluirServico')">Cancelar</button>
+                <button type="submit" class="btn-modal-excluir">Excluir</button>
+            </form>
+        </div>
+    </div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function filtrarTabela() {
+        const input = document.getElementById('inputBusca');
+        const btnLimpar = document.getElementById('btnLimparBusca');
+        const termo = (input.value || '').trim().toLowerCase();
+        btnLimpar.style.display = termo ? 'inline-flex' : 'none';
+
+        const linhas = document.querySelectorAll('#tabelaServicos tbody .linha-item');
+        let visiveis = 0;
+        linhas.forEach(tr => {
+            const texto = tr.getAttribute('data-busca') || '';
+            if (!termo || texto.includes(termo)) {
+                tr.style.display = '';
+                visiveis++;
+            } else {
+                tr.style.display = 'none';
+            }
+        });
+        document.getElementById('contadorItens').textContent = `${visiveis} serviço(s)`;
+        const msg = document.getElementById('msgSemResultados');
+        if (msg) msg.style.display = (visiveis === 0 && linhas.length > 0) ? 'block' : 'none';
+    }
+
+    function limparBusca() {
+        document.getElementById('inputBusca').value = '';
+        filtrarTabela();
+    }
+
+    function selecionarDuracao(min) {
+        document.getElementById('formDuracaoServico').value = min;
+        atualizarChipsDuracao();
+    }
+
+    function atualizarChipsDuracao() {
+        const valor = parseInt(document.getElementById('formDuracaoServico').value || '0', 10);
+        document.querySelectorAll('.chip-duracao').forEach(btn => {
+            const m = parseInt(btn.getAttribute('data-min'), 10);
+            btn.classList.toggle('selecionado', m === valor);
+        });
+    }
+
+    function abrirModalNovoServico() {
+        document.getElementById('formServicoId').value = '';
+        document.getElementById('iconeModalServico').textContent = 'add_circle';
+        document.getElementById('tituloModalServico').textContent = 'Novo serviço';
+        document.getElementById('subtituloModalServico').textContent = 'Cadastre um serviço no catálogo do studio.';
+        document.getElementById('btnSalvarServico').textContent = 'Criar serviço';
+        document.getElementById('formNomeServico').value = '';
+        document.getElementById('formDescricaoServico').value = '';
+        document.getElementById('formPrecoServico').value = '';
+        document.getElementById('formDuracaoServico').value = '60';
+        document.getElementById('blocoSwitchAtivoServico').style.display = 'none';
+        document.getElementById('erroFormServico').style.display = 'none';
+        atualizarChipsDuracao();
+        abrirModal('modalFormularioServico');
+    }
+
+    function abrirModalEditarServico(btn) {
+        document.getElementById('formServicoId').value = btn.getAttribute('data-id');
+        document.getElementById('iconeModalServico').textContent = 'edit';
+        document.getElementById('tituloModalServico').textContent = 'Editar serviço';
+        document.getElementById('subtituloModalServico').textContent = 'Atualize as informações deste serviço.';
+        document.getElementById('btnSalvarServico').textContent = 'Salvar alterações';
+        document.getElementById('formCategoriaId').value = btn.getAttribute('data-categoria');
+        document.getElementById('formNomeServico').value = btn.getAttribute('data-nome');
+        document.getElementById('formDescricaoServico').value = btn.getAttribute('data-descricao');
+        document.getElementById('formPrecoServico').value = btn.getAttribute('data-preco');
+        document.getElementById('formDuracaoServico').value = btn.getAttribute('data-duracao');
+        document.getElementById('formAtivoServico').checked = btn.getAttribute('data-ativo') === 'true';
+        document.getElementById('blocoSwitchAtivoServico').style.display = 'block';
+        document.getElementById('erroFormServico').style.display = 'none';
+        atualizarChipsDuracao();
+        abrirModal('modalFormularioServico');
+    }
+
+    function validarFormularioServico() {
+        const nome = document.getElementById('formNomeServico').value.trim();
+        const precoTexto = document.getElementById('formPrecoServico').value.trim().replace(/\./g, '').replace(',', '.');
+        const preco = parseFloat(precoTexto);
+        const duracao = parseInt(document.getElementById('formDuracaoServico').value || '0', 10);
+        const boxErro = document.getElementById('erroFormServico');
+        const txtErro = document.getElementById('textoErroFormServico');
+
+        if (nome.length < 2) {
+            txtErro.textContent = 'Informe pelo menos 2 caracteres no nome.';
+            boxErro.style.display = 'flex';
+            return false;
+        }
+        if (isNaN(preco) || preco <= 0) {
+            txtErro.textContent = 'Informe um preço válido maior que zero.';
+            boxErro.style.display = 'flex';
+            return false;
+        }
+        if (isNaN(duracao) || duracao < 5 || duracao > 720) {
+            txtErro.textContent = 'A duração deve ser entre 5 e 720 minutos.';
+            boxErro.style.display = 'flex';
+            return false;
+        }
+        return true;
+    }
+
+    function abrirModalExcluirServico(btn) {
+        const id = btn.getAttribute('data-id');
+        const nome = btn.getAttribute('data-nome');
+        document.getElementById('textoConfirmarExclusaoServico').textContent = `Tem certeza que deseja excluir "${nome}"?`;
+        document.getElementById('formExcluirServico').action = `/servicos/${id}/excluir`;
+        abrirModal('modalExcluirServico');
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Studio Cleusa - Painel Administrativo</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons|Material+Icons+Outlined" rel="stylesheet">
+    <style>
+        :root {
+            --cor-vinho: #8E2348;
+            --cor-vinho-escuro: #5E1230;
+            --cor-rosa-claro: #FFEEF3;
+            --cor-fundo: #FFF8FA;
+            --cor-borda: #F1DDE5;
+            --cor-texto: #4A1026;
+            --cor-suave: #976D7B;
+            --cor-erro: #B3261E;
+            --cor-erro-fundo: #FDE7E9;
+        }
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: var(--cor-fundo);
+            color: var(--cor-texto);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        .login-layout {
+            display: flex;
+            min-height: 100vh;
+            width: 100%;
+        }
+
+        /* Painel Esquerdo (Gradiente Vinho - Desktop >= 900px) */
+        .painel-marca {
+            flex: 5;
+            background: linear-gradient(135deg, var(--cor-vinho) 0%, var(--cor-vinho-escuro) 100%);
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px;
+            color: #FFFFFF;
+            text-align: center;
+        }
+        .bolha-1 {
+            position: absolute;
+            top: -80px;
+            left: -60px;
+            width: 260px;
+            height: 260px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.07);
+            pointer-events: none;
+        }
+        .bolha-2 {
+            position: absolute;
+            bottom: -100px;
+            right: -80px;
+            width: 340px;
+            height: 340px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.06);
+            pointer-events: none;
+        }
+        .bolha-3 {
+            position: absolute;
+            bottom: 120px;
+            left: 40px;
+            width: 90px;
+            height: 90px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.08);
+            pointer-events: none;
+        }
+        .marca-conteudo {
+            position: relative;
+            z-index: 2;
+            max-width: 420px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        /* Logo Desenhada (_logo no Flutter Admin) */
+        .logo-desenhada {
+            border-radius: 50%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            user-select: none;
+            flex-shrink: 0;
+        }
+        /* Versão Clara (Desktop - tamanho 130px) */
+        .logo-desenhada.clara {
+            width: 130px;
+            height: 130px;
+            background: rgba(255, 255, 255, 0.12);
+            border: 2px solid #FFFFFF;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.15);
+            margin-bottom: 32px;
+        }
+        .logo-desenhada.clara .icone-spa {
+            font-size: 49px;
+            line-height: 1;
+            color: #FFFFFF;
+        }
+        .logo-desenhada.clara .logo-cleusa {
+            margin-top: 5px;
+            font-size: 19px;
+            font-weight: 700;
+            letter-spacing: 2.4px;
+            line-height: 1.1;
+            color: #FFFFFF;
+        }
+        .logo-desenhada.clara .logo-studio {
+            margin-top: 1px;
+            font-size: 9.5px;
+            font-weight: 500;
+            letter-spacing: 3.5px;
+            line-height: 1.1;
+            color: #FFFFFF;
+        }
+
+        /* Versão Vinho (Dispositivos menores - tamanho 104px, igual ao Flutter Admin) */
+        .logo-mobile-wrapper {
+            display: none;
+            justify-content: center;
+            margin-bottom: 24px;
+        }
+        .logo-desenhada.vinho {
+            width: 104px;
+            height: 104px;
+            background: var(--cor-rosa-claro);
+            border: 2px solid var(--cor-vinho);
+            box-shadow: 0 5px 15px rgba(142, 35, 72, 0.15);
+        }
+        .logo-desenhada.vinho .icone-spa {
+            font-size: 40px;
+            line-height: 1;
+            color: var(--cor-vinho);
+        }
+        .logo-desenhada.vinho .logo-cleusa {
+            margin-top: 4px;
+            font-size: 15px;
+            font-weight: 700;
+            letter-spacing: 2px;
+            line-height: 1.1;
+            color: var(--cor-vinho);
+        }
+        .logo-desenhada.vinho .logo-studio {
+            margin-top: 1px;
+            font-size: 7.6px;
+            font-weight: 500;
+            letter-spacing: 2.8px;
+            line-height: 1.1;
+            color: var(--cor-vinho);
+        }
+
+        .marca-titulo {
+            font-size: 32px;
+            font-weight: 700;
+            color: #FFFFFF;
+            margin-bottom: 8px;
+        }
+        .marca-subtitulo {
+            font-size: 12px;
+            font-weight: 600;
+            letter-spacing: 3px;
+            color: rgba(255, 255, 255, 0.75);
+            margin-bottom: 24px;
+        }
+        .marca-descricao {
+            font-size: 15px;
+            line-height: 1.45;
+            color: rgba(255, 255, 255, 0.85);
+        }
+
+        /* Painel Direito (Formulário) */
+        .painel-form-wrapper {
+            flex: 4;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+            background-color: var(--cor-fundo);
+        }
+        .cartao-login {
+            width: 100%;
+            max-width: 420px;
+            background: #FFFFFF;
+            border-radius: 24px;
+            border: 1px solid var(--cor-borda);
+            padding: 32px 28px 28px 28px;
+            box-shadow: 0 12px 30px rgba(142, 35, 72, 0.08);
+        }
+
+        .form-titulo {
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--cor-texto);
+            text-align: center;
+            margin-bottom: 6px;
+        }
+        .form-subtitulo {
+            font-size: 13px;
+            color: var(--cor-suave);
+            text-align: center;
+            margin-bottom: 28px;
+        }
+        .campo-grupo {
+            margin-bottom: 16px;
+        }
+        .campo-label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--cor-texto);
+            margin-bottom: 6px;
+        }
+        .input-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+        .input-wrapper .icone-prefixo {
+            position: absolute;
+            left: 14px;
+            font-size: 20px;
+            width: 20px;
+            height: 20px;
+            line-height: 20px;
+            color: var(--cor-vinho);
+            pointer-events: none;
+            overflow: hidden;
+        }
+        .input-wrapper input {
+            width: 100%;
+            height: 54px;
+            padding: 0 46px 0 44px;
+            font-size: 14px;
+            font-family: inherit;
+            color: var(--cor-texto);
+            background-color: var(--cor-rosa-claro);
+            border: 1px solid var(--cor-borda);
+            border-radius: 14px;
+            outline: none;
+            transition: border-color 0.15s;
+        }
+        .input-wrapper input::placeholder {
+            color: rgba(151, 109, 123, 0.75);
+        }
+        .input-wrapper input:focus {
+            border-color: var(--cor-vinho);
+            border-width: 1.6px;
+        }
+
+        /* Botão do Olho (ajustado exatamente para 20px como no Flutter) */
+        .btn-olho {
+            position: absolute;
+            right: 8px;
+            width: 36px;
+            height: 36px;
+            background: transparent;
+            border: none;
+            color: var(--cor-suave);
+            cursor: pointer;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+            transition: background-color 0.15s;
+        }
+        .btn-olho:hover {
+            background: rgba(142, 35, 72, 0.08);
+        }
+        .btn-olho .icone-olho {
+            font-size: 20px;
+            width: 20px;
+            height: 20px;
+            line-height: 20px;
+            overflow: hidden;
+            display: inline-block;
+        }
+
+        .banner-erro {
+            margin-top: 16px;
+            padding: 12px 14px;
+            background-color: var(--cor-erro-fundo);
+            border: 1px solid rgba(179, 38, 30, 0.25);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: var(--cor-erro);
+            font-size: 13px;
+            font-weight: 500;
+        }
+        .banner-erro .icone-erro {
+            font-size: 20px;
+            width: 20px;
+            height: 20px;
+            line-height: 20px;
+            color: var(--cor-erro);
+            flex-shrink: 0;
+        }
+        .btn-entrar {
+            margin-top: 28px;
+            width: 100%;
+            height: 52px;
+            background-color: var(--cor-vinho);
+            color: #FFFFFF;
+            border: none;
+            border-radius: 14px;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: background-color 0.15s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .btn-entrar:hover {
+            background-color: #771C3B;
+        }
+        .rodape-restrito {
+            margin-top: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            color: var(--cor-suave);
+            font-size: 12px;
+        }
+        .rodape-restrito .icone-cadeado {
+            font-size: 14px;
+            width: 14px;
+            height: 14px;
+            line-height: 14px;
+        }
+
+        /* Responsividade idêntica ao _larguraDesktop = 900 do Flutter Admin */
+        @media (max-width: 899px) {
+            .painel-marca {
+                display: none;
+            }
+            .logo-mobile-wrapper {
+                display: flex;
+            }
+        }
+        @media (max-width: 420px) {
+            .painel-form-wrapper {
+                padding: 16px;
+            }
+            .cartao-login {
+                padding: 24px 20px 20px 20px;
+            }
+            .logo-desenhada.vinho {
+                width: 84px;
+                height: 84px;
+            }
+            .logo-desenhada.vinho .icone-spa {
+                font-size: 32px;
+            }
+            .logo-desenhada.vinho .logo-cleusa {
+                font-size: 12.2px;
+                letter-spacing: 1.5px;
+            }
+            .logo-desenhada.vinho .logo-studio {
+                font-size: 6.1px;
+                letter-spacing: 2.3px;
+            }
+            .logo-mobile-wrapper {
+                margin-bottom: 18px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="login-layout">
+        <!-- Painel Esquerdo: Marca (Desktop >= 900px) -->
+        <div class="painel-marca">
+            <div class="bolha-1"></div>
+            <div class="bolha-2"></div>
+            <div class="bolha-3"></div>
+            <div class="marca-conteudo">
+                <div class="logo-desenhada clara">
+                    <span class="material-icons-outlined icone-spa">spa</span>
+                    <span class="logo-cleusa">CLEUSA</span>
+                    <span class="logo-studio">STUDIO</span>
+                </div>
+                <div class="marca-titulo">Studio Cleusa</div>
+                <div class="marca-subtitulo">ESTÉTICA &amp; BELEZA</div>
+                <div class="marca-descricao">
+                    Gerencie agendamentos, serviços e usuários em um só lugar.
+                </div>
+            </div>
+        </div>
+
+        <!-- Painel Direito: Formulário -->
+        <div class="painel-form-wrapper">
+            <div class="cartao-login">
+                <!-- Logo desenhada exibida em telas menores (< 900px), idêntica ao Flutter Admin -->
+                <div class="logo-mobile-wrapper">
+                    <div class="logo-desenhada vinho">
+                        <span class="material-icons-outlined icone-spa">spa</span>
+                        <span class="logo-cleusa">CLEUSA</span>
+                        <span class="logo-studio">STUDIO</span>
+                    </div>
+                </div>
+
+                <div class="form-titulo">Bem-vinda de volta</div>
+                <div class="form-subtitulo">Entre para acessar o painel do studio.</div>
+
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        {% for category, message in messages %}
+                            <div class="banner-erro" style="margin-bottom: 16px; margin-top: 0;">
+                                <span class="material-icons icone-erro">error_outline</span>
+                                <span>{{ message }}</span>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                {% endwith %}
+
+                <form method="POST" action="{{ url_for('login') }}" novalidate>
+                    <div class="campo-grupo">
+                        <label class="campo-label" for="email">E-mail</label>
+                        <div class="input-wrapper">
+                            <span class="material-icons icone-prefixo">mail_outline</span>
+                            <input type="email" id="email" name="email" value="{{ email_digitado }}" placeholder="seu@email.com" required autocomplete="email">
+                        </div>
+                    </div>
+
+                    <div class="campo-grupo" style="margin-bottom: 0;">
+                        <label class="campo-label" for="senha">Senha</label>
+                        <div class="input-wrapper">
+                            <span class="material-icons icone-prefixo">lock_outline</span>
+                            <input type="password" id="senha" name="senha" placeholder="••••••••" required autocomplete="current-password">
+                            <button type="button" class="btn-olho" id="btnAlternarSenha" onclick="alternarSenha()" title="Mostrar senha">
+                                <span class="material-icons-outlined icone-olho" id="iconeOlho">visibility</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    {% if erro_login %}
+                    <div class="banner-erro">
+                        <span class="material-icons icone-erro">error_outline</span>
+                        <span>{{ erro_login }}</span>
+                    </div>
+                    {% endif %}
+
+                    <button type="submit" class="btn-entrar">Entrar</button>
+
+                    <div class="rodape-restrito">
+                        <span class="material-icons icone-cadeado">lock_outline</span>
+                        <span>Acesso restrito à equipe do studio</span>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function alternarSenha() {
+            const input = document.getElementById('senha');
+            const icone = document.getElementById('iconeOlho');
+            const btn = document.getElementById('btnAlternarSenha');
+            if (input.type === 'password') {
+                input.type = 'text';
+                icone.textContent = 'visibility_off';
+                btn.title = 'Ocultar senha';
+            } else {
+                input.type = 'password';
+                icone.textContent = 'visibility';
+                btn.title = 'Mostrar senha';
+            }
+        }
+    </script>
+</body>
+</html>
