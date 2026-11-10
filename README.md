@@ -23,9 +23,23 @@ Sistema completo de agendamento e gerenciamento para clinicas de estetica, integ
 
 ---
 
+## Documentacao dos componentes
+
+Este README continua sendo o ponto de entrada do projeto. Consulte os guias abaixo para detalhes de cada aplicacao e da integracao com a API:
+
+| Componente | Documentacao |
+| :--- | :--- |
+| API / Backend FastAPI | [src/projeto/backend/README.md](src/projeto/backend/README.md) |
+| Automacao de e-mails em Python | [src/projeto/python-automacao/README.md](src/projeto/python-automacao/README.md) |
+| Interface administrativa Flask | [src/projeto/interface-python/README.md](src/projeto/interface-python/README.md) |
+| Aplicativo do cliente Flutter | [src/projeto/flutter/flutter-app/README.md](src/projeto/flutter/flutter-app/README.md) |
+| Painel administrativo Flutter | [src/projeto/admin/main/README.md](src/projeto/admin/main/README.md) |
+
 ## Documentacao da API (FastAPI)
 
 A API roda por padrao em `http://localhost:8000`. A documentacao interativa automatica fica disponivel em `/docs` (Swagger UI) e `/redoc` (ReDoc).
+
+A especificacao completa de rotas, autenticacao, payloads e exemplos esta no [README do backend](src/projeto/backend/README.md).
 
 Rotas protegidas exigem o cabecalho HTTP: `Authorization: Bearer <token_jwt>`.
 
@@ -52,7 +66,8 @@ Rotas protegidas exigem o cabecalho HTTP: `Authorization: Bearer <token_jwt>`.
 | :--- | :--- | :--- | :--- |
 | `POST` | `/agendamentos/acesso/codigo` | Publico | Envia codigo de verificacao de 6 digitos por e-mail para a cliente. |
 | `POST` | `/agendamentos/minhas` | Publico | Retorna os agendamentos da cliente via codigo ou token de sessao. |
-| `PATCH` | `/agendamentos/minhas/{id}/cancelar` | Publico | Cancela agendamento pela cliente com antecedencia minima. |
+| `POST` | `/agendamentos/minhas/{id}/cancelar` | Publico | Cancela agendamento pela cliente com antecedencia minima, usando token no corpo. |
+| `PATCH` | `/agendamentos/minhas/telefone` | Publico | Atualiza o telefone da cliente usando token no corpo. |
 | `PATCH` | `/agendamentos/minhas/lembretes` | Publico | Ativa ou desativa recebimento de lembretes da cliente. |
 
 ### 4. Servicos (`/servicos`)
