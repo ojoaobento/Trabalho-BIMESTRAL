@@ -54,24 +54,24 @@ def obter_dia_semana(dt: datetime) -> str:
 
 
 def carregar_modelos():
-    from models.Usuario import Usuario
-    from models.Categoria import Categoria
-    from models.Servico import Servico
-    from models.Cliente import Cliente
-    from models.Agendamento import Agendamento, StatusAgendamento
-    from models.Lembrete import Lembrete, TipoLembrete
-    from models.Disponibilidade import Disponibilidade
+    from backend.models.Usuario import Usuario
+    from backend.models.Categoria import Categoria
+    from backend.models.Servico import Servico
+    from backend.models.Cliente import Cliente
+    from backend.models.Agendamento import Agendamento, StatusAgendamento
+    from backend.models.Lembrete import Lembrete, TipoLembrete
+    from backend.models.Disponibilidade import Disponibilidade
     return Usuario, Categoria, Servico, Cliente, Agendamento, StatusAgendamento, Lembrete, TipoLembrete
 
 
 def processar_fila_lembretes(simular: bool = False) -> int:
     
     try:
-        from core.database import SessionLocal
+        from backend.core.database import SessionLocal
         from sqlalchemy import select
         carregar_modelos()
-        from models.Lembrete import Lembrete, TipoLembrete
-        from models.Agendamento import StatusAgendamento
+        from backend.models.Lembrete import Lembrete, TipoLembrete
+        from backend.models.Agendamento import StatusAgendamento
     except Exception as e:
         print(f"[ERRO DE INICIALIZAÇÃO] Não foi possível carregar os módulos do backend: {e}")
         return 0
@@ -199,8 +199,8 @@ def disparar_manual(agendamento_id: int, tipo: str, simular: bool = False):
     tipo: "confirmacao", "lembrete24h" ou "lembrete" (1h).
     """
     carregar_modelos()
-    from core.database import SessionLocal
-    from models.Agendamento import Agendamento
+    from backend.core.database import SessionLocal
+    from backend.models.Agendamento import Agendamento
 
     with SessionLocal() as db:
         agendamento = db.get(Agendamento, agendamento_id)
