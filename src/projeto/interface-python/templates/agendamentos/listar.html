@@ -86,6 +86,158 @@
         background-color: var(--cor-rosa-claro);
         color: var(--cor-vinho);
     }
+
+    /* ===== Responsividade ===== */
+    .tabela-container {
+        overflow-x: auto;
+    }
+    .ag-cliente-nome {
+        font-weight: 600;
+    }
+    .ag-cliente-tel {
+        font-size: 12px;
+        color: #757575;
+    }
+
+    /* Tablet e abaixo */
+    @media (max-width: 899px) {
+        .controles-filtros-ag {
+            flex: 1 1 auto;
+            justify-content: flex-end;
+        }
+    }
+
+    /* Celular */
+    @media (max-width: 599px) {
+        .barra-filtros-ag {
+            flex-direction: column;
+            align-items: stretch;
+            gap: 8px;
+        }
+        .controles-filtros-ag {
+            justify-content: stretch;
+        }
+        .controles-filtros-ag > .btn-outlined-vinho {
+            flex: 1 1 100%;
+            justify-content: center;
+            min-height: 44px;
+        }
+        .controles-filtros-ag > form {
+            flex: 1 1 0;
+            min-width: 0;
+        }
+        .select-filtro-status {
+            width: 100%;
+            height: 44px;
+        }
+
+        /* Tabela vira lista de cartões */
+        #tabelaAgendamentos,
+        #tabelaAgendamentos tbody,
+        #tabelaAgendamentos tr,
+        #tabelaAgendamentos td {
+            display: block;
+            width: 100%;
+        }
+        #tabelaAgendamentos thead {
+            display: none;
+        }
+        #tabelaAgendamentos tr.linha-agendamento {
+            background: #FFFFFF;
+            border: 1px solid #E0E0E0;
+            border-radius: 12px;
+            padding: 8px 14px;
+            margin-bottom: 12px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+        }
+        #tabelaAgendamentos td {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            padding: 8px 0;
+            border: none;
+            border-bottom: 1px solid #F0F0F0;
+            text-align: right;
+            font-size: 14px;
+        }
+        #tabelaAgendamentos td:last-child {
+            border-bottom: none;
+            padding-top: 12px;
+        }
+        #tabelaAgendamentos td::before {
+            content: attr(data-label);
+            font-size: 12px;
+            font-weight: 600;
+            color: #616161;
+            text-align: left;
+            flex-shrink: 0;
+        }
+
+        /* Ações: o menu de status abre dentro do cartão, sem ser cortado */
+        #tabelaAgendamentos td[data-label="Ações"]::before {
+            display: none;
+        }
+        #tabelaAgendamentos td[data-label="Ações"] .acoes-celula {
+            width: 100%;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+            gap: 4px;
+        }
+        .dropdown-status-wrapper {
+            display: contents;
+        }
+        .menu-popup-status {
+            position: static;
+            order: 99;
+            width: 100%;
+            margin-top: 8px;
+            box-shadow: none;
+            background: #FAFAFA;
+        }
+        .menu-popup-item {
+            padding: 12px 16px;
+        }
+        .btn-icone {
+            min-width: 44px;
+            min-height: 44px;
+        }
+    }
+
+    /* Modais em telas pequenas */
+    @media (max-width: 480px) {
+        .input-modal, .select-modal, .textarea-modal {
+            min-width: 0;
+            font-size: 16px; /* evita zoom automático no iOS */
+        }
+        .dialogo-titulos h3, .dialogo-titulos p {
+            overflow-wrap: anywhere;
+        }
+        #modalFiltroPeriodo .dialogo-padrao,
+        #modalRemarcarAgendamento .dialogo-padrao,
+        #modalExcluirAgendamento .dialogo-exclusao {
+            width: calc(100% - 32px);
+            max-width: 100% !important;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-sizing: border-box;
+        }
+        #modalFiltroPeriodo .dialogo-rodape,
+        #modalRemarcarAgendamento .dialogo-rodape {
+            flex-wrap: wrap;
+        }
+        #modalFiltroPeriodo .dialogo-rodape button,
+        #modalRemarcarAgendamento .dialogo-rodape button {
+            flex: 1 1 140px;
+        }
+        #formExcluirAgendamento {
+            flex-direction: column-reverse;
+        }
+        #formExcluirAgendamento button {
+            width: 100%;
+        }
+    }
 </style>
 {% endblock %}
 
@@ -142,7 +294,7 @@
     </a>
 </div>
 {% elif agendamentos | length == 0 %}
-<div style="flex: 1; display: flex; align-items: center; justify-content: center; color: #616161;">
+<div style="flex: 1; display: flex; align-items: center; justify-content: center; color: #616161; text-align: center; padding: 24px;">
     Nenhum agendamento encontrado.
 </div>
 {% else %}
@@ -162,20 +314,22 @@
         <tbody>
             {% for a in agendamentos %}
             <tr class="linha-agendamento" data-status="{{ a.status }}">
-                <td>{{ a.dt_inicio | data_br }}</td>
-                <td>{{ a.dt_inicio | hora_br }} - {{ a.dt_fim | hora_br }}</td>
-                <td>
-                    <div style="font-weight: 600;">{{ a.cliente.nome if a.cliente else '—' }}</div>
-                    {% if a.cliente and a.cliente.telefone %}
-                    <div style="font-size: 12px; color: #757575;">{{ a.cliente.telefone | telefone_br }}</div>
-                    {% endif %}
+                <td data-label="Data">{{ a.dt_inicio | data_br }}</td>
+                <td data-label="Horário">{{ a.dt_inicio | hora_br }} - {{ a.dt_fim | hora_br }}</td>
+                <td data-label="Cliente">
+                    <div>
+                        <div class="ag-cliente-nome">{{ a.cliente.nome if a.cliente else '—' }}</div>
+                        {% if a.cliente and a.cliente.telefone %}
+                        <div class="ag-cliente-tel">{{ a.cliente.telefone | telefone_br }}</div>
+                        {% endif %}
+                    </div>
                 </td>
-                <td>{{ a.servico.nome if a.servico else '—' }}</td>
-                <td>{{ a.valor_cobrado | moeda }}</td>
-                <td>
+                <td data-label="Serviço">{{ a.servico.nome if a.servico else '—' }}</td>
+                <td data-label="Valor">{{ a.valor_cobrado | moeda }}</td>
+                <td data-label="Status">
                     <span class="chip-ag-status {{ a.status }}">{{ a.status_rotulo }}</span>
                 </td>
-                <td>
+                <td data-label="Ações">
                     <div class="acoes-celula">
                         {% if a.proximos_status | length > 0 %}
                         <div class="dropdown-status-wrapper">

@@ -30,9 +30,152 @@
         grid-template-columns: 1fr 1fr;
         gap: 12px;
     }
+
+    .servico-nome {
+        font-weight: 600;
+    }
+    .servico-desc {
+        font-size: 12px;
+        color: #757575;
+        max-width: 260px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .tabela-container {
+        overflow-x: auto;
+    }
+
+    /* Tablet e abaixo */
+    @media (max-width: 899px) {
+        .servico-desc {
+            max-width: 180px;
+        }
+        .barra-topo {
+            flex-wrap: wrap;
+        }
+        .campo-busca-wrapper {
+            flex: 1 1 260px;
+            min-width: 0;
+        }
+    }
+
+    /* Celular */
+    @media (max-width: 599px) {
+        .barra-topo {
+            flex-direction: column;
+            align-items: stretch;
+        }
+        .campo-busca-wrapper {
+            width: 100%;
+            flex: none;
+        }
+        .linha-contador-acao {
+            width: 100%;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        /* Tabela vira lista de cartões */
+        #tabelaServicos,
+        #tabelaServicos tbody,
+        #tabelaServicos tr,
+        #tabelaServicos td {
+            display: block;
+            width: 100%;
+        }
+        #tabelaServicos thead {
+            display: none;
+        }
+        #tabelaServicos tr.linha-item {
+            background: #FFFFFF;
+            border: 1px solid #E0E0E0;
+            border-radius: 12px;
+            padding: 8px 14px;
+            margin-bottom: 12px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+        }
+        #tabelaServicos td {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            padding: 8px 0;
+            border: none;
+            border-bottom: 1px solid #F0F0F0;
+            text-align: right;
+            font-size: 14px;
+        }
+        #tabelaServicos td:last-child {
+            border-bottom: none;
+            padding-top: 12px;
+        }
+        #tabelaServicos td::before {
+            content: attr(data-label);
+            font-size: 12px;
+            font-weight: 600;
+            color: #616161;
+            text-align: left;
+            flex-shrink: 0;
+        }
+
+        /* Nome + descrição ocupam a largura toda no topo do cartão */
+        #tabelaServicos td[data-label="Nome"] {
+            display: block;
+            text-align: left;
+            padding-top: 4px;
+        }
+        #tabelaServicos td[data-label="Nome"]::before {
+            display: none;
+        }
+        #tabelaServicos td[data-label="Nome"] .servico-nome {
+            font-size: 16px;
+        }
+        .servico-desc {
+            max-width: none;
+            white-space: normal;
+            overflow: visible;
+            text-overflow: clip;
+            margin-top: 2px;
+        }
+
+        #tabelaServicos td[data-label="Ações"]::before {
+            display: none;
+        }
+        #tabelaServicos td[data-label="Ações"] {
+            justify-content: flex-end;
+        }
+        .btn-icone {
+            min-width: 44px;
+            min-height: 44px;
+        }
+    }
+
+    /* Modais em telas pequenas */
     @media (max-width: 480px) {
         .grid-2-cols {
             grid-template-columns: 1fr;
+        }
+        #modalFormularioServico .dialogo-padrao,
+        #modalExcluirServico .dialogo-exclusao {
+            width: calc(100% - 32px);
+            max-width: 100% !important;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-sizing: border-box;
+        }
+        #modalFormularioServico .dialogo-rodape {
+            flex-wrap: wrap;
+        }
+        #modalFormularioServico .dialogo-rodape button {
+            flex: 1 1 140px;
+        }
+        #formExcluirServico {
+            flex-direction: column-reverse;
+        }
+        #formExcluirServico button {
+            width: 100%;
         }
     }
 </style>
@@ -87,18 +230,16 @@
             <tbody>
                 {% for s in servicos %}
                 <tr class="linha-item" data-busca="{{ (s.nome ~ ' ' ~ (s.descricao or '') ~ ' ' ~ s.nome_categoria) | lower }}">
-                    <td>
-                        <div style="font-weight: 600;">{{ s.nome }}</div>
+                    <td data-label="Nome">
+                        <div class="servico-nome">{{ s.nome }}</div>
                         {% if s.descricao %}
-                        <div style="font-size: 12px; color: #757575; max-width: 260px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-                            {{ s.descricao }}
-                        </div>
+                        <div class="servico-desc">{{ s.descricao }}</div>
                         {% endif %}
                     </td>
-                    <td>{{ s.nome_categoria }}</td>
-                    <td>{{ s.preco | moeda }}</td>
-                    <td>{{ s.duracao_minutos | duracao_texto }}</td>
-                    <td>
+                    <td data-label="Categoria">{{ s.nome_categoria }}</td>
+                    <td data-label="Preço">{{ s.preco | moeda }}</td>
+                    <td data-label="Duração">{{ s.duracao_minutos | duracao_texto }}</td>
+                    <td data-label="Status">
                         <div class="celula-status">
                             <form method="POST" action="{{ url_for('alternar_ativo_servico', servico_id=s.id) }}" style="display: inline-flex;">
                                 <input type="hidden" name="ativo" value="{{ 'false' if s.ativo else 'true' }}">
@@ -112,7 +253,7 @@
                             </span>
                         </div>
                     </td>
-                    <td>
+                    <td data-label="Ações">
                         <div class="acoes-celula">
                             <button type="button" class="btn-icone" title="Editar"
                                 data-id="{{ s.id }}"
@@ -191,7 +332,7 @@
                             <label class="form-label-modal" for="formPrecoServico">Preço</label>
                             <div class="campo-modal-wrapper">
                                 <span style="position: absolute; left: 14px; font-weight: 700; color: var(--cor-vinho); font-size: 14px;">R$</span>
-                                <input type="text" name="preco" id="formPrecoServico" class="input-modal com-icone" placeholder="0,00" required>
+                                <input type="text" inputmode="decimal" name="preco" id="formPrecoServico" class="input-modal com-icone" placeholder="0,00" required>
                             </div>
                         </div>
 
@@ -199,7 +340,7 @@
                             <label class="form-label-modal" for="formDuracaoServico">Duração</label>
                             <div class="campo-modal-wrapper">
                                 <span class="material-icons-outlined icone-campo">schedule</span>
-                                <input type="number" name="duracao_minutos" id="formDuracaoServico" class="input-modal com-icone" placeholder="60" min="5" max="720" required oninput="atualizarChipsDuracao()">
+                                <input type="number" inputmode="numeric" name="duracao_minutos" id="formDuracaoServico" class="input-modal com-icone" placeholder="60" min="5" max="720" required oninput="atualizarChipsDuracao()">
                             </div>
                             <div class="chips-duracao">
                                 <button type="button" class="chip-duracao" data-min="30" onclick="selecionarDuracao(30)">30 min</button>

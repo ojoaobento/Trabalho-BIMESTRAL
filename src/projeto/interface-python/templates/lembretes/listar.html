@@ -74,8 +74,106 @@
     .chip-situacao-lembrete.fila { background-color: #FFF3E0; color: #E65100; }
     .chip-situacao-lembrete.agendado { background-color: #E3F2FD; color: #1565C0; }
 
-    @media (max-width: 599px) {
+    /* Tablet e abaixo */
+    @media (max-width: 899px) {
         .select-lembrete {
+            flex: 1 1 200px;
+            width: auto;
+            min-width: 0;
+        }
+    }
+
+    /* Celular */
+    @media (max-width: 599px) {
+        .filtros-lembretes-row {
+            flex-direction: column;
+            align-items: stretch;
+        }
+        .select-lembrete {
+            width: 100%;
+            flex: none;
+        }
+
+        .resumo-lembretes-row {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+        .resumo-lembretes-row > div:last-child {
+            width: 100%;
+            justify-content: space-between;
+        }
+
+        /* Tabela vira lista de cartões */
+        #tabelaLembretes,
+        #tabelaLembretes tbody,
+        #tabelaLembretes tr,
+        #tabelaLembretes td {
+            display: block;
+            width: 100%;
+        }
+        #tabelaLembretes thead {
+            display: none;
+        }
+        #tabelaLembretes tr.linha-lembrete {
+            background: #FFFFFF;
+            border: 1px solid #E0E0E0;
+            border-radius: 12px;
+            padding: 8px 14px;
+            margin-bottom: 12px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+        }
+        #tabelaLembretes td {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            padding: 8px 0;
+            border: none;
+            border-bottom: 1px solid #F0F0F0;
+            text-align: right;
+            font-size: 14px;
+        }
+        #tabelaLembretes td:last-child {
+            border-bottom: none;
+            padding-top: 12px;
+        }
+        #tabelaLembretes td::before {
+            content: attr(data-label);
+            font-size: 12px;
+            font-weight: 600;
+            color: #616161;
+            text-align: left;
+            flex-shrink: 0;
+        }
+        #tabelaLembretes td .acoes-celula {
+            margin-left: auto;
+        }
+        #tabelaLembretes td[data-label="Ações"]::before {
+            display: none;
+        }
+        #tabelaLembretes td[data-label="Ações"] {
+            justify-content: flex-end;
+        }
+        .btn-icone {
+            min-width: 44px;
+            min-height: 44px;
+        }
+    }
+
+    /* Modais em telas pequenas */
+    @media (max-width: 480px) {
+        #modalEditarLembrete .dialogo-padrao,
+        #modalExcluirLembrete .dialogo-exclusao {
+            width: calc(100% - 32px);
+            max-width: 100% !important;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-sizing: border-box;
+        }
+        #formExcluirLembrete {
+            flex-direction: column-reverse;
+        }
+        #formExcluirLembrete button {
             width: 100%;
         }
     }
@@ -145,11 +243,11 @@
         <tbody>
             {% for l in lembretes %}
             <tr class="linha-lembrete" data-situacao="{{ l.situacao_calc }}" data-tipo="{{ l.tipo }}">
-                <td>{{ l.enviar_em | data_hora_br }}</td>
-                <td>{{ 'Confirmação' if l.tipo == 'confirmacao' else 'Lembrete 24h' }}</td>
-                <td>#{{ l.agendamento_id }}</td>
-                <td>{{ '#' ~ l.servico_id if l.servico_id else '—' }}</td>
-                <td>
+                <td data-label="Envio programado">{{ l.enviar_em | data_hora_br }}</td>
+                <td data-label="Tipo">{{ 'Confirmação' if l.tipo == 'confirmacao' else 'Lembrete 24h' }}</td>
+                <td data-label="Agendamento">#{{ l.agendamento_id }}</td>
+                <td data-label="Serviço">{{ '#' ~ l.servico_id if l.servico_id else '—' }}</td>
+                <td data-label="Situação">
                     {% if l.situacao_calc == 'enviado' %}
                         <span class="chip-situacao-lembrete enviado">Enviado</span>
                     {% elif l.situacao_calc == 'fila' %}
@@ -158,8 +256,8 @@
                         <span class="chip-situacao-lembrete agendado">Agendado</span>
                     {% endif %}
                 </td>
-                <td>{{ (l.enviado_em | data_hora_br) if l.enviado_em else '—' }}</td>
-                <td>
+                <td data-label="Enviado em">{{ (l.enviado_em | data_hora_br) if l.enviado_em else '—' }}</td>
+                <td data-label="Ações">
                     <div class="acoes-celula">
                         {% if not l.enviado %}
                         <form method="POST" action="{{ url_for('marcar_lembrete_enviado', lembrete_id=l.id) }}" style="display: inline;">

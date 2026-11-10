@@ -1,5 +1,49 @@
 {% extends "base.html" %}
 
+{% block extra_css %}
+<style>
+    /* ===== Responsividade da página de Categorias ===== */
+    #tabelaCategorias tbody td {
+        overflow-wrap: anywhere;
+    }
+
+    /* Celular: cada linha da tabela vira um cartão (nome em cima; status e ações embaixo) */
+    @media (max-width: 599px) {
+        #tabelaCategorias,
+        #tabelaCategorias tbody {
+            display: block;
+            width: 100%;
+        }
+        #tabelaCategorias thead {
+            display: none;
+        }
+        #tabelaCategorias tbody tr {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px 12px;
+            padding: 12px 4px;
+        }
+        #tabelaCategorias tbody td {
+            padding: 0;
+            border: none;
+        }
+        #tabelaCategorias tbody td:first-child {
+            flex: 1 1 100%;
+            font-size: 15px;
+        }
+    }
+
+    /* Telas muito pequenas: botões do diálogo de exclusão empilham */
+    @media (max-width: 380px) {
+        #formExcluirCategoria {
+            flex-direction: column-reverse;
+        }
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 {% if erro %}
 <div class="estado-erro">

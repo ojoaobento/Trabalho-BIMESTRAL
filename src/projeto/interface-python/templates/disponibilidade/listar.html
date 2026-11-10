@@ -63,10 +63,15 @@
         color: var(--cor-texto);
         font-size: 12px;
         font-weight: 500;
+        font-family: inherit;
         cursor: pointer;
         transition: 0.15s;
     }
-    .chip-opcao.selecionado {
+    .chip-opcao:hover {
+        background-color: var(--cor-rosa-claro);
+    }
+    .chip-opcao.selecionado,
+    .chip-opcao.selecionado:hover {
         background-color: var(--cor-vinho);
         border-color: var(--cor-vinho);
         color: #FFFFFF;
@@ -77,9 +82,142 @@
         grid-template-columns: 1fr 1fr;
         gap: 12px;
     }
+    .conteudo-aba {
+        display: none;
+        flex-direction: column;
+        flex: 1;
+    }
+    .conteudo-aba.ativa {
+        display: flex;
+    }
+    .tabela-container {
+        overflow-x: auto;
+    }
+
+    /* Tablet e abaixo */
+    @media (max-width: 899px) {
+        .botoes-topo-disp {
+            flex: 1 1 auto;
+        }
+    }
+
+    /* Celular */
+    @media (max-width: 599px) {
+        .topo-disponibilidades {
+            flex-direction: column;
+            align-items: stretch;
+            gap: 8px;
+        }
+        .abas-nav {
+            width: 100%;
+            gap: 0;
+        }
+        .aba-btn {
+            flex: 1 1 0;
+            justify-content: center;
+            padding: 12px 8px;
+            font-size: 13px;
+            white-space: nowrap;
+        }
+        .botoes-topo-disp {
+            width: 100%;
+            padding-bottom: 12px;
+        }
+        .botoes-topo-disp > button {
+            flex: 1 1 100%;
+            justify-content: center;
+            min-height: 44px;
+        }
+
+        /* Tabelas viram lista de cartões */
+        .tabela-cards,
+        .tabela-cards tbody,
+        .tabela-cards tr,
+        .tabela-cards td {
+            display: block;
+            width: 100%;
+        }
+        .tabela-cards thead {
+            display: none;
+        }
+        .tabela-cards tr {
+            background: #FFFFFF;
+            border: 1px solid #E0E0E0;
+            border-radius: 12px;
+            padding: 8px 14px;
+            margin-bottom: 12px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+        }
+        .tabela-cards td {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            padding: 8px 0;
+            border: none;
+            border-bottom: 1px solid #F0F0F0;
+            text-align: right;
+            font-size: 14px;
+        }
+        .tabela-cards td:last-child {
+            border-bottom: none;
+            padding-top: 12px;
+        }
+        .tabela-cards td::before {
+            content: attr(data-label);
+            font-size: 12px;
+            font-weight: 600;
+            color: #616161;
+            text-align: left;
+            flex-shrink: 0;
+        }
+        .tabela-cards td[data-label="Ações"]::before {
+            display: none;
+        }
+        .tabela-cards td[data-label="Ações"] {
+            justify-content: flex-end;
+        }
+        .btn-icone {
+            min-width: 44px;
+            min-height: 44px;
+        }
+    }
+
+    /* Modais em telas pequenas */
     @media (max-width: 480px) {
         .grid-2-cols {
             grid-template-columns: 1fr;
+        }
+        .chip-dia {
+            flex: 1 1 56px;
+            justify-content: center;
+            padding: 10px 8px;
+        }
+        #modalFormularioDisponibilidade .dialogo-padrao,
+        #modalFormularioBloqueio .dialogo-padrao,
+        #modalExcluirDisponibilidade .dialogo-exclusao,
+        #modalExcluirBloqueio .dialogo-exclusao {
+            width: calc(100% - 32px);
+            max-width: 100% !important;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-sizing: border-box;
+        }
+        #modalFormularioDisponibilidade .dialogo-rodape,
+        #modalFormularioBloqueio .dialogo-rodape {
+            flex-wrap: wrap;
+        }
+        #modalFormularioDisponibilidade .dialogo-rodape button,
+        #modalFormularioBloqueio .dialogo-rodape button {
+            flex: 1 1 140px;
+        }
+        #formExcluirDisp,
+        #formExcluirBloqueio {
+            flex-direction: column-reverse;
+        }
+        #formExcluirDisp button,
+        #formExcluirBloqueio button {
+            width: 100%;
         }
     }
 </style>
@@ -122,14 +260,14 @@
 </div>
 {% else %}
     <!-- CONTEÚDO ABA 1: SEMANAIS -->
-    <div id="conteudoAbaSemanais" style="display: {{ 'flex' if aba == 'semanais' else 'none' }}; flex-direction: column; flex: 1;">
+    <div id="conteudoAbaSemanais" class="conteudo-aba {% if aba == 'semanais' %}ativa{% endif %}">
         {% if blocos | length == 0 %}
-        <div style="flex: 1; display: flex; align-items: center; justify-content: center; color: #616161;">
+        <div style="flex: 1; display: flex; align-items: center; justify-content: center; color: #616161; text-align: center; padding: 24px;">
             Nenhum horário semanal cadastrado.
         </div>
         {% else %}
         <div class="tabela-container">
-            <table class="data-table">
+            <table class="data-table tabela-cards">
                 <thead>
                     <tr>
                         <th>Dia</th>
@@ -142,10 +280,10 @@
                 <tbody>
                     {% for b in blocos %}
                     <tr>
-                        <td style="font-weight: 500;">{{ b.nome_dia }}</td>
-                        <td>{{ b.inicio_curto }}</td>
-                        <td>{{ b.fim_curto }}</td>
-                        <td>
+                        <td data-label="Dia" style="font-weight: 500;">{{ b.nome_dia }}</td>
+                        <td data-label="Início">{{ b.inicio_curto }}</td>
+                        <td data-label="Fim">{{ b.fim_curto }}</td>
+                        <td data-label="Status">
                             <div class="celula-status">
                                 <form method="POST" action="{{ url_for('alternar_ativo_disponibilidade', disp_id=b.id) }}" style="display: inline-flex;">
                                     <input type="hidden" name="ativo" value="{{ 'false' if b.ativo else 'true' }}">
@@ -159,7 +297,7 @@
                                 </span>
                             </div>
                         </td>
-                        <td>
+                        <td data-label="Ações">
                             <div class="acoes-celula">
                                 <button type="button" class="btn-icone" title="Editar"
                                     data-id="{{ b.id }}"
@@ -189,7 +327,7 @@
     </div>
 
     <!-- CONTEÚDO ABA 2: BLOQUEADOS -->
-    <div id="conteudoAbaBloqueados" style="display: {{ 'flex' if aba == 'bloqueados' else 'none' }}; flex-direction: column; flex: 1;">
+    <div id="conteudoAbaBloqueados" class="conteudo-aba {% if aba == 'bloqueados' %}ativa{% endif %}">
         {% if bloqueios | length == 0 %}
         <div style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 24px;">
             <span class="material-icons" style="font-size: 48px; color: #BDBDBD; margin-bottom: 12px;">check_circle_outline</span>
@@ -198,7 +336,7 @@
         </div>
         {% else %}
         <div class="tabela-container">
-            <table class="data-table">
+            <table class="data-table tabela-cards">
                 <thead>
                     <tr>
                         <th>Data</th>
@@ -210,10 +348,10 @@
                 <tbody>
                     {% for b in bloqueios %}
                     <tr>
-                        <td style="font-weight: 500;">{{ b.dt_inicio | data_br }}</td>
-                        <td>{{ b.dt_inicio | hora_br }} às {{ b.dt_fim | hora_br }}</td>
-                        <td>{{ b.motivo or 'Bloqueio administrativo' }}</td>
-                        <td>
+                        <td data-label="Data" style="font-weight: 500;">{{ b.dt_inicio | data_br }}</td>
+                        <td data-label="Horário">{{ b.dt_inicio | hora_br }} às {{ b.dt_fim | hora_br }}</td>
+                        <td data-label="Motivo">{{ b.motivo or 'Bloqueio administrativo' }}</td>
+                        <td data-label="Ações">
                             <button type="button" class="btn-icone excluir" title="Desbloquear horário"
                                 data-id="{{ b.id }}"
                                 data-data="{{ b.dt_inicio | data_br }}"
@@ -254,7 +392,7 @@
                         <label class="form-label-modal">Dia da semana</label>
                         <div class="chips-opcoes" id="chipsDiasSemana">
                             {% for i in range(7) %}
-                            <button type="button" class="chip-opcao chip-dia" data-dia="{{ i }}" onclick="selecionarDiaSemana({{ i }})">
+                            <button type="button" class="chip-opcao chip-dia" data-dia="{{ i }}" onclick="selecionarDiaSemana(Number(this.dataset.dia))">
                                 {{ dias_curtos[i] }}
                             </button>
                             {% endfor %}
@@ -267,15 +405,15 @@
                     <div class="form-grupo-modal">
                         <label class="form-label-modal">Atalhos</label>
                         <div class="chips-opcoes">
-                            <button type="button" class="chip-opcao" onclick="aplicarAtalhoHorario('08:00', '12:00')">
+                            <button type="button" class="chip-opcao chip-atalho" data-inicio="08:00" data-fim="12:00" onclick="aplicarAtalhoHorario('08:00', '12:00')">
                                 <span class="material-icons-outlined" style="font-size: 15px;">wb_sunny</span>
                                 <span>Manhã</span>
                             </button>
-                            <button type="button" class="chip-opcao" onclick="aplicarAtalhoHorario('13:00', '18:00')">
+                            <button type="button" class="chip-opcao chip-atalho" data-inicio="13:00" data-fim="18:00" onclick="aplicarAtalhoHorario('13:00', '18:00')">
                                 <span class="material-icons-outlined" style="font-size: 15px;">wb_twilight</span>
                                 <span>Tarde</span>
                             </button>
-                            <button type="button" class="chip-opcao" onclick="aplicarAtalhoHorario('08:00', '18:00')">
+                            <button type="button" class="chip-opcao chip-atalho" data-inicio="08:00" data-fim="18:00" onclick="aplicarAtalhoHorario('08:00', '18:00')">
                                 <span class="material-icons-outlined" style="font-size: 15px;">schedule</span>
                                 <span>Dia todo</span>
                             </button>
@@ -287,14 +425,14 @@
                             <label class="form-label-modal" for="formHoraInicioDisp">Início</label>
                             <div class="campo-modal-wrapper">
                                 <span class="material-icons-outlined icone-campo">access_time</span>
-                                <input type="time" name="hora_inicio" id="formHoraInicioDisp" class="input-modal com-icone" value="08:00" required>
+                                <input type="time" name="hora_inicio" id="formHoraInicioDisp" class="input-modal com-icone" value="08:00" required oninput="atualizarAtalhos()" onchange="atualizarAtalhos()">
                             </div>
                         </div>
                         <div>
                             <label class="form-label-modal" for="formHoraFimDisp">Fim</label>
                             <div class="campo-modal-wrapper">
                                 <span class="material-icons-outlined icone-campo">access_time</span>
-                                <input type="time" name="hora_fim" id="formHoraFimDisp" class="input-modal com-icone" value="18:00" required>
+                                <input type="time" name="hora_fim" id="formHoraFimDisp" class="input-modal com-icone" value="18:00" required oninput="atualizarAtalhos()" onchange="atualizarAtalhos()">
                             </div>
                         </div>
                     </div>
@@ -452,13 +590,13 @@
         const btnBloq = document.getElementById('btnAbaBloqueados');
 
         if (aba === 'semanais') {
-            if (sem) sem.style.display = 'flex';
-            if (bloq) bloq.style.display = 'none';
+            if (sem) sem.classList.add('ativa');
+            if (bloq) bloq.classList.remove('ativa');
             btnSem.classList.add('ativa');
             btnBloq.classList.remove('ativa');
         } else {
-            if (sem) sem.style.display = 'none';
-            if (bloq) bloq.style.display = 'flex';
+            if (sem) sem.classList.remove('ativa');
+            if (bloq) bloq.classList.add('ativa');
             btnSem.classList.remove('ativa');
             btnBloq.classList.add('ativa');
         }
@@ -473,9 +611,22 @@
         });
     }
 
+    // Marca o atalho (Manhã / Tarde / Dia todo) que bate com os horários atuais.
+    // Se o usuário digitar um horário diferente, nenhum atalho fica selecionado.
+    function atualizarAtalhos() {
+        const inicio = document.getElementById('formHoraInicioDisp').value;
+        const fim = document.getElementById('formHoraFimDisp').value;
+        document.querySelectorAll('.chip-atalho').forEach(btn => {
+            const combina = btn.getAttribute('data-inicio') === inicio
+                         && btn.getAttribute('data-fim') === fim;
+            btn.classList.toggle('selecionado', combina);
+        });
+    }
+
     function aplicarAtalhoHorario(inicio, fim) {
         document.getElementById('formHoraInicioDisp').value = inicio;
         document.getElementById('formHoraFimDisp').value = fim;
+        atualizarAtalhos();
     }
 
     function abrirModalNovaDisponibilidade() {

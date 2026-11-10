@@ -383,6 +383,7 @@ def salvar_usuario():
                 "nome": nome,
                 "email": email,
                 "senha": senha,
+                "ativo": ativo,
             }
             api_call("POST", "/usuarios", json_data=corpo)
             flash("Usuário criado.", "sucesso")

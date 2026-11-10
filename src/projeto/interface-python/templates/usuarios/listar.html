@@ -29,6 +29,164 @@
         overflow: hidden;
         display: inline-block;
     }
+
+    /* ===== Responsividade dos campos e do modal ===== */
+    .input-modal, .select-modal, .textarea-modal {
+        min-width: 0;
+        font-size: 16px; /* evita zoom automático no iOS */
+    }
+    .dialogo-titulos h3, .dialogo-titulos p {
+        overflow-wrap: anywhere;
+    }
+    .bloco-switch-modal {
+        flex-wrap: wrap;
+    }
+
+    /* ===== Responsividade da lista ===== */
+    .tabela-container {
+        overflow-x: auto;
+    }
+    .usuario-nome {
+        font-weight: 600;
+    }
+    .usuario-email {
+        overflow-wrap: anywhere;
+    }
+
+    /* Tablet e abaixo */
+    @media (max-width: 899px) {
+        .barra-topo {
+            flex-wrap: wrap;
+        }
+        .campo-busca-wrapper {
+            flex: 1 1 260px;
+            min-width: 0;
+        }
+    }
+
+    /* Celular */
+    @media (max-width: 599px) {
+        .barra-topo {
+            flex-direction: column;
+            align-items: stretch;
+        }
+        .campo-busca-wrapper {
+            width: 100%;
+            flex: none;
+        }
+        .linha-contador-acao {
+            width: 100%;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        /* Tabela vira lista de cartões */
+        #tabelaUsuarios,
+        #tabelaUsuarios tbody,
+        #tabelaUsuarios tr,
+        #tabelaUsuarios td {
+            display: block;
+            width: 100%;
+        }
+        #tabelaUsuarios thead {
+            display: none;
+        }
+        #tabelaUsuarios tr.linha-item {
+            background: #FFFFFF;
+            border: 1px solid #E0E0E0;
+            border-radius: 12px;
+            padding: 8px 14px;
+            margin-bottom: 12px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+        }
+        #tabelaUsuarios td {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            padding: 8px 0;
+            border: none;
+            border-bottom: 1px solid #F0F0F0;
+            text-align: right;
+            font-size: 14px;
+        }
+        #tabelaUsuarios td:last-child {
+            border-bottom: none;
+            padding-top: 12px;
+        }
+        #tabelaUsuarios td::before {
+            content: attr(data-label);
+            font-size: 12px;
+            font-weight: 600;
+            color: #616161;
+            text-align: left;
+            flex-shrink: 0;
+        }
+
+        /* Nome como título do cartão */
+        #tabelaUsuarios td[data-label="Nome"] {
+            display: block;
+            text-align: left;
+            padding-top: 4px;
+            font-size: 16px;
+        }
+        #tabelaUsuarios td[data-label="Nome"]::before {
+            display: none;
+        }
+
+        #tabelaUsuarios td[data-label="Ações"]::before {
+            display: none;
+        }
+        #tabelaUsuarios td[data-label="Ações"] {
+            justify-content: flex-end;
+        }
+        .btn-icone {
+            min-width: 44px;
+            min-height: 44px;
+        }
+    }
+
+    @media (max-width: 480px) {
+        .modal-backdrop {
+            padding: 8px;
+            align-items: flex-end; /* modal sobe de baixo no celular */
+        }
+        .dialogo-padrao {
+            max-height: 96vh;
+            border-radius: 20px;
+        }
+        .dialogo-cabecalho {
+            padding: 16px 12px 12px 16px;
+        }
+        .dialogo-corpo {
+            padding: 14px 16px;
+        }
+        .dialogo-rodape {
+            flex-direction: column-reverse; /* Salvar em cima, Cancelar embaixo */
+            padding: 12px 16px 16px;
+        }
+        .btn-modal-cancelar,
+        .btn-modal-salvar {
+            flex: none;
+            width: 100%;
+        }
+
+        /* Modal de exclusão */
+        #modalExcluirUsuario .dialogo-exclusao {
+            width: calc(100% - 16px);
+            max-width: 100% !important;
+            max-height: 96vh;
+            overflow-y: auto;
+            box-sizing: border-box;
+        }
+        #formExcluirUsuario {
+            flex-direction: column-reverse;
+        }
+        #formExcluirUsuario button {
+            width: 100%;
+        }
+    }
 </style>
 {% endblock %}
 
@@ -62,7 +220,7 @@
     </div>
 
     {% if usuarios | length == 0 %}
-    <div style="flex: 1; display: flex; align-items: center; justify-content: center; color: #616161;">
+    <div style="flex: 1; display: flex; align-items: center; justify-content: center; color: #616161; text-align: center; padding: 24px;">
         Nenhum usuário cadastrado.
     </div>
     {% else %}
@@ -80,9 +238,9 @@
             <tbody>
                 {% for u in usuarios %}
                 <tr class="linha-item" data-busca="{{ (u.nome ~ ' ' ~ u.email) | lower }}">
-                    <td style="font-weight: 600;">{{ u.nome }}</td>
-                    <td>{{ u.email }}</td>
-                    <td>
+                    <td data-label="Nome" class="usuario-nome">{{ u.nome }}</td>
+                    <td data-label="E-mail" class="usuario-email">{{ u.email }}</td>
+                    <td data-label="Status">
                         <div class="celula-status">
                             <form method="POST" action="{{ url_for('alternar_ativo_usuario', usuario_id=u.id) }}" style="display: inline-flex;">
                                 <input type="hidden" name="ativo" value="{{ 'false' if u.ativo else 'true' }}">
@@ -96,8 +254,8 @@
                             </span>
                         </div>
                     </td>
-                    <td>{{ u.dt_cadastro | data_br }}</td>
-                    <td>
+                    <td data-label="Cadastro">{{ u.dt_cadastro | data_br }}</td>
+                    <td data-label="Ações">
                         <div class="acoes-celula">
                             <button type="button" class="btn-icone" title="Editar"
                                 data-id="{{ u.id }}"
@@ -155,7 +313,7 @@
                         <label class="form-label-modal" for="formEmailUsuario">E-mail</label>
                         <div class="campo-modal-wrapper">
                             <span class="material-icons icone-campo">mail_outline</span>
-                            <input type="email" name="email" id="formEmailUsuario" class="input-modal com-icone" placeholder="usuario@studiocleusa.com" required>
+                            <input type="email" inputmode="email" autocapitalize="none" name="email" id="formEmailUsuario" class="input-modal com-icone" placeholder="usuario@studiocleusa.com" required>
                         </div>
                     </div>
 
@@ -170,7 +328,8 @@
                         </div>
                     </div>
 
-                    <div id="blocoSwitchAtivoUsuario" style="display: none; margin-top: 16px;">
+                    <!-- Switch "ativo": sempre visível (criação e edição) -->
+                    <div id="blocoSwitchAtivoUsuario" style="margin-top: 16px;">
                         <div class="bloco-switch-modal">
                             <div class="bloco-switch-textos">
                                 <h4>Usuário ativo</h4>
@@ -274,7 +433,7 @@
         document.getElementById('iconeOlhoUsuario').textContent = 'visibility';
         document.getElementById('formSenhaUsuario').placeholder = 'Mínimo de 8 caracteres';
         document.getElementById('labelSenhaUsuario').textContent = 'Senha';
-        document.getElementById('blocoSwitchAtivoUsuario').style.display = 'none';
+        document.getElementById('formAtivoUsuario').checked = true;
         document.getElementById('erroFormUsuario').style.display = 'none';
         abrirModal('modalFormularioUsuario');
     }
@@ -293,7 +452,6 @@
         document.getElementById('formSenhaUsuario').placeholder = 'Em branco mantém a atual';
         document.getElementById('labelSenhaUsuario').textContent = 'Nova senha (opcional)';
         document.getElementById('formAtivoUsuario').checked = btn.getAttribute('data-ativo') === 'true';
-        document.getElementById('blocoSwitchAtivoUsuario').style.display = 'block';
         document.getElementById('erroFormUsuario').style.display = 'none';
         abrirModal('modalFormularioUsuario');
     }
